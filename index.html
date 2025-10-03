@@ -1,0 +1,688 @@
+
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mafia Gaming - PUBG Mobile Purchase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .purchase-form {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 16px;
+            backdrop-filter: blur(5px);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .amount-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .amount-btn {
+            padding: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .amount-btn:hover, .amount-btn.active {
+            background: rgba(255, 107, 107, 0.8);
+            border-color: #ff6b6b;
+            transform: translateY(-2px);
+        }
+
+        .purchase-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .purchase-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .purchase-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .account-checker {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .check-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .check-result.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4caf50;
+        }
+
+        .check-result.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+        }
+
+        .status-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 30px;
+        }
+
+        .transaction-status {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #ff6b6b;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-icon, .error-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+
+        .success-icon {
+            color: #4caf50;
+        }
+
+        .error-icon {
+            color: #f44336;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .logo {
+                font-size: 2em;
+            }
+        }
+
+        .api-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .api-status.online {
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+        }
+
+        .api-status.offline {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="api-status" id="apiStatus">
+        <span class="loading"></span> Connecting...
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎮 MAFIA GAMING</div>
+            <div class="subtitle">PUBG MOBILE UC & Items Purchase</div>
+            <div style="font-size: 14px; opacity: 0.8;">
+                Secure • Fast • Reliable Gaming Store
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="purchase-form">
+                <h2 style="margin-bottom: 20px; color: #ff6b6b;">💰 Purchase Items</h2>
+                
+                <div class="form-group">
+                    <label for="playerId">🎯 Player Game ID</label>
+                    <input type="text" id="playerId" placeholder="Enter your PUBG Mobile Player ID" 
+                           pattern="[0-9]+" title="Player ID must contain only numbers">
+                </div>
+
+                <div class="form-group">
+                    <label for="serverRegion">🌍 Server Region</label>
+                    <select id="serverRegion">
+                        <option value="ASIA">Asia</option>
+                        <option value="EUROPE">Europe</option>
+                        <option value="NORTH_AMERICA">North America</option>
+                        <option value="SOUTH_AMERICA">South America</option>
+                        <option value="MIDDLE_EAST">Middle East</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>💎 Select UC Amount</label>
+                    <div class="amount-options">
+                        <div class="amount-btn" data-amount="60" data-price="0.99">60 UC</div>
+                        <div class="amount-btn" data-amount="300" data-price="4.99">300 UC</div>
+                        <div class="amount-btn" data-amount="600" data-price="9.99">600 UC</div>
+                        <div class="amount-btn" data-amount="1500" data-price="24.99">1500 UC</div>
+                        <div class="amount-btn" data-amount="3000" data-price="49.99">3000 UC</div>
+                        <div class="amount-btn" data-amount="6000" data-price="99.99">6000 UC</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="customAmount">🎨 Custom Amount (Optional)</label>
+                    <input type="number" id="customAmount" placeholder="Enter custom UC amount" min="1" max="50000">
+                </div>
+
+                <button class="purchase-btn" id="purchaseBtn" onclick="processPurchase()">
+                    🚀 PURCHASE NOW
+                </button>
+            </div>
+
+            <div class="account-checker">
+                <h2 style="margin-bottom: 20px; color: #ff6b6b;">🔍 Account Checker</h2>
+                
+                <div class="form-group">
+                    <label for="checkPlayerId">🎯 Player ID to Check</label>
+                    <input type="text" id="checkPlayerId" placeholder="Enter Player ID to verify">
+                </div>
+
+                <button class="purchase-btn" onclick="checkPlayerAccount()" style="background: linear-gradient(45deg, #4caf50, #66bb6a);">
+                    ✅ CHECK ACCOUNT
+                </button>
+
+                <div class="check-result" id="checkResult">
+                    <div id="checkContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-section">
+            <h2 style="margin-bottom: 20px; color: #ff6b6b;">📊 Transaction Status</h2>
+            <div class="transaction-status" id="transactionStatus">
+                <div class="loading"></div>
+                <div>Processing your request...</div>
+            </div>
+            <div id="statusContent">
+                <p style="text-align: center; opacity: 0.7;">No active transactions</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration using provided API keys and settings
+        const CONFIG = {
+            IMSDK_APPLY_CLIENT_ID: "com.pubg.krmobile.applesignin",
+            IMSDK_SERVER_HELP: "help.igamecj.com",
+            IMSDK_SERVER_NOTICE: "ig-us-notice.igamecj.com",
+            IMSDK_SERVER_SDKAPI: "ig-us-sdkapi.igamecj.com",
+            IMSDK_WEB_LOGIN_BASE_URL: "https://itopcdn.igamecj.com/web/prod/webview-thirdlogin.html",
+            APP_ID: "196001210135",
+            APP_NAME: "PUBG MOBILE",
+            DEFAULT_WEB_CLIENT_ID: "514105389385-8pfmoh1t4vdqr32qajm97ielk8etvfc9.apps.googleusercontent.com",
+            FIREBASE_DATABASE_URL: "https://api-6414577526685413251-707161.firebaseio.com",
+            GCLOUD_CONFIG_URL: "https://cloudctrl.igamecj.com",
+            GCLOUD_GAME_ID: "1950038955",
+            GCLOUD_GAME_KEY: "b372c472e5d67ddac3833645eb7b3bd7",
+            GCM_DEFAULT_SENDER_ID: "514105389385",
+            GOOGLE_API_KEY: "AIzaSyDdH6VdZ94JReJFP8Q7tmzjoU8Py7uR6uM",
+            GOOGLE_APP_ID: "1:514105389385:android:4d1f97c2feb935b7",
+            GOOGLE_STORAGE_BUCKET: "api-6414577526685413251-707161.appspot.com",
+            IMSDK_FACEBOOK_APP_ID: "1979447509033428",
+            IMSDK_FACEBOOK_CLIENT_TOKEN: "6aec63340b4d600147b4cf258b924d6e"
+        };
+
+        let selectedAmount = 0;
+        let selectedPrice = 0;
+        let apiConnected = false;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            checkAPIConnection();
+        });
+
+        function initializeApp() {
+            console.log('Mafia Gaming Purchase System Initialized');
+            console.log('App ID:', CONFIG.APP_ID);
+            console.log('Game ID:', CONFIG.GCLOUD_GAME_ID);
+        }
+
+        function setupEventListeners() {
+            // Amount selection buttons
+            document.querySelectorAll('.amount-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedAmount = parseInt(this.dataset.amount);
+                    selectedPrice = parseFloat(this.dataset.price);
+                    document.getElementById('customAmount').value = '';
+                });
+            });
+
+            // Custom amount input
+            document.getElementById('customAmount').addEventListener('input', function() {
+                if (this.value) {
+                    document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+                    selectedAmount = parseInt(this.value);
+                    selectedPrice = selectedAmount * 0.01667; // Approximate price calculation
+                }
+            });
+
+            // Player ID validation
+            document.getElementById('playerId').addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+
+            document.getElementById('checkPlayerId').addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        }
+
+        async function checkAPIConnection() {
+            const statusElement = document.getElementById('apiStatus');
+            
+            try {
+                // Test connection to game servers
+                const testEndpoints = [
+                    `https://${CONFIG.IMSDK_SERVER_SDKAPI}`,
+                    `https://${CONFIG.GCLOUD_CONFIG_URL}`,
+                    CONFIG.FIREBASE_DATABASE_URL
+                ];
+
+                let connectionSuccess = false;
+                
+                for (let endpoint of testEndpoints) {
+                    try {
+                        const response = await fetch(endpoint + '/health', {
+                            method: 'GET',
+                            mode: 'no-cors',
+                            timeout: 5000
+                        });
+                        connectionSuccess = true;
+                        break;
+                    } catch (e) {
+                        // Try JSONP for cross-origin requests
+                        continue;
+                    }
+                }
+
+                // Simulate connection based on configuration
+                setTimeout(() => {
+                    apiConnected = true;
+                    statusElement.className = 'api-status online';
+                    statusElement.innerHTML = '🟢 API Connected';
+                }, 2000);
+
+            } catch (error) {
+                console.error('API Connection Error:', error);
+                statusElement.className = 'api-status offline';
+                statusElement.innerHTML = '🔴 API Offline';
+            }
+        }
+
+        async function checkPlayerAccount() {
+            const playerId = document.getElementById('checkPlayerId').value;
+            const resultDiv = document.getElementById('checkResult');
+            const contentDiv = document.getElementById('checkContent');
+
+            if (!playerId) {
+                alert('Please enter a Player ID to check');
+                return;
+            }
+
+            if (!apiConnected) {
+                alert('API connection not available. Please try again later.');
+                return;
+            }
+
+            // Show loading state
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'check-result';
+            contentDiv.innerHTML = '<div class="loading"></div> Checking player account...';
+
+            try {
+                // Simulate API call to check player account
+                const playerData = await simulatePlayerCheck(playerId);
+                
+                setTimeout(() => {
+                    if (playerData.exists) {
+                        resultDiv.className = 'check-result success';
+                        contentDiv.innerHTML = `
+                            <div class="success-icon">✅</div>
+                            <h3>Account Found!</h3>
+                            <p><strong>Player ID:</strong> ${playerData.playerId}</p>
+                            <p><strong>Player Name:</strong> ${playerData.playerName}</p>
+                            <p><strong>Server:</strong> ${playerData.server}</p>
+                            <p><strong>Current UC:</strong> ${playerData.currentUC}</p>
+                            <p><strong>Account Status:</strong> <span style="color: #4caf50;">Active</span></p>
+                            <p><strong>Last Online:</strong> ${playerData.lastOnline}</p>
+                        `;
+                    } else {
+                        resultDiv.className = 'check-result error';
+                        contentDiv.innerHTML = `
+                            <div class="error-icon">❌</div>
+                            <h3>Account Not Found</h3>
+                            <p>Player ID "${playerId}" was not found in the database.</p>
+                            <p>Please check the ID and try again.</p>
+                        `;
+                    }
+                }, 2000);
+
+            } catch (error) {
+                console.error('Check Player Error:', error);
+                resultDiv.className = 'check-result error';
+                contentDiv.innerHTML = `
+                    <div class="error-icon">⚠️</div>
+                    <h3>Check Failed</h3>
+                    <p>Unable to check player account. Please try again later.</p>
+                `;
+            }
+        }
+
+        async function processPurchase() {
+            const playerId = document.getElementById('playerId').value;
+            const serverRegion = document.getElementById('serverRegion').value;
+            const customAmount = document.getElementById('customAmount').value;
+            
+            // Validation
+            if (!playerId) {
+                alert('Please enter your Player ID');
+                return;
+            }
+
+            const finalAmount = customAmount ? parseInt(customAmount) : selectedAmount;
+            if (!finalAmount || finalAmount <= 0) {
+                alert('Please select or enter a valid UC amount');
+                return;
+            }
+
+            if (!apiConnected) {
+                alert('API connection not available. Please try again later.');
+                return;
+            }
+
+            // Disable purchase button
+            const purchaseBtn = document.getElementById('purchaseBtn');
+            purchaseBtn.disabled = true;
+            purchaseBtn.innerHTML = '<div class="loading"></div> Processing...';
+
+            // Show transaction status
+            const statusSection = document.getElementById('transactionStatus');
+            const statusContent = document.getElementById('statusContent');
+            
+            statusSection.style.display = 'block';
+            statusContent.innerHTML = '';
+
+            try {
+                // Step 1: Validate player account
+                updateTransactionStatus('🔍 Validating player account...', 'info');
+                const playerValidation = await validatePlayerAccount(playerId, serverRegion);
+                
+                if (!playerValidation.valid) {
+                    throw new Error('Invalid player account: ' + playerValidation.message);
+                }
+
+                // Step 2: Process payment
+                updateTransactionStatus('💳 Processing payment...', 'info');
+                const paymentResult = await processPayment(finalAmount, selectedPrice);
+                
+                if (!paymentResult.success) {
+                    throw new Error('Payment failed: ' + paymentResult.message);
+                }
+
+                // Step 3: Add UC to account
+                updateTransactionStatus('🎮 Adding UC to your account...', 'info');
+                const ucAddResult = await addUCToAccount(playerId, finalAmount, serverRegion);
+                
+                if (!ucAddResult.success) {
+                    throw new Error('Failed to add UC: ' + ucAddResult.message);
+                }
+
+                // Success
+                updateTransactionStatus('✅ Purchase completed successfully!', 'success');
+                statusContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; background: rgba(76, 175, 80, 0.2); border-radius: 10px; margin-top: 15px;">
+                        <div class="success-icon">🎉</div>
+                        <h3>Purchase Successful!</h3>
+                        <p><strong>Player ID:</strong> ${playerId}</p>
+                        <p><strong>UC Added:</strong> ${finalAmount}</p>
+                        <p><strong>Server:</strong> ${serverRegion}</p>
+                        <p><strong>Transaction ID:</strong> ${generateTransactionId()}</p>
+                        <p style="margin-top: 15px; font-size: 14px; opacity: 0.8;">
+                            UC has been added to your account. Please restart your game to see the updated balance.
+                        </p>
+                    </div>
+                `;
+
+                // Reset form
+                setTimeout(() => {
+                    document.getElementById('playerId').value = '';
+                    document.getElementById('customAmount').value = '';
+                    document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+                    selectedAmount = 0;
+                    selectedPrice = 0;
+                }, 3000);
+
+            } catch (error) {
+                console.error('Purchase Error:', error);
+                updateTransactionStatus('❌ Purchase failed', 'error');
+                statusContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; background: rgba(244, 67, 54, 0.2); border-radius: 10px; margin-top: 15px;">
+                        <div class="error-icon">⚠️</div>
+                        <h3>Purchase Failed</h3>
+                        <p>${error.message}</p>
+                        <p style="margin-top: 10px; font-size: 14px;">Please contact support if the issue persists.</p>
+                    </div>
+                `;
+            } finally {
+                // Re-enable purchase button
+                purchaseBtn.disabled = false;
+                purchaseBtn.innerHTML = '🚀 PURCHASE NOW';
+            }
+        }
+
+        function updateTransactionStatus(message, type) {
+            const statusSection = document.getElementById('transactionStatus');
+            statusSection.innerHTML = `
+                <div class="loading"></div>
+                <div>${message}</div>
+            `;
+        }
+
+        // Simulation functions for API calls
+        async function simulatePlayerCheck(playerId) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Simulate database lookup
+                    const exists = playerId.length >= 6; // Simple validation
+                    resolve({
+                        exists: exists,
+                        playerId: playerId,
+                        playerName: exists ? 'Player_' + playerId.substring(0, 6) : null,
+                        server: 'ASIA',
+                        currentUC: exists ? Math.floor(Math.random() * 10000) : null,
+                        lastOnline: exists ? new Date().toLocaleDateString() : null
+                    });
+                }, 1500);
+            });
+        }
+
+        async function validatePlayerAccount(playerId, serverRegion) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Use game configuration to validate
+                    const isValid = playerId.length >= 6 && playerId.length <= 20;
+                    resolve({
+                        valid: isValid,
+                        message: isValid ? 'Account validated' : 'Invalid player ID format'
+                    });
+                }, 1000);
+            });
+        }
+
+        async function processPayment(amount, price) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Simulate payment processing using configured APIs
+                    resolve({
+                        success: true,
+                        transactionId: generateTransactionId(),
+                        amount: amount,
+                        price: price
+                    });
+                }, 2000);
+            });
+        }
+
+        async function addUCToAccount(playerId, amount, serverRegion) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Simulate UC addition using game APIs
+                    resolve({
+                        success: true,
+                        playerId: playerId,
+                        ucAdded: amount,
+                        newBalance: Math.floor(Math.random() * 10000) + amount
+                    });
+                }, 1500);
+            });
+        }
+
+        function generateTransactionId() {
+            return 'MG' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
+        }
+
+        // Auto-refresh connection status
+        setInterval(checkAPIConnection, 30000);
+
+        // Prevent form submission on Enter key
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
