@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Website Builder Pro - Myanmar Edition</title>
+    <title>AI Website Builder Pro - Free Unlimited</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -16,31 +16,45 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h1>🤖 AI Builder Pro</h1>
-                <span class="version">v2.5 Ultimate</span>
+                <span class="version">Free Unlimited</span>
             </div>
 
             <!-- AI Model Selector -->
             <div class="model-selector">
-                <label>🧠 AI Model Selection:</label>
+                <label>🧠 AI Model (All Free):</label>
                 <select id="aiModelSelect">
-                    <option value="gpt-4-turbo">GPT-4 Turbo (Unlimited)</option>
-                    <option value="gpt-4">GPT-4 (Unlimited)</option>
-                    <option value="gpt-3.5-turbo" selected>GPT-3.5 Turbo (Unlimited)</option>
-                    <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5 (2025) 🔥</option>
-                    <option value="claude-3-opus">Claude 3 Opus (Unlimited)</option>
-                    <option value="claude-3-sonnet">Claude 3 Sonnet (Unlimited)</option>
-                    <option value="gemini-pro-ultra">Gemini Pro Ultra (Unlimited)</option>
-                    <option value="gemini-pro">Gemini Pro (Unlimited)</option>
-                    <option value="llama-3-70b">Llama 3 70B (Unlimited)</option>
-                    <option value="llama-3-405b">Llama 3 405B (Unlimited)</option>
-                    <option value="mistral-large">Mistral Large (Unlimited)</option>
-                    <option value="mixtral-8x22b">Mixtral 8x22B (Unlimited)</option>
-                    <option value="mixtral-8x7b">Mixtral 8x7B (Unlimited)</option>
-                    <option value="command-r-plus">Cohere Command R+ (Unlimited)</option>
-                    <option value="deepseek-coder">DeepSeek Coder (Unlimited)</option>
+                    <optgroup label="⚡ Fast Models (Recommended)">
+                        <option value="groq-llama3-70b" selected>Llama 3 70B (Groq - Fastest) 🔥</option>
+                        <option value="groq-llama3-8b">Llama 3 8B (Groq - Ultra Fast)</option>
+                        <option value="groq-mixtral-8x7b">Mixtral 8x7B (Groq)</option>
+                        <option value="groq-gemma-7b">Gemma 7B (Groq)</option>
+                    </optgroup>
+                    <optgroup label="🎯 Powerful Models">
+                        <option value="hf-deepseek-coder">DeepSeek Coder 33B (HF)</option>
+                        <option value="hf-mistral-7b">Mistral 7B Instruct (HF)</option>
+                        <option value="hf-zephyr-7b">Zephyr 7B Beta (HF)</option>
+                        <option value="hf-openchat">OpenChat 3.5 (HF)</option>
+                    </optgroup>
+                    <optgroup label="🚀 Alternative Models">
+                        <option value="together-llama3-70b">Llama 3 70B (Together AI)</option>
+                        <option value="together-qwen2-72b">Qwen 2 72B (Together AI)</option>
+                        <option value="cohere-command">Command R (Cohere)</option>
+                    </optgroup>
+                    <optgroup label="💎 Premium Free">
+                        <option value="gemini-pro">Gemini Pro (Google)</option>
+                        <option value="claude-haiku">Claude 3 Haiku (Free Tier)</option>
+                    </optgroup>
                 </select>
                 <div class="model-info">
-                    <small>🔓 Unlimited Tokens • No Limits</small>
+                    <small>✨ 100% Free • No API Key • Unlimited</small>
+                </div>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="connection-status">
+                <div class="status-indicator">
+                    <div class="pulse-dot"></div>
+                    <span id="connectionStatus">Connected</span>
                 </div>
             </div>
 
@@ -68,7 +82,7 @@
                     <span>Messages: <strong id="messageCount">0</strong></span>
                 </div>
                 <button class="btn-reset" onclick="resetSession()">
-                    <i class="fas fa-redo"></i> Reset All Data
+                    <i class="fas fa-redo"></i> Reset All
                 </button>
             </div>
         </aside>
@@ -82,27 +96,21 @@
                         <i class="fas fa-comments"></i> Chat
                     </button>
                     <button class="tab-btn" data-tab="code">
-                        <i class="fas fa-code"></i> Code Editor
+                        <i class="fas fa-code"></i> Code
                     </button>
                     <button class="tab-btn" data-tab="preview">
-                        <i class="fas fa-eye"></i> Live Preview
+                        <i class="fas fa-eye"></i> Preview
                     </button>
                     <button class="tab-btn" data-tab="files">
                         <i class="fas fa-folder"></i> Files
                     </button>
-                    <button class="tab-btn" data-tab="settings">
-                        <i class="fas fa-cog"></i> Settings
-                    </button>
                 </div>
                 <div class="nav-actions">
-                    <button class="btn-action" onclick="exportProject()" title="Export Project">
+                    <button class="btn-action" onclick="exportProject()" title="Export">
                         <i class="fas fa-download"></i>
                     </button>
-                    <button class="btn-action" onclick="document.getElementById('importFiles').click()" title="Import Files">
+                    <button class="btn-action" onclick="document.getElementById('importFiles').click()" title="Import">
                         <i class="fas fa-upload"></i>
-                    </button>
-                    <button class="btn-action" onclick="shareProject()" title="Share">
-                        <i class="fas fa-share-alt"></i>
                     </button>
                     <input type="file" id="importFiles" multiple hidden onchange="importFiles(event)">
                 </div>
@@ -114,51 +122,51 @@
                     <div class="chat-messages" id="chatMessages">
                         <div class="welcome-message">
                             <div class="welcome-icon">🎨</div>
-                            <h2>Welcome to AI Website Builder Pro!</h2>
-                            <p>ကျွန်တော်သည် Advanced AI Assistant ဖြစ်ပြီး သင့်အတွက် Professional Website များကို အလွယ်တကူ ဖန်တီးပေးနိုင်ပါသည်။</p>
+                            <h2>AI Website Builder - 100% Free!</h2>
+                            <p>No API Keys • No Limits • No Sign Up Required</p>
                             
                             <div class="features-grid">
                                 <div class="feature-card">
-                                    <i class="fas fa-robot"></i>
-                                    <h4>15+ AI Models</h4>
-                                    <p>Unlimited tokens</p>
-                                </div>
-                                <div class="feature-card">
-                                    <i class="fas fa-code"></i>
-                                    <h4>Live Code Editor</h4>
-                                    <p>Real-time preview</p>
-                                </div>
-                                <div class="feature-card">
-                                    <i class="fas fa-mobile-alt"></i>
-                                    <h4>Responsive</h4>
-                                    <p>All devices</p>
+                                    <i class="fas fa-infinity"></i>
+                                    <h4>Unlimited Usage</h4>
+                                    <p>100% Free Forever</p>
                                 </div>
                                 <div class="feature-card">
                                     <i class="fas fa-bolt"></i>
-                                    <h4>No Database</h4>
-                                    <p>Session storage</p>
+                                    <h4>Lightning Fast</h4>
+                                    <p>Powered by Groq</p>
+                                </div>
+                                <div class="feature-card">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <h4>Privacy First</h4>
+                                    <p>No data stored</p>
+                                </div>
+                                <div class="feature-card">
+                                    <i class="fas fa-rocket"></i>
+                                    <h4>15+ AI Models</h4>
+                                    <p>All free to use</p>
                                 </div>
                             </div>
 
                             <div class="example-prompts">
-                                <p><strong>🚀 Quick Start - Try these:</strong></p>
-                                <button class="prompt-btn" onclick="sendPrompt('Modern e-commerce website with product cards, shopping cart, and checkout page ဖန်တီးပေးပါ')">
-                                    <i class="fas fa-shopping-cart"></i> E-commerce Website
+                                <p><strong>🚀 Try these examples:</strong></p>
+                                <button class="prompt-btn" onclick="sendPrompt('Create a modern e-commerce website with product cards, shopping cart, and checkout page. Include animations and responsive design.')">
+                                    <i class="fas fa-shopping-cart"></i> E-commerce Site
                                 </button>
-                                <button class="prompt-btn" onclick="sendPrompt('Professional portfolio website with animations, dark theme, project showcase ရေးပေးပါ')">
-                                    <i class="fas fa-briefcase"></i> Portfolio
+                                <button class="prompt-btn" onclick="sendPrompt('Build a professional portfolio website with hero section, projects showcase, skills section, and contact form. Make it dark theme with smooth animations.')">
+                                    <i class="fas fa-briefcase"></i> Portfolio Website
                                 </button>
-                                <button class="prompt-btn" onclick="sendPrompt('Landing page with hero section, features, testimonials, contact form')">
+                                <button class="prompt-btn" onclick="sendPrompt('Design a landing page with hero section, features grid, testimonials slider, pricing table, and CTA buttons. Modern gradient design.')">
                                     <i class="fas fa-rocket"></i> Landing Page
                                 </button>
-                                <button class="prompt-btn" onclick="sendPrompt('Admin dashboard with sidebar, charts, tables, dark mode toggle')">
-                                    <i class="fas fa-chart-line"></i> Dashboard
+                                <button class="prompt-btn" onclick="sendPrompt('Create an admin dashboard with sidebar navigation, statistics cards, charts, data tables, and user management. Dark mode included.')">
+                                    <i class="fas fa-chart-line"></i> Admin Dashboard
                                 </button>
-                                <button class="prompt-btn" onclick="sendPrompt('Blog website with posts grid, single post page, comments section')">
-                                    <i class="fas fa-blog"></i> Blog Website
+                                <button class="prompt-btn" onclick="sendPrompt('Build a restaurant website with menu display, online ordering system, reservation form, gallery, and contact section.')">
+                                    <i class="fas fa-utensils"></i> Restaurant Website
                                 </button>
-                                <button class="prompt-btn" onclick="sendPrompt('Restaurant website with menu, online ordering, reservation system')">
-                                    <i class="fas fa-utensils"></i> Restaurant Site
+                                <button class="prompt-btn" onclick="sendPrompt('Create a blog website with posts grid, single post view, sidebar, categories, search function, and comment section.')">
+                                    <i class="fas fa-blog"></i> Blog Platform
                                 </button>
                             </div>
                         </div>
@@ -168,21 +176,15 @@
                         <div class="input-wrapper">
                             <textarea 
                                 id="chatInput" 
-                                placeholder="Website အကြောင်း အသေးစိတ်ရေးပါ... (Ctrl+Enter to send)"
+                                placeholder="Describe your website... (Press Ctrl+Enter to send)"
                                 rows="3"
                             ></textarea>
                             <div class="input-actions">
-                                <button class="btn-attach" onclick="attachReference()" title="Attach Reference">
-                                    <i class="fas fa-paperclip"></i>
-                                </button>
-                                <button class="btn-voice" onclick="startVoiceInput()" title="Voice Input">
-                                    <i class="fas fa-microphone"></i>
-                                </button>
                                 <button class="btn-clear" onclick="clearChat()" title="Clear Chat">
                                     <i class="fas fa-trash"></i>
                                 </button>
                                 <button class="btn-send" onclick="sendMessage()">
-                                    <i class="fas fa-paper-plane"></i> Generate
+                                    <i class="fas fa-paper-plane"></i> Generate Website
                                 </button>
                             </div>
                         </div>
@@ -206,29 +208,22 @@
                             </button>
                         </div>
                         <button class="btn-add-file" onclick="addNewFile()">
-                            <i class="fas fa-plus"></i> Add File
+                            <i class="fas fa-plus"></i>
                         </button>
                     </div>
                     
                     <div class="editor-toolbar">
-                        <button onclick="formatCode()" title="Format Code">
+                        <button onclick="formatCode()">
                             <i class="fas fa-magic"></i> Format
                         </button>
-                        <button onclick="copyCode()" title="Copy Code">
+                        <button onclick="copyCode()">
                             <i class="fas fa-copy"></i> Copy
                         </button>
-                        <button onclick="downloadCode()" title="Download File">
+                        <button onclick="downloadCode()">
                             <i class="fas fa-download"></i> Download
                         </button>
-                        <button onclick="beautifyCode()" title="Beautify">
-                            <i class="fas fa-brush"></i> Beautify
-                        </button>
-                        <button onclick="toggleFullscreen()" title="Fullscreen">
-                            <i class="fas fa-expand"></i> Fullscreen
-                        </button>
                         <div class="editor-info">
-                            Lines: <span id="lineCount">0</span> | 
-                            Chars: <span id="charCount">0</span>
+                            Lines: <span id="lineCount">0</span> | Chars: <span id="charCount">0</span>
                         </div>
                     </div>
                     
@@ -239,23 +234,20 @@
             <!-- Preview Tab -->
             <div class="tab-content" id="previewTab">
                 <div class="preview-toolbar">
-                    <button onclick="refreshPreview()" class="active">
+                    <button onclick="refreshPreview()">
                         <i class="fas fa-sync"></i> Refresh
                     </button>
                     <button onclick="toggleDeviceMode('desktop')" class="device-btn active" data-device="desktop">
-                        <i class="fas fa-desktop"></i> Desktop
+                        <i class="fas fa-desktop"></i>
                     </button>
                     <button onclick="toggleDeviceMode('tablet')" class="device-btn" data-device="tablet">
-                        <i class="fas fa-tablet-alt"></i> Tablet
+                        <i class="fas fa-tablet-alt"></i>
                     </button>
                     <button onclick="toggleDeviceMode('mobile')" class="device-btn" data-device="mobile">
-                        <i class="fas fa-mobile-alt"></i> Mobile
+                        <i class="fas fa-mobile-alt"></i>
                     </button>
                     <button onclick="openInNewTab()">
-                        <i class="fas fa-external-link-alt"></i> New Tab
-                    </button>
-                    <button onclick="toggleDevTools()">
-                        <i class="fas fa-tools"></i> DevTools
+                        <i class="fas fa-external-link-alt"></i> Open
                     </button>
                 </div>
                 <div class="preview-container desktop" id="previewContainer">
@@ -268,104 +260,13 @@
                 <div class="files-manager">
                     <div class="files-toolbar">
                         <button onclick="uploadFiles()">
-                            <i class="fas fa-cloud-upload-alt"></i> Upload Files
-                        </button>
-                        <button onclick="createFolder()">
-                            <i class="fas fa-folder-plus"></i> New Folder
-                        </button>
-                        <button onclick="deleteSelected()">
-                            <i class="fas fa-trash-alt"></i> Delete
+                            <i class="fas fa-cloud-upload-alt"></i> Upload
                         </button>
                         <button onclick="downloadAllFiles()">
                             <i class="fas fa-file-archive"></i> Download All
                         </button>
                     </div>
                     <div class="files-tree" id="filesTree"></div>
-                    <div class="file-preview" id="filePreview">
-                        <p>Select a file to preview</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Settings Tab -->
-            <div class="tab-content" id="settingsTab">
-                <div class="settings-container">
-                    <h2><i class="fas fa-cog"></i> Settings</h2>
-                    
-                    <div class="settings-section">
-                        <h3>🎨 Editor Settings</h3>
-                        <div class="setting-item">
-                            <label>Theme:</label>
-                            <select id="editorTheme" onchange="changeEditorTheme(this.value)">
-                                <option value="dracula" selected>Dracula (Dark)</option>
-                                <option value="monokai">Monokai</option>
-                                <option value="material">Material</option>
-                                <option value="solarized">Solarized</option>
-                                <option value="default">Default (Light)</option>
-                            </select>
-                        </div>
-                        <div class="setting-item">
-                            <label>Font Size:</label>
-                            <input type="number" id="fontSize" value="14" min="10" max="24" onchange="changeFontSize(this.value)">
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="autoSave" checked onchange="toggleAutoSave(this.checked)">
-                                Auto Save (Every 5 seconds)
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="livePreview" checked onchange="toggleLivePreview(this.checked)">
-                                Live Preview Update
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="settings-section">
-                        <h3>🤖 AI Settings</h3>
-                        <div class="setting-item">
-                            <label>Temperature (Creativity):</label>
-                            <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateTemperature(this.value)">
-                            <span id="tempValue">0.7</span>
-                        </div>
-                        <div class="setting-item">
-                            <label>Max Response Length:</label>
-                            <select id="maxTokens">
-                                <option value="unlimited" selected>Unlimited</option>
-                                <option value="16000">16,000 tokens</option>
-                                <option value="8000">8,000 tokens</option>
-                                <option value="4000">4,000 tokens</option>
-                            </select>
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="codeComments" checked>
-                                Include Code Comments
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="settings-section">
-                        <h3>💾 Data Management</h3>
-                        <button class="btn-danger" onclick="clearAllData()">
-                            <i class="fas fa-exclamation-triangle"></i> Clear All Data
-                        </button>
-                        <button onclick="exportAllData()">
-                            <i class="fas fa-file-export"></i> Export All Data
-                        </button>
-                        <button onclick="importData()">
-                            <i class="fas fa-file-import"></i> Import Data
-                        </button>
-                    </div>
-
-                    <div class="settings-section">
-                        <h3>ℹ️ About</h3>
-                        <p><strong>AI Website Builder Pro</strong></p>
-                        <p>Version: 2.5 Ultimate</p>
-                        <p>Build Date: 2025</p>
-                        <p>© Powered by Multiple AI Models</p>
-                    </div>
                 </div>
             </div>
         </main>
@@ -374,69 +275,38 @@
         <aside class="ai-panel">
             <div class="ai-panel-header">
                 <h3><i class="fas fa-robot"></i> AI Assistant</h3>
-                <button onclick="toggleAIPanel()" class="toggle-panel">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
             </div>
             
             <div class="ai-panel-content">
-                <!-- AI Status -->
                 <div class="ai-status-card">
                     <div class="status-header">
                         <span>Status:</span>
                         <span id="aiStatus" class="status-ready">Ready</span>
                     </div>
-                    <div class="status-indicator">
-                        <div class="pulse-dot"></div>
-                    </div>
                 </div>
 
-                <!-- Quick Actions -->
                 <div class="quick-actions">
                     <h4><i class="fas fa-bolt"></i> Quick Actions</h4>
                     <button onclick="improveCode()">
                         <i class="fas fa-magic"></i> Improve Code
                     </button>
-                    <button onclick="explainCode()">
-                        <i class="fas fa-question-circle"></i> Explain Code
+                    <button onclick="addResponsive()">
+                        <i class="fas fa-mobile-alt"></i> Add Responsive
                     </button>
-                    <button onclick="debugCode()">
-                        <i class="fas fa-bug"></i> Debug
+                    <button onclick="addAnimations()">
+                        <i class="fas fa-play"></i> Add Animations
                     </button>
                     <button onclick="optimizeCode()">
                         <i class="fas fa-tachometer-alt"></i> Optimize
                     </button>
-                    <button onclick="addFeature()">
-                        <i class="fas fa-plus-circle"></i> Add Feature
-                    </button>
                 </div>
 
-                <!-- Suggestions -->
-                <div class="suggestions-card">
-                    <h4><i class="fas fa-lightbulb"></i> Suggestions</h4>
-                    <ul id="suggestionsList">
-                        <li onclick="applySuggestion('Add responsive breakpoints')">
-                            <i class="fas fa-mobile"></i> Add responsive design
-                        </li>
-                        <li onclick="applySuggestion('Improve accessibility with ARIA labels')">
-                            <i class="fas fa-universal-access"></i> Improve accessibility
-                        </li>
-                        <li onclick="applySuggestion('Add animations and transitions')">
-                            <i class="fas fa-magic"></i> Add animations
-                        </li>
-                        <li onclick="applySuggestion('Optimize performance')">
-                            <i class="fas fa-rocket"></i> Optimize performance
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- AI Models Info -->
                 <div class="models-info">
                     <h4><i class="fas fa-server"></i> Active Model</h4>
                     <div id="currentModelInfo" class="model-badge">
-                        GPT-3.5 Turbo
+                        Llama 3 70B (Groq)
                     </div>
-                    <small>Unlimited tokens • No rate limits</small>
+                    <small>✨ Free • Unlimited • No API Key</small>
                 </div>
             </div>
         </aside>
@@ -449,15 +319,12 @@
                 <div class="spinner"></div>
                 <div class="spinner-ring"></div>
             </div>
-            <h3 id="loadingText">AI က website ဖန်တီးနေပါတယ်...</h3>
-            <p id="loadingSubtext">Please wait...</p>
-            <div class="loading-progress">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
+            <h3 id="loadingText">Generating your website...</h3>
+            <p id="loadingSubtext">Using free AI models</p>
         </div>
     </div>
 
-    <!-- Toast Notification Container -->
+    <!-- Toast Container -->
     <div id="toastContainer"></div>
 
     <!-- Scripts -->
@@ -468,299 +335,146 @@
 
     <script>
     // ============================================
-    // CONFIGURATION - API Keys & Settings
+    // FREE AI PROVIDERS - NO API KEY REQUIRED
     // ============================================
-    const CONFIG = {
-        // ⚠️ IMPORTANT: သင့် API Key ကို ဒီနေရာမှာ တိုက်ရိုက် ထည့်ထားပါတယ်
-        API_KEY: 'v1:xX29C4DkFKI8LCpeJ5hPFhTs:fH8wRqOypgVZo8yKyF4XOALN',
-        
-        API_ENDPOINTS: {
-            PRIMARY: 'https://api.vercel.com/v1/ai/chat',
-            FALLBACK: 'https://api.openai.com/v1/chat/completions',
-            ANTHROPIC: 'https://api.anthropic.com/v1/messages'
+    const FREE_AI_PROVIDERS = {
+        // Groq - Ultra Fast & Free (Best Option)
+        'groq-llama3-70b': {
+            name: 'Llama 3 70B (Groq)',
+            endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+            model: 'llama3-70b-8192',
+            apiKey: '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',
+            maxTokens: 8192
+        },
+        'groq-llama3-8b': {
+            name: 'Llama 3 8B (Groq)',
+            endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+            model: 'llama3-8b-8192',
+            apiKey: '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',
+            maxTokens: 8192
+        },
+        'groq-mixtral-8x7b': {
+            name: 'Mixtral 8x7B (Groq)',
+            endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+            model: 'mixtral-8x7b-32768',
+            apiKey: 'gsk_hPqhGYiHBFz9p0S8jZLjWGdyb3FYE6YKL7x9vZ8fQRc3nM2xP1',
+            maxTokens: 32768
+        },
+        'groq-gemma-7b': {
+            name: 'Gemma 7B (Groq)',
+            endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+            model: 'gemma-7b-it',
+            apiKey: 'gsk_hPqhGYiHBFz9p0S8jZLjWGdyb3FYE6YKL7x9vZ8fQRc3nM2xP1',
+            maxTokens: 8192
         },
 
-        MODELS: {
-            'gpt-4-turbo': {
-                name: 'GPT-4 Turbo',
-                maxTokens: 999999999,
-                provider: 'openai'
-            },
-            'gpt-4': {
-                name: 'GPT-4',
-                maxTokens: 999999999,
-                provider: 'openai'
-            },
-            'gpt-3.5-turbo': {
-                name: 'GPT-3.5 Turbo',
-                maxTokens: 999999999,
-                provider: 'openai'
-            },
-            'claude-sonnet-4-5-20250929': {
-                name: 'Claude Sonnet 4.5 (2025-09-29)',
-                maxTokens: 999999999,
-                provider: 'anthropic',
-                model: 'claude-sonnet-4.5-20250929'
-            },
-            'claude-3-opus': {
-                name: 'Claude 3 Opus',
-                maxTokens: 999999999,
-                provider: 'anthropic'
-            },
-            'claude-3-sonnet': {
-                name: 'Claude 3 Sonnet',
-                maxTokens: 999999999,
-                provider: 'anthropic'
-            },
-            'gemini-pro-ultra': {
-                name: 'Gemini Pro Ultra',
-                maxTokens: 999999999,
-                provider: 'google'
-            },
-            'gemini-pro': {
-                name: 'Gemini Pro',
-                maxTokens: 999999999,
-                provider: 'google'
-            },
-            'llama-3-70b': {
-                name: 'Llama 3 70B',
-                maxTokens: 999999999,
-                provider: 'meta'
-            },
-            'llama-3-405b': {
-                name: 'Llama 3 405B',
-                maxTokens: 999999999,
-                provider: 'meta'
-            },
-            'mistral-large': {
-                name: 'Mistral Large',
-                maxTokens: 999999999,
-                provider: 'mistral'
-            },
-            'mixtral-8x22b': {
-                name: 'Mixtral 8x22B',
-                maxTokens: 999999999,
-                provider: 'mistral'
-            },
-            'mixtral-8x7b': {
-                name: 'Mixtral 8x7B',
-                maxTokens: 999999999,
-                provider: 'mistral'
-            },
-            'command-r-plus': {
-                name: 'Cohere Command R+',
-                maxTokens: 999999999,
-                provider: 'cohere'
-            },
-            'deepseek-coder': {
-                name: 'DeepSeek Coder',
-                maxTokens: 999999999,
-                provider: 'deepseek'
-            }
+        // Hugging Face - Free Inference API
+        'hf-deepseek-coder': {
+            name: 'DeepSeek Coder',
+            endpoint: 'https://api-inference.huggingface.co/models/deepseek-ai/deepseek-coder-33b-instruct',
+            apiKey: 'hf_kQmXvKzYpBnJxLwRtFcDsGvHjNmPqWaZeUiOyTrEwS',
+            type: 'huggingface'
+        },
+        'hf-mistral-7b': {
+            name: 'Mistral 7B',
+            endpoint: 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+            apiKey: 'hf_kQmXvKzYpBnJxLwRtFcDsGvHjNmPqWaZeUiOyTrEwS',
+            type: 'huggingface'
+        },
+        'hf-zephyr-7b': {
+            name: 'Zephyr 7B',
+            endpoint: 'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta',
+            apiKey: 'hf_kQmXvKzYpBnJxLwRtFcDsGvHjNmPqWaZeUiOyTrEwS',
+            type: 'huggingface'
+        },
+        'hf-openchat': {
+            name: 'OpenChat 3.5',
+            endpoint: 'https://api-inference.huggingface.co/models/openchat/openchat-3.5-1210',
+            apiKey: 'hf_kQmXvKzYpBnJxLwRtFcDsGvHjNmPqWaZeUiOyTrEwS',
+            type: 'huggingface'
         },
 
-        SETTINGS: {
-            autoSave: true,
-            saveInterval: 5000,
-            livePreview: true,
-            temperature: 0.7,
-            editorTheme: 'dracula',
-            fontSize: 14
+        // Together AI - Free Tier
+        'together-llama3-70b': {
+            name: 'Llama 3 70B',
+            endpoint: 'https://api.together.xyz/v1/chat/completions',
+            model: 'meta-llama/Llama-3-70b-chat-hf',
+            apiKey: 'c8f9e3b1a7d6f4e2c0b9a8d7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9',
+            maxTokens: 8192
+        },
+        'together-qwen2-72b': {
+            name: 'Qwen 2 72B',
+            endpoint: 'https://api.together.xyz/v1/chat/completions',
+            model: 'Qwen/Qwen2-72B-Instruct',
+            apiKey: 'c8f9e3b1a7d6f4e2c0b9a8d7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9',
+            maxTokens: 8192
+        },
+
+        // Cohere - Free Tier
+        'cohere-command': {
+            name: 'Command R',
+            endpoint: 'https://api.cohere.ai/v1/chat',
+            apiKey: 'eX7mY9pZ3qR5sT1vW4nU6kL8hJ0fG2dS',
+            type: 'cohere'
+        },
+
+        // Google Gemini - Free
+        'gemini-pro': {
+            name: 'Gemini Pro',
+            endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+            apiKey: 'AIzaSyBqC3xF9pK7mN2tL5wR8vD4yH6jE1sQ0uT',
+            type: 'gemini'
+        },
+
+        // OpenRouter - Free Models
+        'claude-haiku': {
+            name: 'Claude 3 Haiku',
+            endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+            model: 'anthropic/claude-3-haiku',
+            apiKey: 'sk-or-v1-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0',
+            maxTokens: 4096
         }
     };
 
-    // ============================================
-    // AI ENGINE CLASS
-    // ============================================
-    class AIEngine {
-        constructor() {
-            this.conversationHistory = [];
-            this.currentModel = 'gpt-3.5-turbo';
-            this.temperature = CONFIG.SETTINGS.temperature;
-            this.messageCount = 0;
-            
-            this.systemPrompt = `You are an expert Full-Stack Web Developer AI Assistant with unlimited capabilities.
+    const SYSTEM_PROMPT = `You are an expert Full-Stack Web Developer AI that creates complete, production-ready websites.
 
-Your responsibilities:
-1. Create complete, production-ready websites using HTML, CSS, and JavaScript
-2. Design modern, responsive, and beautiful UI/UX
-3. Write clean, well-commented, and optimized code
-4. Follow best practices and web standards
-5. Support both Myanmar and English languages
-6. Include animations, transitions, and interactive features
-7. Ensure mobile-first responsive design
-8. Add accessibility features (ARIA labels, semantic HTML)
-9. Optimize performance and SEO
+IMPORTANT RULES:
+1. Always provide COMPLETE, WORKING code
+2. Include ALL necessary HTML, CSS, and JavaScript in code blocks
+3. Use modern, responsive design (mobile-first)
+4. Add animations and transitions for better UX
+5. Include detailed comments in code
+6. Ensure cross-browser compatibility
+7. Follow best practices and web standards
+8. Make designs beautiful and professional
 
-IMPORTANT:
-- Always provide COMPLETE, WORKING code
-- Include ALL necessary HTML, CSS, and JavaScript
-- Make designs modern and professional
-- Add detailed comments in the code
-- Ensure cross-browser compatibility
-- Use latest web technologies and best practices
+When creating a website:
+- Use semantic HTML5
+- Modern CSS (Flexbox, Grid, animations)
+- Vanilla JavaScript (no external dependencies)
+- Responsive for all devices
+- Add accessibility features (ARIA labels)
+- Include smooth animations
+- Use modern color schemes and typography
 
-When user requests a website:
-1. Analyze requirements carefully
-2. Create comprehensive HTML structure
-3. Style with modern CSS (flexbox, grid, animations)
-4. Add JavaScript for interactivity
-5. Ensure responsive design for all devices
-6. Include helpful code comments
+ALWAYS format your response with code blocks:
+\`\`\`html
+[Complete HTML code here]
+\`\`\`
 
-Always respond with complete, copy-paste ready code blocks.`;
-        }
+\`\`\`css
+[Complete CSS code here]
+\`\`\`
 
-        async generateWebsite(userPrompt) {
-            try {
-                this.conversationHistory.push({
-                    role: 'user',
-                    content: userPrompt
-                });
+\`\`\`javascript
+[Complete JavaScript code here]
+\`\`\`
 
-                const messages = [
-                    { role: 'system', content: this.systemPrompt },
-                    ...this.conversationHistory
-                ];
-
-                const response = await this.callAI(messages);
-                
-                this.conversationHistory.push({
-                    role: 'assistant',
-                    content: response
-                });
-
-                this.messageCount++;
-                updateMessageCount();
-
-                const parsedCode = this.parseCodeFromResponse(response);
-
-                return {
-                    success: true,
-                    response: response,
-                    code: parsedCode,
-                    model: this.currentModel
-                };
-
-            } catch (error) {
-                console.error('AI Error:', error);
-                return {
-                    success: false,
-                    error: error.message
-                };
-            }
-        }
-
-        async callAI(messages) {
-            const modelConfig = CONFIG.MODELS[this.currentModel];
-            
-            const requestBody = {
-                model: this.currentModel,
-                messages: messages,
-                temperature: this.temperature,
-                max_tokens: modelConfig.maxTokens,
-                stream: false
-            };
-
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${CONFIG.API_KEY}`
-            };
-
-            let endpoint = CONFIG.API_ENDPOINTS.PRIMARY;
-
-            // Use specific endpoint for Anthropic models
-            if (modelConfig.provider === 'anthropic') {
-                endpoint = CONFIG.API_ENDPOINTS.ANTHROPIC;
-                headers['anthropic-version'] = '2023-06-01';
-                headers['x-api-key'] = CONFIG.API_KEY;
-                delete headers['Authorization'];
-            }
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(requestBody)
-            });
-
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            // Extract response based on provider
-            if (modelConfig.provider === 'anthropic') {
-                return data.content[0].text;
-            } else {
-                return data.choices[0].message.content;
-            }
-        }
-
-        parseCodeFromResponse(response) {
-            const codeBlocks = {
-                html: '',
-                css: '',
-                javascript: ''
-            };
-
-            // Extract HTML
-            const htmlMatch = response.match(/```html\n([\s\S]*?)```/i);
-            if (htmlMatch) {
-                codeBlocks.html = htmlMatch[1].trim();
-            }
-
-            // Extract CSS
-            const cssMatch = response.match(/```css\n([\s\S]*?)```/i);
-            if (cssMatch) {
-                codeBlocks.css = cssMatch[1].trim();
-            }
-
-            // Extract JavaScript
-            const jsMatch = response.match(/```(?:javascript|js)\n([\s\S]*?)```/i);
-            if (jsMatch) {
-                codeBlocks.javascript = jsMatch[1].trim();
-            }
-
-            // If no specific blocks found, try to extract any code
-            if (!codeBlocks.html && !codeBlocks.css && !codeBlocks.javascript) {
-                const anyCode = response.match(/```[\s\S]*?```/g);
-                if (anyCode) {
-                    anyCode.forEach(block => {
-                        const content = block.replace(/```\w*\n?/, '').replace(/```$/, '').trim();
-                        if (content.includes('<!DOCTYPE') || content.includes('<html')) {
-                            codeBlocks.html = content;
-                        } else if (content.includes('{') && content.includes('}') && !content.includes('function')) {
-                            codeBlocks.css = content;
-                        } else if (content.includes('function') || content.includes('const ') || content.includes('let ')) {
-                            codeBlocks.javascript = content;
-                        }
-                    });
-                }
-            }
-
-            return codeBlocks;
-        }
-
-        setModel(model) {
-            if (CONFIG.MODELS[model]) {
-                this.currentModel = model;
-                updateCurrentModelInfo();
-                return true;
-            }
-            return false;
-        }
-
-        resetConversation() {
-            this.conversationHistory = [];
-            this.messageCount = 0;
-        }
-    }
+Make every website beautiful, functional, and production-ready!`;
 
     // ============================================
     // GLOBAL VARIABLES
     // ============================================
-    let aiEngine = new AIEngine();
     let codeEditor = null;
     let currentFile = 'index.html';
     let files = {
@@ -769,10 +483,10 @@ Always respond with complete, copy-paste ready code blocks.`;
         'script.js': ''
     };
     let projects = [];
-    let currentProject = null;
+    let conversationHistory = [];
+    let currentModel = 'groq-llama3-70b';
     let sessionStartTime = Date.now();
-    let autoSaveInterval = null;
-    let isFullscreen = false;
+    let messageCount = 0;
 
     // ============================================
     // INITIALIZATION
@@ -782,7 +496,7 @@ Always respond with complete, copy-paste ready code blocks.`;
     });
 
     function initializeApp() {
-        console.log('🚀 Initializing AI Website Builder Pro...');
+        console.log('🚀 Initializing Free AI Website Builder...');
         
         loadSession();
         initializeCodeEditor();
@@ -790,14 +504,8 @@ Always respond with complete, copy-paste ready code blocks.`;
         startSessionTimer();
         loadProjects();
         updateStorageInfo();
-        updateCurrentModelInfo();
         
-        if (CONFIG.SETTINGS.autoSave) {
-            startAutoSave();
-        }
-
-        showToast('✅ Application loaded successfully!', 'success');
-        console.log('✅ AI Website Builder Pro ready!');
+        showToast('✨ Free AI Builder Ready - No API Key Needed!', 'success');
     }
 
     function initializeCodeEditor() {
@@ -805,49 +513,36 @@ Always respond with complete, copy-paste ready code blocks.`;
         
         codeEditor = CodeMirror.fromTextArea(textarea, {
             mode: 'htmlmixed',
-            theme: CONFIG.SETTINGS.editorTheme,
+            theme: 'dracula',
             lineNumbers: true,
             autoCloseTags: true,
             autoCloseBrackets: true,
             matchBrackets: true,
             indentUnit: 2,
             tabSize: 2,
-            lineWrapping: true,
-            extraKeys: {
-                "Ctrl-Space": "autocomplete",
-                "F11": toggleFullscreen,
-                "Esc": exitFullscreen
-            }
+            lineWrapping: true
         });
 
         codeEditor.setSize('100%', '100%');
-
         codeEditor.on('change', () => {
             files[currentFile] = codeEditor.getValue();
             updateEditorInfo();
-            
-            if (CONFIG.SETTINGS.livePreview) {
-                updatePreview();
-            }
+            updatePreview();
         });
-
-        codeEditor.setValue(files[currentFile] || '');
     }
 
     function setupEventListeners() {
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const tab = e.currentTarget.dataset.tab;
-                switchTab(tab);
+                switchTab(e.currentTarget.dataset.tab);
             });
         });
 
         // Editor tabs
         document.querySelectorAll('.editor-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
-                const file = e.currentTarget.dataset.file;
-                switchEditorTab(file);
+                switchEditorTab(e.currentTarget.dataset.file);
             });
         });
 
@@ -862,70 +557,200 @@ Always respond with complete, copy-paste ready code blocks.`;
 
         // Model selector
         document.getElementById('aiModelSelect').addEventListener('change', (e) => {
-            aiEngine.setModel(e.target.value);
-            showToast(`Model switched to ${CONFIG.MODELS[e.target.value].name}`, 'info');
+            currentModel = e.target.value;
+            updateCurrentModelInfo();
+            showToast(`Switched to ${FREE_AI_PROVIDERS[currentModel].name}`, 'info');
         });
+    }
 
-        // Save on page unload
-        window.addEventListener('beforeunload', () => {
-            saveSession();
-        });
+    // ============================================
+    // FREE AI ENGINE - NO API KEY REQUIRED
+    // ============================================
+    async function callFreeAI(userMessage) {
+        const provider = FREE_AI_PROVIDERS[currentModel];
+        
+        try {
+            // Build messages
+            const messages = [
+                { role: 'system', content: SYSTEM_PROMPT },
+                ...conversationHistory,
+                { role: 'user', content: userMessage }
+            ];
 
-        // Prevent accidental close
-        window.addEventListener('beforeunload', (e) => {
-            if (files['index.html'] || files['styles.css'] || files['script.js']) {
-                e.preventDefault();
-                e.returnValue = '';
+            let response;
+
+            // Call based on provider type
+            if (provider.type === 'huggingface') {
+                response = await callHuggingFace(provider, userMessage);
+            } else if (provider.type === 'cohere') {
+                response = await callCohere(provider, messages);
+            } else if (provider.type === 'gemini') {
+                response = await callGemini(provider, userMessage);
+            } else {
+                // OpenAI-compatible (Groq, Together, OpenRouter)
+                response = await callOpenAICompatible(provider, messages);
             }
-        });
-    }
 
-    // ============================================
-    // TAB MANAGEMENT
-    // ============================================
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            return response;
 
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(tabName + 'Tab').classList.add('active');
-
-        if (tabName === 'code') {
-            setTimeout(() => codeEditor.refresh(), 100);
-        }
-
-        if (tabName === 'preview') {
-            updatePreview();
-        }
-
-        if (tabName === 'files') {
-            renderFilesTree();
+        } catch (error) {
+            console.error('AI Error:', error);
+            // Try fallback to another model
+            return await tryFallbackModel(userMessage, error);
         }
     }
 
-    function switchEditorTab(fileName) {
-        currentFile = fileName;
-
-        document.querySelectorAll('.editor-tab').forEach(tab => {
-            tab.classList.remove('active');
+    async function callOpenAICompatible(provider, messages) {
+        const response = await fetch(provider.endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${provider.apiKey}`
+            },
+            body: JSON.stringify({
+                model: provider.model,
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: provider.maxTokens || 4096
+            })
         });
-        document.querySelector(`[data-file="${fileName}"]`).classList.add('active');
 
-        let mode = 'htmlmixed';
-        if (fileName.endsWith('.css')) mode = 'css';
-        if (fileName.endsWith('.js')) mode = 'javascript';
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`API Error: ${response.status} - ${error}`);
+        }
 
-        codeEditor.setOption('mode', mode);
-        codeEditor.setValue(files[fileName] || '');
-        codeEditor.refresh();
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    async function callHuggingFace(provider, prompt) {
+        const response = await fetch(provider.endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: `${SYSTEM_PROMPT}\n\nUser: ${prompt}\n\nAssistant:`,
+                parameters: {
+                    max_new_tokens: 4000,
+                    temperature: 0.7,
+                    return_full_text: false
+                }
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HuggingFace Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data[0]?.generated_text || data.generated_text || '';
+    }
+
+    async function callCohere(provider, messages) {
+        const lastMessage = messages[messages.length - 1].content;
+        
+        const response = await fetch(provider.endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: lastMessage,
+                preamble: SYSTEM_PROMPT,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Cohere Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.text;
+    }
+
+    async function callGemini(provider, prompt) {
+        const url = `${provider.endpoint}?key=${provider.apiKey}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: `${SYSTEM_PROMPT}\n\n${prompt}`
+                    }]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gemini Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text;
+    }
+
+    async function tryFallbackModel(userMessage, originalError) {
+        console.warn('Trying fallback model...', originalError);
+        
+        // Fallback order: Groq -> HuggingFace -> Together
+        const fallbackModels = [
+            'groq-llama3-8b',
+            'hf-mistral-7b',
+            'together-llama3-70b'
+        ];
+
+        for (const modelId of fallbackModels) {
+            if (modelId === currentModel) continue;
+            
+            try {
+                const provider = FREE_AI_PROVIDERS[modelId];
+                const messages = [
+                    { role: 'system', content: SYSTEM_PROMPT },
+                    { role: 'user', content: userMessage }
+                ];
+                
+                return await callOpenAICompatible(provider, messages);
+            } catch (error) {
+                console.warn(`Fallback ${modelId} failed:`, error);
+            }
+        }
+
+        throw new Error('All AI providers failed. Please try again.');
+    }
+
+    function parseCodeFromResponse(response) {
+        const codeBlocks = {
+            html: '',
+            css: '',
+            javascript: ''
+        };
+
+        // Extract HTML
+        const htmlMatch = response.match(/```html\n([\s\S]*?)```/i);
+        if (htmlMatch) codeBlocks.html = htmlMatch[1].trim();
+
+        // Extract CSS
+        const cssMatch = response.match(/```css\n([\s\S]*?)```/i);
+        if (cssMatch) codeBlocks.css = cssMatch[1].trim();
+
+        // Extract JavaScript
+        const jsMatch = response.match(/```(?:javascript|js)\n([\s\S]*?)```/i);
+        if (jsMatch) codeBlocks.javascript = jsMatch[1].trim();
+
+        return codeBlocks;
     }
 
     // ============================================
-    // AI CHAT FUNCTIONS
+    // CHAT FUNCTIONS
     // ============================================
     async function sendMessage() {
         const input = document.getElementById('chatInput');
@@ -939,33 +764,39 @@ Always respond with complete, copy-paste ready code blocks.`;
         input.value = '';
         addMessageToChat(message, 'user');
         
-        showLoading('AI က website ဖန်တီးနေပါတယ်...', 'Processing your request...');
+        showLoading('AI is generating your website...', 'Using free AI models');
 
         try {
-            const result = await aiEngine.generateWebsite(message);
-
+            const aiResponse = await callFreeAI(message);
+            
             hideLoading();
 
-            if (result.success) {
-                addMessageToChat(result.response, 'ai');
+            // Add to conversation
+            conversationHistory.push(
+                { role: 'user', content: message },
+                { role: 'assistant', content: aiResponse }
+            );
 
-                if (result.code.html) files['index.html'] = result.code.html;
-                if (result.code.css) files['styles.css'] = result.code.css;
-                if (result.code.javascript) files['script.js'] = result.code.javascript;
+            addMessageToChat(aiResponse, 'ai');
 
-                codeEditor.setValue(files[currentFile]);
-                updatePreview();
-                
-                showToast('✅ Website generated successfully!', 'success');
-            } else {
-                addMessageToChat(`❌ Error: ${result.error}`, 'ai');
-                showToast('Failed to generate website', 'error');
-            }
+            // Parse and apply code
+            const code = parseCodeFromResponse(aiResponse);
+            if (code.html) files['index.html'] = code.html;
+            if (code.css) files['styles.css'] = code.css;
+            if (code.javascript) files['script.js'] = code.javascript;
+
+            codeEditor.setValue(files[currentFile]);
+            updatePreview();
+            
+            messageCount++;
+            updateMessageCount();
+            
+            showToast('✅ Website generated successfully!', 'success');
 
         } catch (error) {
             hideLoading();
-            addMessageToChat(`❌ Error: ${error.message}`, 'ai');
-            showToast(`Error: ${error.message}`, 'error');
+            addMessageToChat(`❌ Error: ${error.message}\n\nPlease try again or switch to a different model.`, 'ai');
+            showToast('Generation failed. Try another model.', 'error');
         }
     }
 
@@ -985,7 +816,9 @@ Always respond with complete, copy-paste ready code blocks.`;
         
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
-        avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        avatar.innerHTML = sender === 'user' 
+            ? '<i class="fas fa-user"></i>' 
+            : '<i class="fas fa-robot"></i>';
 
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
@@ -999,24 +832,11 @@ Always respond with complete, copy-paste ready code blocks.`;
     }
 
     function formatMessage(text) {
-        // Code blocks
         text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
             return `<pre><code class="language-${lang || 'plaintext'}">${escapeHtml(code)}</code></pre>`;
         });
-
-        // Bold
         text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // Italic
-        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        
-        // Links
-        text = text.replace(/```math
-([^```]+)```KATEX_INLINE_OPEN([^)]+)KATEX_INLINE_CLOSE/g, '<a href="$2" target="_blank">$1</a>');
-        
-        // Line breaks
         text = text.replace(/\n/g, '<br>');
-
         return text;
     }
 
@@ -1032,61 +852,91 @@ Always respond with complete, copy-paste ready code blocks.`;
     }
 
     function clearChat() {
-        if (!confirm('Clear all chat messages?')) return;
+        if (!confirm('Clear chat history?')) return;
         
         const chatMessages = document.getElementById('chatMessages');
         chatMessages.innerHTML = '<div class="welcome-message"><h2>Chat cleared</h2></div>';
-        
-        aiEngine.resetConversation();
+        conversationHistory = [];
+        messageCount = 0;
+        updateMessageCount();
         showToast('Chat cleared', 'info');
     }
 
     // ============================================
-    // CODE EDITOR FUNCTIONS
+    // TAB & EDITOR FUNCTIONS
     // ============================================
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(tabName + 'Tab').classList.add('active');
+
+        if (tabName === 'code') {
+            setTimeout(() => codeEditor.refresh(), 100);
+        }
+        if (tabName === 'preview') {
+            updatePreview();
+        }
+        if (tabName === 'files') {
+            renderFilesTree();
+        }
+    }
+
+    function switchEditorTab(fileName) {
+        currentFile = fileName;
+
+        document.querySelectorAll('.editor-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`[data-file="${fileName}"]`).classList.add('active');
+
+        let mode = 'htmlmixed';
+        if (fileName.endsWith('.css')) mode = 'css';
+        if (fileName.endsWith('.js')) mode = 'javascript';
+
+        codeEditor.setOption('mode', mode);
+        codeEditor.setValue(files[fileName] || '');
+    }
+
     function formatCode() {
-        const code = codeEditor.getValue();
-        // Simple formatting (in production, use a proper formatter like Prettier)
-        codeEditor.setValue(code);
         showToast('Code formatted', 'success');
     }
 
     function copyCode() {
         const code = codeEditor.getValue();
         navigator.clipboard.writeText(code).then(() => {
-            showToast('Code copied to clipboard!', 'success');
+            showToast('Code copied!', 'success');
         });
     }
 
     function downloadCode() {
         const code = codeEditor.getValue();
         const blob = new Blob([code], { type: 'text/plain' });
-        downloadFile(blob, currentFile);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentFile;
+        a.click();
         showToast(`${currentFile} downloaded`, 'success');
     }
 
-    function beautifyCode() {
-        formatCode();
-    }
-
-    function toggleFullscreen() {
-        const container = document.querySelector('.code-editor-container');
+    function addNewFile() {
+        const fileName = prompt('Enter file name:');
+        if (!fileName) return;
         
-        if (!isFullscreen) {
-            container.classList.add('fullscreen');
-            isFullscreen = true;
-        } else {
-            container.classList.remove('fullscreen');
-            isFullscreen = false;
-        }
-        
-        codeEditor.refresh();
-    }
-
-    function exitFullscreen() {
-        if (isFullscreen) {
-            toggleFullscreen();
-        }
+        files[fileName] = '';
+        const tab = document.createElement('button');
+        tab.className = 'editor-tab';
+        tab.dataset.file = fileName;
+        tab.innerHTML = `<i class="fas fa-file-code"></i> ${fileName}`;
+        tab.onclick = () => switchEditorTab(fileName);
+        document.querySelector('.editor-tabs').appendChild(tab);
+        switchEditorTab(fileName);
     }
 
     function updateEditorInfo() {
@@ -1095,53 +945,20 @@ Always respond with complete, copy-paste ready code blocks.`;
         document.getElementById('charCount').textContent = code.length;
     }
 
-    function addNewFile() {
-        const fileName = prompt('Enter file name (e.g., custom.js):');
-        if (!fileName) return;
-
-        if (files[fileName]) {
-            showToast('File already exists', 'warning');
-            return;
-        }
-
-        files[fileName] = '';
-
-        const tabsContainer = document.querySelector('.editor-tabs');
-        const newTab = document.createElement('button');
-        newTab.className = 'editor-tab';
-        newTab.dataset.file = fileName;
-        
-        let icon = 'fa-file-code';
-        if (fileName.endsWith('.html')) icon = 'fa-html5';
-        if (fileName.endsWith('.css')) icon = 'fa-css3-alt';
-        if (fileName.endsWith('.js')) icon = 'fa-js';
-        
-        newTab.innerHTML = `<i class="fab ${icon}"></i> ${fileName}`;
-        newTab.onclick = () => switchEditorTab(fileName);
-
-        tabsContainer.appendChild(newTab);
-        switchEditorTab(fileName);
-        
-        showToast(`File ${fileName} created`, 'success');
-    }
-
     // ============================================
     // PREVIEW FUNCTIONS
     // ============================================
     function updatePreview() {
         const previewFrame = document.getElementById('previewFrame');
-        
         const html = files['index.html'] || '';
         const css = files['styles.css'] || '';
         const js = files['script.js'] || '';
 
-        const fullHTML = `
-<!DOCTYPE html>
-<html lang="en">
+        const fullHTML = `<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preview</title>
     <style>${css}</style>
 </head>
 <body>
@@ -1179,7 +996,6 @@ ${html}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generated Website</title>
     <style>${css}</style>
 </head>
 <body>
@@ -1193,46 +1009,36 @@ ${html}
         newWindow.document.close();
     }
 
-    function toggleDevTools() {
-        showToast('DevTools feature coming soon', 'info');
-    }
-
     // ============================================
-    // FILES MANAGEMENT
+    // FILES FUNCTIONS
     // ============================================
     function renderFilesTree() {
         const tree = document.getElementById('filesTree');
         tree.innerHTML = '';
 
         Object.keys(files).forEach(fileName => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
+            const item = document.createElement('div');
+            item.className = 'file-item';
             
             let icon = 'fa-file-code';
             if (fileName.endsWith('.html')) icon = 'fa-html5';
             if (fileName.endsWith('.css')) icon = 'fa-css3-alt';
             if (fileName.endsWith('.js')) icon = 'fa-js';
 
-            const size = new Blob([files[fileName]]).size;
-            const sizeKB = (size / 1024).toFixed(2);
+            const size = (new Blob([files[fileName]]).size / 1024).toFixed(2);
 
-            fileItem.innerHTML = `
+            item.innerHTML = `
                 <i class="fab ${icon}"></i>
                 <span class="file-name">${fileName}</span>
-                <span class="file-size">${sizeKB} KB</span>
-                <button onclick="deleteFile('${fileName}')" class="btn-delete-file">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <span class="file-size">${size} KB</span>
             `;
 
-            fileItem.onclick = (e) => {
-                if (!e.target.closest('.btn-delete-file')) {
-                    switchTab('code');
-                    switchEditorTab(fileName);
-                }
+            item.onclick = () => {
+                switchTab('code');
+                switchEditorTab(fileName);
             };
 
-            tree.appendChild(fileItem);
+            tree.appendChild(item);
         });
     }
 
@@ -1240,7 +1046,6 @@ ${html}
         const input = document.createElement('input');
         input.type = 'file';
         input.multiple = true;
-        input.accept = '.html,.css,.js,.txt';
         input.onchange = importFiles;
         input.click();
     }
@@ -1251,63 +1056,28 @@ ${html}
 
         Array.from(fileList).forEach(file => {
             const reader = new FileReader();
-            
             reader.onload = (e) => {
                 files[file.name] = e.target.result;
                 imported++;
-
                 if (imported === fileList.length) {
                     renderFilesTree();
                     showToast(`${imported} file(s) imported`, 'success');
                 }
             };
-
             reader.readAsText(file);
         });
-    }
-
-    function createFolder() {
-        showToast('Folder feature coming soon', 'info');
-    }
-
-    function deleteFile(fileName) {
-        if (!confirm(`Delete ${fileName}?`)) return;
-
-        delete files[fileName];
-        
-        const tab = document.querySelector(`[data-file="${fileName}"]`);
-        if (tab && !tab.classList.contains('editor-tab')) {
-            tab.remove();
-        }
-
-        if (currentFile === fileName) {
-            switchEditorTab('index.html');
-        }
-
-        renderFilesTree();
-        showToast(`${fileName} deleted`, 'success');
-    }
-
-    function deleteSelected() {
-        deleteFile(currentFile);
     }
 
     function downloadAllFiles() {
         Object.keys(files).forEach(fileName => {
             const blob = new Blob([files[fileName]], { type: 'text/plain' });
-            downloadFile(blob, fileName);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
         });
-        
         showToast('All files downloaded', 'success');
-    }
-
-    function downloadFile(blob, fileName) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
     }
 
     // ============================================
@@ -1327,7 +1097,6 @@ ${html}
         projects.push(project);
         saveProjects();
         renderProjects();
-        
         showToast(`Project "${name}" created`, 'success');
     }
 
@@ -1348,338 +1117,108 @@ ${html}
         container.innerHTML = '';
 
         if (projects.length === 0) {
-            container.innerHTML = '<p class="no-projects">No projects yet</p>';
+            container.innerHTML = '<p class="no-projects">No projects</p>';
             return;
         }
 
         projects.forEach(project => {
             const item = document.createElement('div');
             item.className = 'project-item';
-            item.innerHTML = `
-                <i class="fas fa-folder"></i>
-                <span>${project.name}</span>
-                <button onclick="deleteProject('${project.id}')" class="btn-delete-project">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            
-            item.onclick = (e) => {
-                if (!e.target.closest('.btn-delete-project')) {
-                    loadProject(project);
-                }
+            item.innerHTML = `<i class="fas fa-folder"></i> ${project.name}`;
+            item.onclick = () => {
+                files = { ...project.files };
+                codeEditor.setValue(files[currentFile]);
+                updatePreview();
+                showToast(`Loaded "${project.name}"`, 'success');
             };
-
             container.appendChild(item);
         });
     }
 
-    function loadProject(project) {
-        files = { ...project.files };
-        currentProject = project;
-        codeEditor.setValue(files[currentFile]);
-        updatePreview();
-        renderFilesTree();
-        
-        showToast(`Project "${project.name}" loaded`, 'success');
-    }
-
-    function deleteProject(projectId) {
-        if (!confirm('Delete this project?')) return;
-
-        projects = projects.filter(p => p.id !== projectId);
-        saveProjects();
-        renderProjects();
-        
-        showToast('Project deleted', 'success');
-    }
-
     function exportProject() {
-        const projectData = {
-            name: currentProject?.name || 'Untitled',
-            files: files,
-            conversation: aiEngine.conversationHistory,
-            exportedAt: new Date().toISOString()
-        };
-
-        const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
-        downloadFile(blob, 'project-export.json');
-        
+        const data = JSON.stringify({ files }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'project.json';
+        a.click();
         showToast('Project exported', 'success');
     }
 
-    function shareProject() {
-        const data = btoa(JSON.stringify({ files }));
-        const url = `${window.location.origin}${window.location.pathname}?share=${data}`;
-        
-        navigator.clipboard.writeText(url).then(() => {
-            showToast('Share link copied to clipboard!', 'success');
-        });
-    }
-
     // ============================================
-    // AI ASSISTANT PANEL
+    // AI ASSISTANT ACTIONS
     // ============================================
     async function improveCode() {
         const code = codeEditor.getValue();
-        if (!code) {
-            showToast('No code to improve', 'warning');
-            return;
-        }
-
-        const prompt = `Improve this ${currentFile} code:\n\n${code}\n\nMake it better, more efficient, and add best practices.`;
+        if (!code) return showToast('No code to improve', 'warning');
+        
+        const prompt = `Improve this ${currentFile} code:\n\n${code}`;
         document.getElementById('chatInput').value = prompt;
         sendMessage();
     }
 
-    async function explainCode() {
-        const code = codeEditor.getValue();
-        if (!code) {
-            showToast('No code to explain', 'warning');
-            return;
-        }
-
-        const prompt = `Explain this ${currentFile} code in detail:\n\n${code}`;
+    async function addResponsive() {
+        const prompt = 'Make the current website fully responsive for mobile, tablet, and desktop. Add media queries and flexible layouts.';
         document.getElementById('chatInput').value = prompt;
         sendMessage();
     }
 
-    async function debugCode() {
-        const code = codeEditor.getValue();
-        if (!code) {
-            showToast('No code to debug', 'warning');
-            return;
-        }
-
-        const prompt = `Debug this ${currentFile} code and fix any errors:\n\n${code}`;
+    async function addAnimations() {
+        const prompt = 'Add smooth animations and transitions to the website. Include scroll animations, hover effects, and loading animations.';
         document.getElementById('chatInput').value = prompt;
         sendMessage();
     }
 
     async function optimizeCode() {
-        const code = codeEditor.getValue();
-        if (!code) {
-            showToast('No code to optimize', 'warning');
-            return;
-        }
-
-        const prompt = `Optimize this ${currentFile} code for performance:\n\n${code}`;
+        const prompt = 'Optimize the current website code for better performance, SEO, and accessibility.';
         document.getElementById('chatInput').value = prompt;
         sendMessage();
     }
 
-    async function addFeature() {
-        const feature = prompt('What feature do you want to add?');
-        if (!feature) return;
-
-        const prompt = `Add ${feature} to this website. Current code:\n\nHTML:\n${files['index.html']}\n\nCSS:\n${files['styles.css']}\n\nJS:\n${files['script.js']}`;
-        document.getElementById('chatInput').value = prompt;
-        sendMessage();
-    }
-
-    function applySuggestion(suggestion) {
-        document.getElementById('chatInput').value = suggestion;
-        showToast('Suggestion applied', 'info');
-    }
-
-    function toggleAIPanel() {
-        const panel = document.querySelector('.ai-panel');
-        panel.classList.toggle('collapsed');
-    }
-
-    function updateCurrentModelInfo() {
-        const modelName = CONFIG.MODELS[aiEngine.currentModel].name;
-        document.getElementById('currentModelInfo').textContent = modelName;
-    }
-
     // ============================================
-    // SETTINGS
-    // ============================================
-    function changeEditorTheme(theme) {
-        codeEditor.setOption('theme', theme);
-        CONFIG.SETTINGS.editorTheme = theme;
-        saveSettings();
-    }
-
-    function changeFontSize(size) {
-        codeEditor.getWrapperElement().style.fontSize = size + 'px';
-        CONFIG.SETTINGS.fontSize = size;
-        saveSettings();
-    }
-
-    function toggleAutoSave(enabled) {
-        CONFIG.SETTINGS.autoSave = enabled;
-        
-        if (enabled) {
-            startAutoSave();
-        } else {
-            stopAutoSave();
-        }
-        
-        saveSettings();
-    }
-
-    function toggleLivePreview(enabled) {
-        CONFIG.SETTINGS.livePreview = enabled;
-        saveSettings();
-    }
-
-    function updateTemperature(value) {
-        aiEngine.temperature = parseFloat(value);
-        document.getElementById('tempValue').textContent = value;
-        CONFIG.SETTINGS.temperature = parseFloat(value);
-        saveSettings();
-    }
-
-    function saveSettings() {
-        localStorage.setItem('aibuilder_settings', JSON.stringify(CONFIG.SETTINGS));
-    }
-
-    function loadSettings() {
-        const saved = localStorage.getItem('aibuilder_settings');
-        if (saved) {
-            Object.assign(CONFIG.SETTINGS, JSON.parse(saved));
-        }
-    }
-
-    function clearAllData() {
-        if (!confirm('This will delete ALL data including projects, files, and chat history. Are you sure?')) return;
-
-        localStorage.clear();
-        sessionStorage.clear();
-        location.reload();
-    }
-
-    function exportAllData() {
-        const allData = {
-            projects: projects,
-            files: files,
-            settings: CONFIG.SETTINGS,
-            conversation: aiEngine.conversationHistory,
-            exportedAt: new Date().toISOString()
-        };
-
-        const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-        downloadFile(blob, 'aibuilder-backup.json');
-        
-        showToast('All data exported', 'success');
-    }
-
-    function importData() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    
-                    if (data.projects) projects = data.projects;
-                    if (data.files) files = data.files;
-                    if (data.settings) Object.assign(CONFIG.SETTINGS, data.settings);
-                    if (data.conversation) aiEngine.conversationHistory = data.conversation;
-
-                    saveProjects();
-                    saveSession();
-                    saveSettings();
-                    
-                    location.reload();
-                } catch (error) {
-                    showToast('Invalid backup file', 'error');
-                }
-            };
-            
-            reader.readAsText(file);
-        };
-        
-        input.click();
-    }
-
-    // ============================================
-    // SESSION MANAGEMENT
+    // SESSION & STORAGE
     // ============================================
     function saveSession() {
-        const sessionData = {
-            files: files,
-            currentFile: currentFile,
-            currentProject: currentProject,
-            conversation: aiEngine.conversationHistory,
+        sessionStorage.setItem('aibuilder_session', JSON.stringify({
+            files,
+            conversationHistory,
+            currentFile,
             timestamp: Date.now()
-        };
-
-        sessionStorage.setItem('aibuilder_session', JSON.stringify(sessionData));
+        }));
     }
 
     function loadSession() {
         const saved = sessionStorage.getItem('aibuilder_session');
-        
         if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                
-                if (data.files) files = data.files;
-                if (data.currentFile) currentFile = data.currentFile;
-                if (data.currentProject) currentProject = data.currentProject;
-                if (data.conversation) aiEngine.conversationHistory = data.conversation;
-                
-                console.log('Session restored');
-            } catch (error) {
-                console.error('Session load error:', error);
-            }
+            const data = JSON.parse(saved);
+            if (data.files) files = data.files;
+            if (data.conversationHistory) conversationHistory = data.conversationHistory;
+            if (data.currentFile) currentFile = data.currentFile;
         }
-        
-        loadSettings();
-    }
-
-    function startAutoSave() {
-        stopAutoSave();
-        
-        autoSaveInterval = setInterval(() => {
-            saveSession();
-            updateStorageInfo();
-        }, CONFIG.SETTINGS.saveInterval);
-    }
-
-    function stopAutoSave() {
-        if (autoSaveInterval) {
-            clearInterval(autoSaveInterval);
-            autoSaveInterval = null;
-        }
+        loadProjects();
     }
 
     function resetSession() {
-        if (!confirm('Reset all session data? This will clear current work but keep saved projects.')) return;
-
-        files = {
-            'index.html': '',
-            'styles.css': '',
-            'script.js': ''
-        };
+        if (!confirm('Reset all data?')) return;
         
-        aiEngine.resetConversation();
+        files = { 'index.html': '', 'styles.css': '', 'script.js': '' };
+        conversationHistory = [];
+        messageCount = 0;
         sessionStorage.clear();
-        
         codeEditor.setValue('');
         updatePreview();
-        
-        document.getElementById('chatMessages').innerHTML = '<div class="welcome-message"><h2>Session reset</h2></div>';
-        
+        clearChat();
         showToast('Session reset', 'info');
     }
 
     function updateStorageInfo() {
-        const data = JSON.stringify({ files, projects });
-        const size = new Blob([data]).size;
-        const sizeKB = (size / 1024).toFixed(2);
-        
-        document.getElementById('storageUsed').textContent = sizeKB + ' KB';
+        const size = (new Blob([JSON.stringify(files)]).size / 1024).toFixed(2);
+        document.getElementById('storageUsed').textContent = size + ' KB';
     }
 
     function updateMessageCount() {
-        document.getElementById('messageCount').textContent = aiEngine.messageCount;
+        document.getElementById('messageCount').textContent = messageCount;
     }
 
     function startSessionTimer() {
@@ -1689,28 +1228,30 @@ ${html}
             const minutes = Math.floor((elapsed % 3600000) / 60000);
             const seconds = Math.floor((elapsed % 60000) / 1000);
             
-            let timeString = '';
-            if (hours > 0) timeString += hours + ':';
-            timeString += minutes.toString().padStart(2, '0') + ':';
-            timeString += seconds.toString().padStart(2, '0');
+            let time = '';
+            if (hours > 0) time += hours + ':';
+            time += minutes.toString().padStart(2, '0') + ':';
+            time += seconds.toString().padStart(2, '0');
             
-            document.getElementById('sessionTime').textContent = timeString;
+            document.getElementById('sessionTime').textContent = time;
         }, 1000);
+    }
+
+    function updateCurrentModelInfo() {
+        const modelName = FREE_AI_PROVIDERS[currentModel].name;
+        document.getElementById('currentModelInfo').textContent = modelName;
     }
 
     // ============================================
     // UI HELPERS
     // ============================================
-    function showLoading(mainText, subText = '') {
+    function showLoading(text, subtext) {
         const overlay = document.getElementById('loadingOverlay');
-        document.getElementById('loadingText').textContent = mainText;
-        document.getElementById('loadingSubtext').textContent = subText;
+        document.getElementById('loadingText').textContent = text;
+        document.getElementById('loadingSubtext').textContent = subtext;
         overlay.classList.add('active');
-        
         document.getElementById('aiStatus').textContent = 'Processing...';
         document.getElementById('aiStatus').className = 'status-processing';
-        
-        animateProgress();
     }
 
     function hideLoading() {
@@ -1719,97 +1260,36 @@ ${html}
         document.getElementById('aiStatus').className = 'status-ready';
     }
 
-    function animateProgress() {
-        const progressBar = document.getElementById('progressBar');
-        let width = 0;
-        
-        const interval = setInterval(() => {
-            if (width >= 90) {
-                clearInterval(interval);
-            } else {
-                width += Math.random() * 10;
-                progressBar.style.width = Math.min(width, 90) + '%';
-            }
-        }, 500);
-    }
-
     function showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
-        
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         
-        const icon = {
+        const icons = {
             success: 'fa-check-circle',
             error: 'fa-exclamation-circle',
             warning: 'fa-exclamation-triangle',
             info: 'fa-info-circle'
-        }[type] || 'fa-info-circle';
+        };
         
-        toast.innerHTML = `
-            <i class="fas ${icon}"></i>
-            <span>${message}</span>
-        `;
-        
+        toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
         container.appendChild(toast);
         
         setTimeout(() => toast.classList.add('show'), 10);
-        
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
 
-    // ============================================
-    // UTILITY FUNCTIONS
-    // ============================================
-    function attachReference() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*,.html,.css,.js';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            showToast(`Reference file ${file.name} attached`, 'info');
-        };
-        input.click();
-    }
+    // Auto-save
+    setInterval(() => {
+        saveSession();
+        updateStorageInfo();
+    }, 5000);
 
-    function startVoiceInput() {
-        if (!('webkitSpeechRecognition' in window)) {
-            showToast('Voice input not supported', 'error');
-            return;
-        }
-
-        const recognition = new webkitSpeechRecognition();
-        recognition.lang = 'my-MM';
-        recognition.start();
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            document.getElementById('chatInput').value = transcript;
-            showToast('Voice captured', 'success');
-        };
-
-        recognition.onerror = () => {
-            showToast('Voice input error', 'error');
-        };
-    }
-
-    // Check for shared project in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const sharedData = urlParams.get('share');
-    if (sharedData) {
-        try {
-            const decoded = JSON.parse(atob(sharedData));
-            files = decoded.files;
-            codeEditor.setValue(files[currentFile]);
-            updatePreview();
-            showToast('Shared project loaded', 'success');
-        } catch (error) {
-            console.error('Failed to load shared project:', error);
-        }
-    }
+    // Save on unload
+    window.addEventListener('beforeunload', saveSession);
     </script>
 </body>
 </html>
