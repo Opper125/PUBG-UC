@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 Auto Video Downloader Bot - Relay System</title>
+    <title>Video Downloader Bot - Admin Panel</title>
     <style>
         * {
             margin: 0;
@@ -12,220 +12,223 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            font-family: 'Pyidaungsu', 'Noto Sans Myanmar', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 15px;
-            color: white;
+            padding: 20px;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
         .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
             text-align: center;
-            padding: 30px 20px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            border-radius: 25px;
-            margin-bottom: 25px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         .header h1 {
-            font-size: 2.2em;
-            margin-bottom: 12px;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
         }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.95;
-            margin: 8px 0;
-        }
-
-        .status-badge {
+        .status {
             display: inline-block;
-            padding: 10px 25px;
-            background: rgba(76, 175, 80, 0.3);
-            border: 2px solid #4CAF50;
+            padding: 8px 20px;
+            background: #4CAF50;
+            color: white;
             border-radius: 20px;
-            margin-top: 15px;
-            font-weight: bold;
-            animation: pulse 2s infinite;
+            font-size: 0.9em;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
+        .status.offline {
+            background: #f44336;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
+            background: white;
             padding: 25px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
         .card h2 {
-            margin-bottom: 18px;
-            font-size: 1.6em;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
-            padding-bottom: 12px;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
         }
 
-        .bot-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+        .stat-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .form-group {
             margin-bottom: 20px;
         }
 
-        .info-box {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 12px;
-            border-left: 4px solid #4CAF50;
-        }
-
-        .info-label {
-            font-size: 0.85em;
-            opacity: 0.8;
-            margin-bottom: 5px;
-        }
-
-        .info-value {
-            font-size: 1.1em;
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
             font-weight: bold;
-            word-break: break-all;
         }
 
-        .telegram-widget {
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
             width: 100%;
-            height: 600px;
-            border: none;
-            border-radius: 15px;
-            background: white;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
         }
 
         .btn {
-            display: inline-block;
-            padding: 14px 32px;
-            margin: 8px;
+            padding: 12px 30px;
             border: none;
-            border-radius: 12px;
-            font-size: 1.05em;
+            border-radius: 8px;
+            font-size: 1em;
             font-weight: bold;
             cursor: pointer;
-            text-decoration: none;
             transition: all 0.3s;
+            display: inline-block;
             text-align: center;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: #667eea;
             color: white;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
         }
 
         .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-secondary {
-            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        .btn-success {
+            background: #4CAF50;
             color: white;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
         }
 
-        .btn-secondary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.6);
+        .btn-success:hover {
+            background: #45a049;
         }
 
-        .instruction-step {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 18px;
-            margin-bottom: 12px;
-            border-radius: 12px;
-            border-left: 5px solid #FFC107;
-            display: flex;
-            align-items: start;
-            gap: 15px;
+        .btn-danger {
+            background: #f44336;
+            color: white;
         }
 
-        .step-number {
-            background: #FFC107;
-            color: #000;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2em;
-            flex-shrink: 0;
+        .btn-danger:hover {
+            background: #da190b;
         }
 
-        .step-content {
-            flex: 1;
-        }
-
-        .code-block {
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 15px;
+        .file-upload {
+            border: 2px dashed #667eea;
+            padding: 30px;
+            text-align: center;
             border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            overflow-x: auto;
-            margin-top: 10px;
-            border: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            background: #f5f5f5;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .preview {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .preview img,
+        .preview video {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
         }
 
         .alert {
-            padding: 18px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 8px;
             margin-bottom: 20px;
             display: none;
-            animation: slideDown 0.4s ease;
-            font-weight: 500;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
 
         .alert.show {
             display: block;
-        }
-
-        .alert.info {
-            background: rgba(33, 150, 243, 0.25);
-            border: 2px solid #2196F3;
-            color: #E3F2FD;
-        }
-
-        .alert.warning {
-            background: rgba(255, 152, 0, 0.25);
-            border: 2px solid #FF9800;
-            color: #FFF3E0;
-        }
-
-        .alert.success {
-            background: rgba(76, 175, 80, 0.25);
-            border: 2px solid #4CAF50;
-            color: #E8F5E9;
+            animation: slideDown 0.3s ease;
         }
 
         @keyframes slideDown {
             from {
                 opacity: 0;
-                transform: translateY(-15px);
+                transform: translateY(-10px);
             }
             to {
                 opacity: 1;
@@ -233,70 +236,114 @@
             }
         }
 
-        .video-demo {
-            position: relative;
-            width: 100%;
-            padding-bottom: 56.25%;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 15px;
-            overflow: hidden;
-        }
-
-        .quick-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 15px;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.8em;
-            }
-            
-            .bot-info {
-                grid-template-columns: 1fr;
-            }
-
-            .telegram-widget {
-                height: 500px;
-            }
-        }
-
-        .copy-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85em;
-            margin-left: 10px;
-            transition: all 0.3s;
-        }
-
-        .copy-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
         .loading {
+            display: none;
             text-align: center;
-            padding: 40px;
-            font-size: 1.2em;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
         }
 
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
             border-radius: 50%;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            margin: 0 auto;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .logs {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+        }
+
+        .log-entry.error {
+            border-left-color: #ff0000;
+            color: #ff6b6b;
+        }
+
+        .log-entry.warning {
+            border-left-color: #ffaa00;
+            color: #ffd93d;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
         }
     </style>
 </head>
@@ -304,233 +351,126 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>🎬 Auto Video Downloader Bot</h1>
-            <p>Relay System - Powered by HUB9XDOWNLOADERBOT</p>
-            <div class="status-badge">✓ System Online</div>
+            <h1>🎬 Video Downloader Bot</h1>
+            <p style="margin: 10px 0; color: #666;">Telegram Bot Admin Panel</p>
+            <span class="status" id="botStatus">● Bot ပိတ်နေသည်</span>
         </div>
 
-        <!-- Alert -->
-        <div class="alert info show" id="infoAlert">
-            <strong>ℹ️ အသုံးပြုနည်း:</strong> သင့် bot (@YOUR_BOT_NAME) သည် HUB9XDOWNLOADERBOT ကို relay bot အနေဖြင့် အသုံးပြုပါသည်။ အောက်ပါ instructions များကို လိုက်နာပါ။
-        </div>
+        <!-- Alert Messages -->
+        <div class="alert" id="alertBox"></div>
 
-        <!-- Bot Information -->
-        <div class="card">
-            <h2>🤖 Bot Configuration</h2>
-            <div class="bot-info">
-                <div class="info-box">
-                    <div class="info-label">သင့် Bot Token</div>
-                    <div class="info-value" style="font-size: 0.8em;">7821519***</div>
+        <!-- Dashboard Stats -->
+        <div class="dashboard">
+            <div class="card">
+                <h2>📊 စာရင်းဇယား</h2>
+                <div class="stat-box">
+                    <span class="stat-label">စုစုပေါင်း Users</span>
+                    <span class="stat-value" id="totalUsers">0</span>
                 </div>
-                <div class="info-box">
-                    <div class="info-label">Relay Bot</div>
-                    <div class="info-value">@HUB9XDOWNLOADERBOT</div>
+                <div class="stat-box">
+                    <span class="stat-label">ယနေ့ Downloads</span>
+                    <span class="stat-value" id="todayDownloads">0</span>
                 </div>
-                <div class="info-box">
-                    <div class="info-label">Owner Account</div>
-                    <div class="info-value">@OPPER101</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-label">Owner ID</div>
-                    <div class="info-value">1538232799</div>
+                <div class="stat-box">
+                    <span class="stat-label">စုစုပေါင်း Downloads</span>
+                    <span class="stat-value" id="totalDownloads">0</span>
                 </div>
             </div>
 
-            <div class="quick-links">
-                <a href="https://t.me/HUB9XDOWNLOADERBOT" target="_blank" class="btn btn-primary">
-                    🚀 Open Relay Bot
-                </a>
-                <a href="https://t.me/OPPER101" target="_blank" class="btn btn-secondary">
-                    👤 Contact Owner
-                </a>
+            <div class="card">
+                <h2>⚙️ Bot ဆက်တင်များ</h2>
+                <div class="form-group">
+                    <label>Bot Token</label>
+                    <input type="text" id="botToken" value="7821519539:AAFmikR4MBeLKRLTYD3nqeTUrSdc7RqJQA8" readonly>
+                </div>
+                <button class="btn btn-primary" onclick="startBot()">🚀 Bot စတင်ရန်</button>
+                <button class="btn btn-danger" onclick="stopBot()">⏹️ Bot ရပ်ရန်</button>
             </div>
         </div>
 
-        <!-- Embedded Telegram Bot -->
+        <!-- Broadcast Section -->
         <div class="card">
-            <h2>📱 Direct Bot Access</h2>
-            <p style="margin-bottom: 15px; opacity: 0.9;">
-                HUB9XDOWNLOADERBOT ကို တိုက်ရိုက် အသုံးပြုရန် အောက်တွင် embed လုပ်ထားပါသည်။
-            </p>
+            <h2>📢 အသုံးပြုသူများထံ အသိပေးချက်ပို့ရန်</h2>
+            <div class="form-group">
+                <label>မက်ဆေ့ချ်</label>
+                <textarea id="broadcastMessage" placeholder="သင်ပို့လိုသော မက်ဆေ့ချ်ကို ရိုက်ထည့်ပါ..."></textarea>
+            </div>
             
-            <!-- Telegram Widget -->
-            <iframe 
-                class="telegram-widget" 
-                src="https://t.me/HUB9XDOWNLOADERBOT"
-                id="telegramWidget"
-                allow="camera; microphone"
-            ></iframe>
-
-            <div style="margin-top: 15px; text-align: center;">
-                <button class="btn btn-secondary" onclick="reloadWidget()">🔄 Reload Bot</button>
+            <div class="form-group">
+                <label>ပုံ/ဗီဒီယို ထည့်ရန် (Optional)</label>
+                <div class="file-upload" onclick="document.getElementById('broadcastFiles').click()">
+                    <p>📁 ဖိုင်များရွေးချယ်ရန် နှိပ်ပါ</p>
+                    <p style="font-size: 0.9em; color: #666;">ပုံ (PNG, JPG) သို့မဟုတ် ဗီဒီယို (MP4)</p>
+                    <input type="file" id="broadcastFiles" multiple accept="image/*,video/*" onchange="previewFiles()">
+                </div>
+                <div class="preview" id="filePreview"></div>
             </div>
+
+            <div class="loading" id="broadcastLoading">
+                <div class="spinner"></div>
+                <p>ပို့နေသည်...</p>
+            </div>
+
+            <button class="btn btn-success" onclick="sendBroadcast()">📤 အားလုံးထံ ပို့ရန်</button>
         </div>
 
-        <!-- Setup Instructions -->
+        <!-- Channel/Group Settings -->
         <div class="card">
-            <h2>⚙️ Auto-Relay Setup Instructions</h2>
-            <p style="margin-bottom: 20px; opacity: 0.9;">
-                သင့် bot ကို HUB9XDOWNLOADERBOT နဲ့ auto-relay လုပ်နိုင်ရန် အောက်ပါ setup လုပ်ပါ:
-            </p>
-
-            <div class="instruction-step">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                    <strong>Telegram Bot Code Setup</strong>
-                    <p>အောက်ပါ code ကို သင့် bot handler ထဲမှာ ထည့်ပါ:</p>
-                    <div class="code-block" id="botCode">
-// When user sends video link to your bot
-async function handleVideoLink(chatId, videoUrl) {
-    // Send instruction to user
-    await sendMessage(chatId, 
-        `🔄 Processing your request...\n\n` +
-        `Please click the button below to get your video:`
-    );
-
-    // Create deep link to HUB9XDOWNLOADERBOT
-    const relayBotUrl = `https://t.me/HUB9XDOWNLOADERBOT?start=${encodeURIComponent(videoUrl)}`;
-    
-    const keyboard = {
-        inline_keyboard: [[
-            { 
-                text: '📥 Download via HUB9X Bot', 
-                url: relayBotUrl 
-            }
-        ]]
-    };
-
-    await sendMessage(chatId, 
-        `✅ Ready to download!\n\n` +
-        `🎬 Video: ${videoUrl}\n\n` +
-        `Click the button below to process:`,
-        { reply_markup: keyboard }
-    );
-}
-                    </div>
-                    <button class="copy-btn" onclick="copyCode('botCode')">📋 Copy Code</button>
+            <h2>🔗 Channel & Group Settings</h2>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label>Channel Link</label>
+                    <input type="text" id="channelLink" value="https://t.me/+akSU2_DCpW5iMzll" readonly>
                 </div>
-            </div>
-
-            <div class="instruction-step">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                    <strong>Webhook Configuration</strong>
-                    <p>သင့် bot webhook ကို set လုပ်ရန် browser မှာ ဖွင့်ပါ:</p>
-                    <div class="code-block" id="webhookUrl">
-https://api.telegram.org/bot7821519539:AAFmikR4MBeLKRLTYD3nqeTUrSdc7RqJQA8/setWebhook?url=https://YOUR-DOMAIN.com/webhook
-                    </div>
-                    <button class="copy-btn" onclick="copyCode('webhookUrl')">📋 Copy</button>
+                <div class="form-group">
+                    <label>Channel ID</label>
+                    <input type="text" id="channelId" value="-1003011981359" readonly>
                 </div>
-            </div>
-
-            <div class="instruction-step">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                    <strong>Testing the Relay System</strong>
-                    <p>Test လုပ်ရန်:</p>
-                    <ul style="margin-top: 10px; line-height: 1.8;">
-                        <li>သင့် bot ကို Telegram မှာ ဖွင့်ပါ</li>
-                        <li>/start ပို့ပါ</li>
-                        <li>YouTube/TikTok/Facebook link တခု ပို့ပါ</li>
-                        <li>"Download via HUB9X Bot" button ပေါ်လာမယ်</li>
-                        <li>Button နှိပ်ရင် HUB9XDOWNLOADERBOT ဆီ redirect သွားမယ်</li>
-                        <li>Video download ရမယ်</li>
-                    </ul>
+                <div class="form-group">
+                    <label>Group Link</label>
+                    <input type="text" id="groupLink" value="https://t.me/+okfdHYdJXjcwNGFl" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Group ID</label>
+                    <input type="text" id="groupId" value="-1003151936245" readonly>
                 </div>
             </div>
         </div>
 
-        <!-- Complete Bot Code -->
+        <!-- Bot Logs -->
         <div class="card">
-            <h2>📄 Complete Relay Bot Code (Netlify Function)</h2>
-            <p style="margin-bottom: 15px;">
-                သင့် Netlify Functions folder ထဲမှာ အောက်ပါ file ကို create လုပ်ပါ:
-            </p>
-            
-            <div class="code-block" id="completeCode" style="max-height: 400px; overflow-y: auto;">
-// netlify/functions/telegram-relay.js
+            <h2>📝 Bot Logs</h2>
+            <div class="logs" id="botLogs">
+                <div class="log-entry">System initialized...</div>
+            </div>
+        </div>
+    </div>
 
-const fetch = require('node-fetch');
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // Configuration
+        const CONFIG = {
+            BOT_TOKEN: '7821519539:AAFmikR4MBeLKRLTYD3nqeTUrSdc7RqJQA8',
+            CHANNEL_ID: '-1003011981359',
+            GROUP_ID: '-1003151936245',
+            CHANNEL_LINK: 'https://t.me/+akSU2_DCpW5iMzll',
+            GROUP_LINK: 'https://t.me/+okfdHYdJXjcwNGFl',
+            ADMIN_USERNAME: '@OPPER101'
+        };
 
-const BOT_TOKEN = '7821519539:AAFmikR4MBeLKRLTYD3nqeTUrSdc7RqJQA8';
-const RELAY_BOT = '@HUB9XDOWNLOADERBOT';
-const RELAY_BOT_ID = '8224680804';
-const OWNER_ID = '1538232799';
-const CHANNEL_ID = '-1003011981359';
-const GROUP_ID = '-1003151936245';
-const CHANNEL_LINK = 'https://t.me/+akSU2_DCpW5iMzll';
-const GROUP_LINK = 'https://t.me/+okfdHYdJXjcwNGFl';
+        // Local Storage Keys
+        const STORAGE_KEYS = {
+            USERS: 'bot_users',
+            DOWNLOADS: 'bot_downloads',
+            STATS: 'bot_stats'
+        };
 
-// Send message helper
-async function sendMessage(chatId, text, extra = {}) {
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: chatId,
-            text: text,
-            parse_mode: 'HTML',
-            ...extra
-        })
-    });
-    return await response.json();
-}
+        // Initialize Bot
+        let botRunning = false;
+        let updateOffset = 0;
 
-// Check membership
-async function checkMembership(userId, chatId) {
-    try {
-        const url = `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                user_id: userId
-            })
-        });
-        const data = await response.json();
-        const status = data.result?.status;
-        return ['creator', 'administrator', 'member'].includes(status);
-    } catch {
-        return false;
-    }
-}
-
-// Detect video platform
-function detectPlatform(url) {
-    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YouTube';
-    if (url.includes('facebook.com') || url.includes('fb.watch')) return 'Facebook';
-    if (url.includes('tiktok.com')) return 'TikTok';
-    if (url.includes('instagram.com')) return 'Instagram';
-    return 'Unknown';
-}
-
-// Main handler
-exports.handler = async (event) => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-    };
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: '' };
-    }
-
-    try {
-        const update = JSON.parse(event.body);
-
-        // Handle messages
-        if (update.message) {
-            const msg = update.message;
-            const chatId = msg.chat.id;
-            const userId = msg.from.id;
-            const text = msg.text || '';
-
-            // Handle /start
-            if (text === '/start') {
-                const welcomeMsg = `🤝 မဂ်လာပါခင်ဗျာ Bot ကို စတင်မူ့အတွက် ကျေးဇူးတင်ပါတယ်
+        // Welcome Message
+        const WELCOME_MESSAGE = `🤝 မဂ်လာပါခင်ဗျာ Bot ကို စတင်မူ့အတွက် ကျေးဇူးတင်ပါတယ်
 
 Bot တွင် Video Link ပို့ပီး Video များကို Quality ကောင်းကောင်း Download ဆွဲပါ
 
@@ -538,235 +478,515 @@ Bot တွင် Video Link ပို့ပီး Video များကို Qu
 • YouTube (Videos & Shorts)
 • Facebook (Videos)
 • TikTok (Videos)
-• Instagram (Reels)
+• Instagram (Reels & Videos)
 
 💡 အသုံးပြုနည်း:
 1. Video link ကို copy လုပ်ပါ
 2. Bot ထဲမှာ paste လုပ်ပါ
-3. Download button နှိပ်ပါ
+3. Quality ရွေးပါ
+4. Download ဆွဲပါ
 
 🎯 Let's start!`;
 
-                await sendMessage(chatId, welcomeMsg);
+        // Success Download Message
+        const DOWNLOAD_SUCCESS_MESSAGE = `\n\n✅ အောင်မြင်စွာ Download ပီးဆုံးခဲ့ပီး Feedback များပေးခြင်ပါက Telegram Bot Owner ဖြစ်တဲ့ ${CONFIG.ADMIN_USERNAME} ကို တိုက်ရိုက် Feedback ပို့ပေးနိုင်သည်`;
 
-                // Check membership
-                const channelMember = await checkMembership(userId, CHANNEL_ID);
-                const groupMember = await checkMembership(userId, GROUP_ID);
+        // Initialize Stats
+        function initStats() {
+            if (!localStorage.getItem(STORAGE_KEYS.STATS)) {
+                localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify({
+                    totalUsers: 0,
+                    totalDownloads: 0,
+                    todayDownloads: 0,
+                    lastReset: new Date().toDateString()
+                }));
+            }
+            updateDashboard();
+        }
 
-                if (!channelMember || !groupMember) {
-                    const keyboard = {
-                        inline_keyboard: [
-                            [{ text: '📢 Join Channel', url: CHANNEL_LINK }],
-                            [{ text: '👥 Join Group', url: GROUP_LINK }],
-                            [{ text: '✅ Done', callback_data: 'check_membership' }]
-                        ]
-                    };
-
-                    await sendMessage(chatId, 
-                        `⚠️ Bot ကို အသုံးပြုရန် Channel နှင့် Group ကို Join လုပ်ပေးပါ။`,
-                        { reply_markup: keyboard }
-                    );
-                }
-
-                return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+        // Update Dashboard
+        function updateDashboard() {
+            const stats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS) || '{}');
+            
+            // Reset daily stats if new day
+            if (stats.lastReset !== new Date().toDateString()) {
+                stats.todayDownloads = 0;
+                stats.lastReset = new Date().toDateString();
+                localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
             }
 
-            // Handle video links
-            if (text.includes('http')) {
-                const platform = detectPlatform(text);
-                
-                if (platform === 'Unknown') {
-                    await sendMessage(chatId, '❌ ပံ့ပိုးမထားသော link ဖြစ်ပါသည်။');
-                    return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
-                }
+            document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
+            document.getElementById('todayDownloads').textContent = stats.todayDownloads || 0;
+            document.getElementById('totalDownloads').textContent = stats.totalDownloads || 0;
+        }
 
-                // Create deep link to relay bot
-                const relayUrl = `https://t.me/HUB9XDOWNLOADERBOT?start=${encodeURIComponent(text)}`;
-
-                const keyboard = {
-                    inline_keyboard: [[
-                        { 
-                            text: '📥 Download Video', 
-                            url: relayUrl 
-                        }
-                    ]]
+        // Add User
+        function addUser(userId, username, firstName) {
+            let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '{}');
+            
+            if (!users[userId]) {
+                users[userId] = {
+                    id: userId,
+                    username: username,
+                    firstName: firstName,
+                    joinedAt: new Date().toISOString(),
+                    hasJoinedChannel: false,
+                    hasJoinedGroup: false,
+                    downloadCount: 0
                 };
 
-                await sendMessage(chatId, 
-                    `✅ Video Link ရှာတွေ့ပါပီ!\n\n` +
-                    `📱 Platform: ${platform}\n` +
-                    `🔗 Link: ${text}\n\n` +
-                    `📥 အောက်က button ကို နှိပ်ပီး download ဆွဲပါ:`,
-                    { reply_markup: keyboard }
-                );
+                localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
 
-                return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+                // Update stats
+                const stats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS));
+                stats.totalUsers++;
+                localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
+                updateDashboard();
             }
 
-            // Default message
+            return users[userId];
+        }
+
+        // Check Membership
+        async function checkMembership(userId, chatId) {
+            try {
+                const response = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember`, {
+                    params: {
+                        chat_id: chatId,
+                        user_id: userId
+                    }
+                });
+
+                const status = response.data.result.status;
+                return ['creator', 'administrator', 'member'].includes(status);
+            } catch (error) {
+                addLog('Membership check error: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // Send Message
+        async function sendMessage(chatId, text, options = {}) {
+            try {
+                const response = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+                    chat_id: chatId,
+                    text: text,
+                    parse_mode: 'HTML',
+                    ...options
+                });
+                return response.data.result;
+            } catch (error) {
+                addLog('Send message error: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // Send Photo
+        async function sendPhoto(chatId, photo, caption = '') {
+            try {
+                const formData = new FormData();
+                formData.append('chat_id', chatId);
+                formData.append('photo', photo);
+                if (caption) formData.append('caption', caption);
+
+                const response = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendPhoto`, formData);
+                return response.data.result;
+            } catch (error) {
+                addLog('Send photo error: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // Send Video
+        async function sendVideo(chatId, video, caption = '') {
+            try {
+                const formData = new FormData();
+                formData.append('chat_id', chatId);
+                formData.append('video', video);
+                if (caption) formData.append('caption', caption);
+
+                const response = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendVideo`, formData);
+                return response.data.result;
+            } catch (error) {
+                addLog('Send video error: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // Detect Platform from URL
+        function detectPlatform(url) {
+            if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+            if (url.includes('facebook.com') || url.includes('fb.watch')) return 'facebook';
+            if (url.includes('tiktok.com')) return 'tiktok';
+            if (url.includes('instagram.com')) return 'instagram';
+            return null;
+        }
+
+        // Process Video URL (This needs actual API integration)
+        async function processVideoUrl(url, chatId, userId) {
+            const platform = detectPlatform(url);
+            
+            if (!platform) {
+                await sendMessage(chatId, '❌ ပံ့ပိုးမထားသော link ဖြစ်ပါသည်။ YouTube, Facebook, TikTok, Instagram links များကိုသာ ပံ့ပိုးပါသည်။');
+                return;
+            }
+
+            await sendMessage(chatId, `🔍 ${platform.toUpperCase()} link ကို စိစစ်နေပါသည်...`);
+
+            // TODO: Integrate with actual video download API
+            // For now, showing demo response
+            const keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: '📹 HD Quality (1080p)', callback_data: `download_hd_${userId}` },
+                        { text: '📹 SD Quality (720p)', callback_data: `download_sd_${userId}` }
+                    ],
+                    [
+                        { text: '🎵 MP3 Audio', callback_data: `download_mp3_${userId}` }
+                    ]
+                ]
+            };
+
             await sendMessage(chatId, 
-                `📎 ကျေးဇူးပြု၍ video link ပို့ပါ။\n\n` +
-                `✅ Supported: YouTube, Facebook, TikTok, Instagram`
+                `✅ Video ရှာတွေ့ပါပီ!\n\n` +
+                `📱 Platform: ${platform.toUpperCase()}\n` +
+                `🎬 သင်လိုချင်သော Quality ကို ရွေးပါ:`,
+                { reply_markup: keyboard }
             );
+
+            // Update download stats
+            const stats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS));
+            stats.totalDownloads++;
+            stats.todayDownloads++;
+            localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
+            updateDashboard();
         }
 
-        // Handle callback queries
-        if (update.callback_query) {
-            const query = update.callback_query;
-            const chatId = query.message.chat.id;
-            const userId = query.from.id;
-            const data = query.data;
+        // Handle Updates
+        async function handleUpdate(update) {
+            try {
+                if (update.message) {
+                    const message = update.message;
+                    const chatId = message.chat.id;
+                    const userId = message.from.id;
+                    const text = message.text || '';
+                    const username = message.from.username || 'unknown';
+                    const firstName = message.from.first_name || 'User';
 
-            if (data === 'check_membership') {
-                const channelMember = await checkMembership(userId, CHANNEL_ID);
-                const groupMember = await checkMembership(userId, GROUP_ID);
+                    addLog(`Message from ${firstName} (@${username}): ${text}`);
 
-                if (channelMember && groupMember) {
-                    await sendMessage(chatId, 
-                        `✅ ကျေးဇူးတင်ပါတယ်! သင် Join ပြုလုပ်ပီးပါပီ။\n\n` +
-                        `🎬 ယခု video link များကို ပို့၍ download ဆွဲနိုင်ပါပီ။`
-                    );
-                } else {
-                    await sendMessage(chatId, 
-                        `❌ သင်သည် Channel/Group ကို Join မပြုလုပ်ရသေးပါ။`
-                    );
+                    // Add user to database
+                    const user = addUser(userId, username, firstName);
+
+                    // Handle /start command
+                    if (text === '/start') {
+                        await sendMessage(chatId, WELCOME_MESSAGE);
+                        
+                        // Check if user needs to join channel/group
+                        if (!user.hasJoinedChannel || !user.hasJoinedGroup) {
+                            const keyboard = {
+                                inline_keyboard: [
+                                    [{ text: '📢 Channel ကို Join ပြုလုပ်ရန်', url: CONFIG.CHANNEL_LINK }],
+                                    [{ text: '👥 Group ကို Join ပြုလုပ်ရန်', url: CONFIG.GROUP_LINK }],
+                                    [{ text: '✅ Join ပြုလုပ်ပီးပါပီ', callback_data: 'check_membership' }]
+                                ]
+                            };
+
+                            await sendMessage(chatId, 
+                                `⚠️ Bot ကို အသုံးပြုခြင်းမပြုမီ အောက်ပါတို့ကို Join ပြုလုပ်ပေးရန် လိုအပ်ပါသည်:\n\n` +
+                                `1️⃣ ကျွန်တော်တို့၏ Channel\n` +
+                                `2️⃣ ကျွန်တော်တို့၏ Group\n\n` +
+                                `Join ပြုလုပ်ပီးပါက "✅ Join ပြုလုပ်ပီးပါပီ" ကို နှိပ်ပါ။`,
+                                { reply_markup: keyboard }
+                            );
+                        }
+                        return;
+                    }
+
+                    // Check membership before processing
+                    if (!user.hasJoinedChannel || !user.hasJoinedGroup) {
+                        const channelMember = await checkMembership(userId, CONFIG.CHANNEL_ID);
+                        const groupMember = await checkMembership(userId, CONFIG.GROUP_ID);
+
+                        if (!channelMember || !groupMember) {
+                            await sendMessage(chatId, 
+                                `⛔️ သင်သည် Channel နှင့် Group များကို Join မပြုလုပ်ရသေးပါ။\n\n` +
+                                `/start ကို နှိပ်ပီး Join ပြုလုပ်ပါ။`
+                            );
+                            return;
+                        }
+
+                        // Update user membership status
+                        user.hasJoinedChannel = true;
+                        user.hasJoinedGroup = true;
+                        let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS));
+                        users[userId] = user;
+                        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+                    }
+
+                    // Process video URL
+                    if (text.includes('http') || text.includes('www.')) {
+                        await processVideoUrl(text, chatId, userId);
+                    } else {
+                        await sendMessage(chatId, 
+                            `📎 ကျေးဇူးပြု၍ သင် download ဆွဲလိုသော video ၏ link ကို ပို့ပါ။\n\n` +
+                            `✅ Supported:\n` +
+                            `• YouTube\n` +
+                            `• Facebook\n` +
+                            `• TikTok\n` +
+                            `• Instagram`
+                        );
+                    }
                 }
+
+                // Handle callback queries (button clicks)
+                if (update.callback_query) {
+                    const callbackQuery = update.callback_query;
+                    const chatId = callbackQuery.message.chat.id;
+                    const userId = callbackQuery.from.id;
+                    const data = callbackQuery.data;
+
+                    if (data === 'check_membership') {
+                        const channelMember = await checkMembership(userId, CONFIG.CHANNEL_ID);
+                        const groupMember = await checkMembership(userId, CONFIG.GROUP_ID);
+
+                        if (channelMember && groupMember) {
+                            // Update user status
+                            let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS));
+                            users[userId].hasJoinedChannel = true;
+                            users[userId].hasJoinedGroup = true;
+                            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+
+                            await sendMessage(chatId, 
+                                `✅ ကျေးဇူးတင်ပါတယ်! သင် Join ပြုလုပ်ပီးပါပီ။\n\n` +
+                                `🎬 ယခု video link များကို ပို့၍ download ဆွဲနိုင်ပါပီ။`
+                            );
+                        } else {
+                            let missing = [];
+                            if (!channelMember) missing.push('Channel');
+                            if (!groupMember) missing.push('Group');
+                            
+                            await sendMessage(chatId, 
+                                `❌ သင်သည် ${missing.join(' နှင့် ')} ကို Join မပြုလုပ်ရသေးပါ။\n\n` +
+                                `ကျေးဇူးပြု၍ Join ပြုလုပ်ပီးမှ ထပ်မံကြိုးစားပါ။`
+                            );
+                        }
+                    }
+
+                    // Handle download quality selection
+                    if (data.startsWith('download_')) {
+                        const [_, quality, uid] = data.split('_');
+                        
+                        await sendMessage(chatId, 
+                            `⏳ ${quality.toUpperCase()} quality ဖြင့် download စတင်နေပါသည်...\n\n` +
+                            `ကျေးဇူးပြု၍ ခဏစောင့်ပါ...`
+                        );
+
+                        // Simulate download (replace with actual download logic)
+                        setTimeout(async () => {
+                            await sendMessage(chatId, 
+                                `✅ Download ပြီးစီးပါပီ!` + DOWNLOAD_SUCCESS_MESSAGE
+                            );
+                        }, 3000);
+                    }
+
+                    // Answer callback query
+                    await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/answerCallbackQuery`, {
+                        callback_query_id: callbackQuery.id
+                    });
+                }
+
+            } catch (error) {
+                addLog('Error handling update: ' + error.message, 'error');
+            }
+        }
+
+        // Get Updates (Long Polling)
+        async function getUpdates() {
+            if (!botRunning) return;
+
+            try {
+                const response = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates`, {
+                    params: {
+                        offset: updateOffset,
+                        timeout: 30
+                    }
+                });
+
+                const updates = response.data.result;
+
+                for (const update of updates) {
+                    await handleUpdate(update);
+                    updateOffset = update.update_id + 1;
+                }
+
+            } catch (error) {
+                addLog('Error getting updates: ' + error.message, 'error');
             }
 
-            // Answer callback
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ callback_query_id: query.id })
-            });
+            // Continue polling
+            if (botRunning) {
+                setTimeout(getUpdates, 1000);
+            }
         }
 
-        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+        // Start Bot
+        async function startBot() {
+            if (botRunning) {
+                showAlert('Bot လုပ်ဆောင်နေပြီးဖြစ်ပါသည်', 'error');
+                return;
+            }
 
-    } catch (error) {
-        console.error('Error:', error);
-        return { 
-            statusCode: 500, 
-            headers, 
-            body: JSON.stringify({ error: error.message }) 
-        };
-    }
-};
-            </div>
-            <button class="copy-btn" onclick="copyCode('completeCode')">📋 Copy Full Code</button>
-        </div>
-
-        <!-- How It Works -->
-        <div class="card">
-            <h2>🔄 System ဘယ်လို အလုပ်လုပ်သလဲ</h2>
-            
-            <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; margin-top: 15px;">
-                <div style="margin-bottom: 20px;">
-                    <strong>1. User → သင့် Bot</strong>
-                    <p style="margin: 8px 0; opacity: 0.9;">User က video link ကို သင့် bot ထဲမှာ ပို့တယ်</p>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <strong>2. သင့် Bot → Processing</strong>
-                    <p style="margin: 8px 0; opacity: 0.9;">Bot က link ကို detect လုပ်ပြီး platform စစ်တယ်</p>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <strong>3. Deep Link Creation</strong>
-                    <p style="margin: 8px 0; opacity: 0.9;">HUB9XDOWNLOADERBOT သို့ redirect link ဖန်တီးတယ်</p>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <strong>4. User → HUB9XDOWNLOADERBOT</strong>
-                    <p style="margin: 8px 0; opacity: 0.9;">User က button နှိပ်တာနဲ့ HUB9X bot ဆီသွားတယ်</p>
-                </div>
-
-                <div>
-                    <strong>5. Download Complete</strong>
-                    <p style="margin: 8px 0; opacity: 0.9;">HUB9X bot က video ကို download လုပ်ပေးတယ်</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Deploy -->
-        <div class="card">
-            <h2>🚀 Quick Deploy to Netlify</h2>
-            
-            <div class="instruction-step">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                    <strong>GitHub Repository ပြင်ဆင်ရန်</strong>
-                    <p>အပေါ်က code များကို GitHub repo မှာ upload လုပ်ပါ</p>
-                </div>
-            </div>
-
-            <div class="instruction-step">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                    <strong>Netlify ချိတ်ဆက်ရန်</strong>
-                    <p>Netlify dashboard → "Import from Git" → GitHub repo ရွေးပါ</p>
-                </div>
-            </div>
-
-            <div class="instruction-step">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                    <strong>Deploy လုပ်ပါ</strong>
-                    <p>Deploy settings မှာ functions directory: <code>netlify/functions</code> ထည့်ပါ</p>
-                </div>
-            </div>
-
-            <div style="margin-top: 20px; text-align: center;">
-                <a href="https://app.netlify.com/start" target="_blank" class="btn btn-primary">
-                    🚀 Deploy to Netlify Now
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Copy code function
-        function copyCode(elementId) {
-            const element = document.getElementById(elementId);
-            const text = element.textContent;
-            
-            navigator.clipboard.writeText(text).then(() => {
-                // Show success message
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '✓ Copied!';
-                btn.style.background = 'rgba(76, 175, 80, 0.4)';
+            try {
+                // Test bot token
+                const response = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getMe`);
                 
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.background = '';
-                }, 2000);
-            }).catch(err => {
-                alert('Failed to copy: ' + err);
+                if (response.data.ok) {
+                    botRunning = true;
+                    document.getElementById('botStatus').textContent = '● Bot လုပ်ဆောင်နေသည်';
+                    document.getElementById('botStatus').classList.remove('offline');
+                    addLog('Bot started successfully!', 'success');
+                    showAlert('Bot စတင်ပြီးပါပြီ!', 'success');
+                    
+                    // Start polling
+                    getUpdates();
+                } else {
+                    throw new Error('Invalid bot token');
+                }
+            } catch (error) {
+                addLog('Failed to start bot: ' + error.message, 'error');
+                showAlert('Bot စတင်ရန် မအောင်မြင်ပါ: ' + error.message, 'error');
+            }
+        }
+
+        // Stop Bot
+        function stopBot() {
+            botRunning = false;
+            document.getElementById('botStatus').textContent = '● Bot ပိတ်နေသည်';
+            document.getElementById('botStatus').classList.add('offline');
+            addLog('Bot stopped', 'warning');
+            showAlert('Bot ရပ်ပြီးပါပြီ', 'success');
+        }
+
+        // Preview Files
+        function previewFiles() {
+            const files = document.getElementById('broadcastFiles').files;
+            const preview = document.getElementById('filePreview');
+            preview.innerHTML = '';
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (file.type.startsWith('image/')) {
+                        preview.innerHTML += `<img src="${e.target.result}" alt="Preview">`;
+                    } else if (file.type.startsWith('video/')) {
+                        preview.innerHTML += `<video src="${e.target.result}" controls></video>`;
+                    }
+                };
+                reader.readAsDataURL(file);
             });
         }
 
-        // Reload telegram widget
-        function reloadWidget() {
-            const widget = document.getElementById('telegramWidget');
-            widget.src = widget.src;
+        // Send Broadcast
+        async function sendBroadcast() {
+            const message = document.getElementById('broadcastMessage').value;
+            const files = document.getElementById('broadcastFiles').files;
+
+            if (!message && files.length === 0) {
+                showAlert('မက်ဆေ့ချ် သို့မဟုတ် ဖိုင်များ ထည့်ပါ', 'error');
+                return;
+            }
+
+            if (!botRunning) {
+                showAlert('Bot ကို ဦးစွာ စတင်ပါ', 'error');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '{}');
+            const userIds = Object.keys(users);
+
+            if (userIds.length === 0) {
+                showAlert('Users များ မရှိသေးပါ', 'error');
+                return;
+            }
+
+            document.getElementById('broadcastLoading').classList.add('show');
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const userId of userIds) {
+                try {
+                    // Send text message
+                    if (message) {
+                        await sendMessage(userId, message);
+                    }
+
+                    // Send files
+                    for (const file of files) {
+                        if (file.type.startsWith('image/')) {
+                            await sendPhoto(userId, file, message);
+                        } else if (file.type.startsWith('video/')) {
+                            await sendVideo(userId, file, message);
+                        }
+                    }
+
+                    successCount++;
+                    addLog(`Broadcast sent to user ${userId}`, 'success');
+                } catch (error) {
+                    errorCount++;
+                    addLog(`Failed to send to user ${userId}: ${error.message}`, 'error');
+                }
+
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            document.getElementById('broadcastLoading').classList.remove('show');
+            showAlert(`ပို့ပြီးပါပြီ! အောင်မြင်: ${successCount}, မအောင်မြင်: ${errorCount}`, 'success');
+            
+            // Clear form
+            document.getElementById('broadcastMessage').value = '';
+            document.getElementById('broadcastFiles').value = '';
+            document.getElementById('filePreview').innerHTML = '';
         }
 
-        // Auto-reload widget every 5 minutes
-        setInterval(() => {
-            console.log('Auto-refreshing widget...');
-        }, 300000);
+        // Show Alert
+        function showAlert(message, type = 'success') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert ${type} show`;
 
-        // Page load
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 5000);
+        }
+
+        // Add Log
+        function addLog(message, type = 'info') {
+            const logs = document.getElementById('botLogs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        // Initialize on load
         window.addEventListener('DOMContentLoaded', () => {
-            console.log('Relay bot system loaded');
+            initStats();
+            addLog('Admin panel loaded successfully');
             
-            // Show info based on current page
-            const currentUrl = window.location.href;
-            if (currentUrl.includes('netlify.app') || currentUrl.includes('localhost')) {
-                const alert = document.getElementById('infoAlert');
-                alert.innerHTML = '<strong>✅ System Ready!</strong> သင့် bot သည် HUB9XDOWNLOADERBOT ကို relay အနေဖြင့် အသုံးပြုနိုင်ပြီ။';
-                alert.className = 'alert success show';
+            // Auto-start bot (optional)
+            // startBot();
+        });
+
+        // Prevent page unload if bot is running
+        window.addEventListener('beforeunload', (e) => {
+            if (botRunning) {
+                e.preventDefault();
+                e.returnValue = 'Bot လုပ်ဆောင်နေပါသည်။ ပိတ်မည်မှာ သေချာပါသလား?';
             }
         });
     </script>
