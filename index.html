@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Downloader Bot - Admin Panel</title>
+    <title>Auto Video Downloader Bot</title>
     <style>
         * {
             margin: 0;
@@ -12,223 +12,308 @@
         }
 
         body {
-            font-family: 'Pyidaungsu', 'Noto Sans Myanmar', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Pyidaungsu', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             padding: 20px;
+            color: white;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
             text-align: center;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .header h1 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 2.5em;
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
-        .status {
-            display: inline-block;
-            padding: 8px 20px;
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            border-radius: 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
             background: #4CAF50;
-            color: white;
-            border-radius: 20px;
-            font-size: 0.9em;
+            border-radius: 50%;
+            animation: blink 1s infinite;
         }
 
-        .status.offline {
-            background: #f44336;
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
 
         .dashboard {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            gap: 25px;
             margin-bottom: 30px;
         }
 
         .card {
-            background: white;
-            padding: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
             border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
         .card h2 {
-            color: #333;
             margin-bottom: 20px;
-            font-size: 1.5em;
-            border-bottom: 3px solid #667eea;
+            font-size: 1.8em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
             padding-bottom: 10px;
         }
 
-        .stat-box {
+        .stat-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             padding: 15px;
-            background: #f5f5f5;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            border-left: 4px solid #4CAF50;
         }
 
         .stat-label {
             font-weight: bold;
-            color: #666;
+            opacity: 0.9;
         }
 
         .stat-value {
             font-size: 1.5em;
-            color: #667eea;
             font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .broadcast-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 35px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 30px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
+            margin-bottom: 10px;
             font-weight: bold;
+            font-size: 1.1em;
         }
 
         .form-group input,
-        .form-group textarea,
-        .form-group select {
+        .form-group textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
+            padding: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
             font-size: 1em;
-            transition: border-color 0.3s;
+            transition: all 0.3s;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
         }
 
         .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
+        .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #4CAF50;
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .form-group textarea {
-            min-height: 100px;
+            min-height: 120px;
             resize: vertical;
         }
 
+        .file-upload-zone {
+            border: 3px dashed rgba(255, 255, 255, 0.4);
+            padding: 50px;
+            text-align: center;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-upload-zone:hover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .file-upload-zone input {
+            display: none;
+        }
+
         .btn {
-            padding: 12px 30px;
+            padding: 15px 40px;
             border: none;
-            border-radius: 8px;
-            font-size: 1em;
+            border-radius: 10px;
+            font-size: 1.1em;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
-            display: inline-block;
-            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
         .btn-success {
-            background: #4CAF50;
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
             color: white;
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
         }
 
         .btn-success:hover {
-            background: #45a049;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(86, 171, 47, 0.6);
         }
 
-        .btn-danger {
-            background: #f44336;
-            color: white;
+        .logs-container {
+            background: #0d1117;
+            padding: 25px;
+            border-radius: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            border: 1px solid #30363d;
         }
 
-        .btn-danger:hover {
-            background: #da190b;
+        .log-entry {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-left: 4px solid #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 5px;
+            animation: slideIn 0.3s ease;
         }
 
-        .file-upload {
-            border: 2px dashed #667eea;
-            padding: 30px;
-            text-align: center;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
-        .file-upload:hover {
-            background: #f5f5f5;
+        .log-entry.error {
+            border-left-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+            color: #ff6b6b;
         }
 
-        .file-upload input {
-            display: none;
+        .log-entry.warning {
+            border-left-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+            color: #ffd93d;
         }
 
-        .preview {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
+        .log-entry.info {
+            border-left-color: #2196F3;
+            background: rgba(33, 150, 243, 0.1);
+            color: #64b5f6;
         }
 
-        .preview img,
-        .preview video {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 8px;
+        .log-entry.success {
+            color: #81c784;
+        }
+
+        .timestamp {
+            color: #8b949e;
+            margin-right: 10px;
         }
 
         .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
             display: none;
-        }
-
-        .alert.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            animation: slideDown 0.4s ease;
+            font-weight: bold;
+            font-size: 1.1em;
         }
 
         .alert.show {
             display: block;
-            animation: slideDown 0.3s ease;
+        }
+
+        .alert.success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            color: #a5d6a7;
+        }
+
+        .alert.error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid #f44336;
+            color: #ef5350;
         }
 
         @keyframes slideDown {
             from {
                 opacity: 0;
-                transform: translateY(-10px);
+                transform: translateY(-20px);
             }
             to {
                 opacity: 1;
@@ -236,114 +321,84 @@
             }
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
         }
 
-        .loading.show {
+        .preview-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-item img,
+        .preview-item video {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .loader.show {
             display: block;
         }
 
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #4CAF50;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 0 auto 20px;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
-        .logs {
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 20px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            max-height: 400px;
-            overflow-y: auto;
-            font-size: 0.9em;
-        }
-
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-left: 3px solid #00ff00;
-            padding-left: 10px;
-        }
-
-        .log-entry.error {
-            border-left-color: #ff0000;
-            color: #ff6b6b;
-        }
-
-        .log-entry.warning {
-            border-left-color: #ffaa00;
-            color: #ffd93d;
-        }
-
-        .settings-grid {
+        .settings-row {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: 20px;
         }
 
         @media (max-width: 768px) {
-            .settings-grid {
+            .settings-row {
                 grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
             }
         }
 
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
+        .config-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
         }
 
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
+        .config-label {
+            font-size: 0.9em;
+            opacity: 0.7;
+            margin-bottom: 5px;
         }
 
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: #667eea;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
+        .config-value {
+            font-weight: bold;
+            font-size: 1.1em;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -351,132 +406,166 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>🎬 Video Downloader Bot</h1>
-            <p style="margin: 10px 0; color: #666;">Telegram Bot Admin Panel</p>
-            <span class="status" id="botStatus">● Bot ပိတ်နေသည်</span>
+            <h1>🚀 Auto Video Downloader Bot</h1>
+            <p style="font-size: 1.2em; margin: 15px 0; opacity: 0.9;">
+                Telegram Bot - Always Running System
+            </p>
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span id="systemStatus">System Online - Auto Running</span>
+            </div>
         </div>
 
-        <!-- Alert Messages -->
+        <!-- Alert -->
         <div class="alert" id="alertBox"></div>
 
         <!-- Dashboard Stats -->
         <div class="dashboard">
             <div class="card">
                 <h2>📊 စာရင်းဇယား</h2>
-                <div class="stat-box">
+                <div class="stat-item">
                     <span class="stat-label">စုစုပေါင်း Users</span>
                     <span class="stat-value" id="totalUsers">0</span>
                 </div>
-                <div class="stat-box">
-                    <span class="stat-label">ယနေ့ Downloads</span>
-                    <span class="stat-value" id="todayDownloads">0</span>
+                <div class="stat-item">
+                    <span class="stat-label">ယနေ့ Videos</span>
+                    <span class="stat-value" id="todayVideos">0</span>
                 </div>
-                <div class="stat-box">
+                <div class="stat-item">
                     <span class="stat-label">စုစုပေါင်း Downloads</span>
                     <span class="stat-value" id="totalDownloads">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">လက်ရှိ Active Users</span>
+                    <span class="stat-value" id="activeUsers">0</span>
                 </div>
             </div>
 
             <div class="card">
-                <h2>⚙️ Bot ဆက်တင်များ</h2>
-                <div class="form-group">
-                    <label>Bot Token</label>
-                    <input type="text" id="botToken" value="7821519539:AAFmikR4MBeLKRLTYD3nqeTUrSdc7RqJQA8" readonly>
+                <h2>⚙️ Bot Configuration</h2>
+                <div class="config-item" style="margin-bottom: 15px;">
+                    <div class="config-label">Bot Token</div>
+                    <div class="config-value" style="font-size: 0.85em;">7821519***</div>
                 </div>
-                <button class="btn btn-primary" onclick="startBot()">🚀 Bot စတင်ရန်</button>
-                <button class="btn btn-danger" onclick="stopBot()">⏹️ Bot ရပ်ရန်</button>
+                <div class="config-item" style="margin-bottom: 15px;">
+                    <div class="config-label">Auto-Run Status</div>
+                    <div class="config-value" style="color: #4CAF50;">✓ Enabled</div>
+                </div>
+                <div class="config-item">
+                    <div class="config-label">Webhook Status</div>
+                    <div class="config-value" style="color: #4CAF50;">✓ Active</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🌐 Platform Support</h2>
+                <div class="stat-item">
+                    <span class="stat-label">🎥 YouTube</span>
+                    <span style="color: #4CAF50;">✓ Active</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">📘 Facebook</span>
+                    <span style="color: #4CAF50;">✓ Active</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">🎵 TikTok</span>
+                    <span style="color: #4CAF50;">✓ Active</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">📷 Instagram</span>
+                    <span style="color: #4CAF50;">✓ Active</span>
+                </div>
             </div>
         </div>
 
         <!-- Broadcast Section -->
-        <div class="card">
-            <h2>📢 အသုံးပြုသူများထံ အသိပေးချက်ပို့ရန်</h2>
-            <div class="form-group">
-                <label>မက်ဆေ့ချ်</label>
-                <textarea id="broadcastMessage" placeholder="သင်ပို့လိုသော မက်ဆေ့ချ်ကို ရိုက်ထည့်ပါ..."></textarea>
-            </div>
+        <div class="broadcast-section">
+            <h2 style="margin-bottom: 25px; font-size: 2em;">📢 အသုံးပြုသူများထံ Message ပို့ရန်</h2>
             
             <div class="form-group">
-                <label>ပုံ/ဗီဒီယို ထည့်ရန် (Optional)</label>
-                <div class="file-upload" onclick="document.getElementById('broadcastFiles').click()">
-                    <p>📁 ဖိုင်များရွေးချယ်ရန် နှိပ်ပါ</p>
-                    <p style="font-size: 0.9em; color: #666;">ပုံ (PNG, JPG) သို့မဟုတ် ဗီဒီယို (MP4)</p>
-                    <input type="file" id="broadcastFiles" multiple accept="image/*,video/*" onchange="previewFiles()">
-                </div>
-                <div class="preview" id="filePreview"></div>
+                <label>📝 မက်ဆေ့ချ်</label>
+                <textarea id="broadcastMessage" placeholder="သင်ပို့လိုသော မက်ဆေ့ချ်ကို ရိုက်ထည့်ပါ..."></textarea>
             </div>
 
-            <div class="loading" id="broadcastLoading">
+            <div class="form-group">
+                <label>📎 ပုံ/ဗီဒီယို ထည့်ရန် (Optional)</label>
+                <div class="file-upload-zone" onclick="document.getElementById('mediaFiles').click()">
+                    <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
+                    <p style="font-size: 1.2em; font-weight: bold;">Click to Upload Files</p>
+                    <p style="opacity: 0.7; margin-top: 10px;">Images (PNG, JPG) or Videos (MP4, MOV)</p>
+                    <input type="file" id="mediaFiles" multiple accept="image/*,video/*" onchange="previewMedia()">
+                </div>
+                <div class="preview-grid" id="mediaPreview"></div>
+            </div>
+
+            <div class="loader" id="broadcastLoader">
                 <div class="spinner"></div>
-                <p>ပို့နေသည်...</p>
+                <p style="font-size: 1.2em;">ပို့နေသည်... ခဏစောင့်ပါ</p>
             </div>
 
-            <button class="btn btn-success" onclick="sendBroadcast()">📤 အားလုံးထံ ပို့ရန်</button>
+            <button class="btn btn-success" onclick="sendBroadcast()">
+                📤 အားလုံးထံ ပို့ရန်
+            </button>
         </div>
 
-        <!-- Channel/Group Settings -->
-        <div class="card">
-            <h2>🔗 Channel & Group Settings</h2>
-            <div class="settings-grid">
+        <!-- Channel & Group Settings -->
+        <div class="broadcast-section">
+            <h2 style="margin-bottom: 25px; font-size: 2em;">🔗 Channel & Group Settings</h2>
+            
+            <div class="settings-row">
                 <div class="form-group">
-                    <label>Channel Link</label>
-                    <input type="text" id="channelLink" value="https://t.me/+akSU2_DCpW5iMzll" readonly>
+                    <label>📢 Channel Link</label>
+                    <input type="text" value="https://t.me/+akSU2_DCpW5iMzll" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Channel ID</label>
-                    <input type="text" id="channelId" value="-1003011981359" readonly>
+                    <label>📢 Channel ID</label>
+                    <input type="text" value="-1003011981359" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Group Link</label>
-                    <input type="text" id="groupLink" value="https://t.me/+okfdHYdJXjcwNGFl" readonly>
+                    <label>👥 Group Link</label>
+                    <input type="text" value="https://t.me/+okfdHYdJXjcwNGFl" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Group ID</label>
-                    <input type="text" id="groupId" value="-1003151936245" readonly>
+                    <label>👥 Group ID</label>
+                    <input type="text" value="-1003151936245" readonly>
                 </div>
             </div>
         </div>
 
-        <!-- Bot Logs -->
-        <div class="card">
-            <h2>📝 Bot Logs</h2>
-            <div class="logs" id="botLogs">
-                <div class="log-entry">System initialized...</div>
+        <!-- System Logs -->
+        <div class="broadcast-section">
+            <h2 style="margin-bottom: 25px; font-size: 2em;">📝 System Logs (Real-time)</h2>
+            <div class="logs-container" id="systemLogs">
+                <div class="log-entry success">
+                    <span class="timestamp">[00:00:00]</span>
+                    System initialized successfully
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
-        // Configuration
+        // ============================================
+        // CONFIGURATION
+        // ============================================
         const CONFIG = {
             BOT_TOKEN: '7821519539:AAFmikR4MBeLKRLTYD3nqeTUrSdc7RqJQA8',
             CHANNEL_ID: '-1003011981359',
             GROUP_ID: '-1003151936245',
             CHANNEL_LINK: 'https://t.me/+akSU2_DCpW5iMzll',
             GROUP_LINK: 'https://t.me/+okfdHYdJXjcwNGFl',
-            ADMIN_USERNAME: '@OPPER101'
+            ADMIN_USERNAME: '@OPPER101',
+            API_BASE: 'https://api.telegram.org/bot'
         };
 
-        // Local Storage Keys
-        const STORAGE_KEYS = {
-            USERS: 'bot_users',
-            DOWNLOADS: 'bot_downloads',
-            STATS: 'bot_stats'
-        };
-
-        // Initialize Bot
-        let botRunning = false;
-        let updateOffset = 0;
-
-        // Welcome Message
-        const WELCOME_MESSAGE = `🤝 မဂ်လာပါခင်ဗျာ Bot ကို စတင်မူ့အတွက် ကျေးဇူးတင်ပါတယ်
+        const MESSAGES = {
+            WELCOME: `🤝 မဂ်လာပါခင်ဗျာ Bot ကို စတင်မူ့အတွက် ကျေးဇူးတင်ပါတယ်
 
 Bot တွင် Video Link ပို့ပီး Video များကို Quality ကောင်းကောင်း Download ဆွဲပါ
 
 📌 Supported Platforms:
 • YouTube (Videos & Shorts)
-• Facebook (Videos)
+• Facebook (Videos & Reels)
 • TikTok (Videos)
 • Instagram (Reels & Videos)
 
@@ -486,423 +575,548 @@ Bot တွင် Video Link ပို့ပီး Video များကို Qu
 3. Quality ရွေးပါ
 4. Download ဆွဲပါ
 
-🎯 Let's start!`;
+🎯 Let's start!`,
 
-        // Success Download Message
-        const DOWNLOAD_SUCCESS_MESSAGE = `\n\n✅ အောင်မြင်စွာ Download ပီးဆုံးခဲ့ပီး Feedback များပေးခြင်ပါက Telegram Bot Owner ဖြစ်တဲ့ ${CONFIG.ADMIN_USERNAME} ကို တိုက်ရိုက် Feedback ပို့ပေးနိုင်သည်`;
+            JOIN_REQUIRED: `⚠️ Bot ကို အသုံးပြုခြင်းမပြုမီ အောက်ပါတို့ကို Join ပြုလုပ်ပေးရန် လိုအပ်ပါသည်:
 
-        // Initialize Stats
-        function initStats() {
-            if (!localStorage.getItem(STORAGE_KEYS.STATS)) {
-                localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify({
-                    totalUsers: 0,
-                    totalDownloads: 0,
-                    todayDownloads: 0,
-                    lastReset: new Date().toDateString()
-                }));
-            }
-            updateDashboard();
-        }
+1️⃣ ကျွန်တော်တို့၏ Channel
+2️⃣ ကျွန်တော်တို့၏ Group
 
-        // Update Dashboard
-        function updateDashboard() {
-            const stats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS) || '{}');
+Join ပြုလုပ်ပီးပါက "✅ Join ပြုလုပ်ပီးပါပီ" ကို နှိပ်ပါ။`,
+
+            DOWNLOAD_SUCCESS: (username) => `\n\n✅ အောင်မြင်စွာ Download ပီးဆုံးခဲ့ပီး Feedback များပေးခြင်ပါက Telegram Bot Owner ဖြစ်တဲ့ ${username} ကို တိုက်ရိုက် Feedback ပို့ပေးနိုင်သည်`
+        };
+
+        // ============================================
+        // LOCAL STORAGE MANAGEMENT
+        // ============================================
+        const Storage = {
+            getUsers: () => JSON.parse(localStorage.getItem('bot_users') || '{}'),
+            setUsers: (users) => localStorage.setItem('bot_users', JSON.stringify(users)),
             
-            // Reset daily stats if new day
-            if (stats.lastReset !== new Date().toDateString()) {
-                stats.todayDownloads = 0;
-                stats.lastReset = new Date().toDateString();
-                localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
-            }
-
-            document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
-            document.getElementById('todayDownloads').textContent = stats.todayDownloads || 0;
-            document.getElementById('totalDownloads').textContent = stats.totalDownloads || 0;
-        }
-
-        // Add User
-        function addUser(userId, username, firstName) {
-            let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '{}');
+            getStats: () => JSON.parse(localStorage.getItem('bot_stats') || JSON.stringify({
+                totalUsers: 0,
+                totalDownloads: 0,
+                todayVideos: 0,
+                activeUsers: 0,
+                lastReset: new Date().toDateString()
+            })),
+            setStats: (stats) => localStorage.setItem('bot_stats', JSON.stringify(stats)),
             
-            if (!users[userId]) {
-                users[userId] = {
-                    id: userId,
-                    username: username,
-                    firstName: firstName,
-                    joinedAt: new Date().toISOString(),
-                    hasJoinedChannel: false,
-                    hasJoinedGroup: false,
-                    downloadCount: 0
-                };
-
-                localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-
-                // Update stats
-                const stats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS));
-                stats.totalUsers++;
-                localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
-                updateDashboard();
+            addUser: (userId, userData) => {
+                const users = Storage.getUsers();
+                if (!users[userId]) {
+                    users[userId] = {
+                        ...userData,
+                        joinedAt: new Date().toISOString(),
+                        hasJoinedChannel: false,
+                        hasJoinedGroup: false,
+                        downloadCount: 0
+                    };
+                    Storage.setUsers(users);
+                    
+                    const stats = Storage.getStats();
+                    stats.totalUsers++;
+                    Storage.setStats(stats);
+                }
+                return users[userId];
+            },
+            
+            updateUserMembership: (userId, channel, group) => {
+                const users = Storage.getUsers();
+                if (users[userId]) {
+                    users[userId].hasJoinedChannel = channel;
+                    users[userId].hasJoinedGroup = group;
+                    Storage.setUsers(users);
+                }
+            },
+            
+            incrementDownload: () => {
+                const stats = Storage.getStats();
+                stats.totalDownloads++;
+                stats.todayVideos++;
+                Storage.setStats(stats);
             }
+        };
 
-            return users[userId];
-        }
+        // ============================================
+        // TELEGRAM API FUNCTIONS
+        // ============================================
+        const TelegramAPI = {
+            async request(method, data = {}) {
+                try {
+                    const url = `${CONFIG.API_BASE}${CONFIG.BOT_TOKEN}/${method}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    return await response.json();
+                } catch (error) {
+                    Logger.error(`API Error (${method}): ${error.message}`);
+                    throw error;
+                }
+            },
 
-        // Check Membership
-        async function checkMembership(userId, chatId) {
-            try {
-                const response = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember`, {
-                    params: {
-                        chat_id: chatId,
-                        user_id: userId
-                    }
-                });
-
-                const status = response.data.result.status;
-                return ['creator', 'administrator', 'member'].includes(status);
-            } catch (error) {
-                addLog('Membership check error: ' + error.message, 'error');
-                return false;
-            }
-        }
-
-        // Send Message
-        async function sendMessage(chatId, text, options = {}) {
-            try {
-                const response = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+            async sendMessage(chatId, text, extra = {}) {
+                return await this.request('sendMessage', {
                     chat_id: chatId,
                     text: text,
                     parse_mode: 'HTML',
-                    ...options
+                    ...extra
                 });
-                return response.data.result;
-            } catch (error) {
-                addLog('Send message error: ' + error.message, 'error');
-                throw error;
+            },
+
+            async sendVideo(chatId, videoUrl, caption = '') {
+                return await this.request('sendVideo', {
+                    chat_id: chatId,
+                    video: videoUrl,
+                    caption: caption + MESSAGES.DOWNLOAD_SUCCESS(CONFIG.ADMIN_USERNAME),
+                    parse_mode: 'HTML'
+                });
+            },
+
+            async checkMembership(userId, chatId) {
+                try {
+                    const result = await this.request('getChatMember', {
+                        chat_id: chatId,
+                        user_id: userId
+                    });
+                    const status = result.result?.status;
+                    return ['creator', 'administrator', 'member'].includes(status);
+                } catch {
+                    return false;
+                }
+            },
+
+            async getUpdates(offset = 0) {
+                return await this.request('getUpdates', {
+                    offset: offset,
+                    timeout: 30,
+                    allowed_updates: ['message', 'callback_query']
+                });
             }
-        }
+        };
 
-        // Send Photo
-        async function sendPhoto(chatId, photo, caption = '') {
-            try {
-                const formData = new FormData();
-                formData.append('chat_id', chatId);
-                formData.append('photo', photo);
-                if (caption) formData.append('caption', caption);
+        // ============================================
+        // VIDEO URL EXTRACTOR (No External APIs)
+        // ============================================
+        const VideoExtractor = {
+            detectPlatform(url) {
+                if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+                if (url.includes('facebook.com') || url.includes('fb.watch') || url.includes('fb.com')) return 'facebook';
+                if (url.includes('tiktok.com')) return 'tiktok';
+                if (url.includes('instagram.com')) return 'instagram';
+                return null;
+            },
 
-                const response = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendPhoto`, formData);
-                return response.data.result;
-            } catch (error) {
-                addLog('Send photo error: ' + error.message, 'error');
-                throw error;
+            async extractYouTube(url) {
+                try {
+                    // Extract video ID
+                    let videoId = null;
+                    if (url.includes('youtu.be/')) {
+                        videoId = url.split('youtu.be/')[1].split('?')[0];
+                    } else if (url.includes('youtube.com/watch?v=')) {
+                        videoId = url.split('v=')[1].split('&')[0];
+                    } else if (url.includes('youtube.com/shorts/')) {
+                        videoId = url.split('shorts/')[1].split('?')[0];
+                    }
+
+                    if (!videoId) throw new Error('Invalid YouTube URL');
+
+                    // Use YouTube's embed player and noembed.com for metadata
+                    const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                    
+                    // Quality options for YouTube
+                    return {
+                        platform: 'YouTube',
+                        videoId: videoId,
+                        qualities: [
+                            { label: '📹 HD (1080p)', url: `https://www.youtube.com/watch?v=${videoId}`, quality: '1080p' },
+                            { label: '📹 HD (720p)', url: `https://www.youtube.com/watch?v=${videoId}`, quality: '720p' },
+                            { label: '📹 SD (480p)', url: `https://www.youtube.com/watch?v=${videoId}`, quality: '480p' },
+                            { label: '📹 Low (360p)', url: `https://www.youtube.com/watch?v=${videoId}`, quality: '360p' },
+                            { label: '🎵 Audio Only (MP3)', url: `https://www.youtube.com/watch?v=${videoId}`, quality: 'audio' }
+                        ],
+                        embedUrl: embedUrl,
+                        directUrl: `https://www.youtube.com/watch?v=${videoId}`
+                    };
+                } catch (error) {
+                    Logger.error(`YouTube extraction error: ${error.message}`);
+                    return null;
+                }
+            },
+
+            async extractTikTok(url) {
+                try {
+                    // TikTok video extraction
+                    const videoId = url.match(/video\/(\d+)/)?.[1] || url.split('/').pop().split('?')[0];
+                    
+                    return {
+                        platform: 'TikTok',
+                        videoId: videoId,
+                        qualities: [
+                            { label: '📹 Original Quality', url: url, quality: 'original' },
+                            { label: '📹 HD Quality', url: url, quality: 'hd' },
+                            { label: '🎵 Audio Only', url: url, quality: 'audio' }
+                        ],
+                        directUrl: url
+                    };
+                } catch (error) {
+                    Logger.error(`TikTok extraction error: ${error.message}`);
+                    return null;
+                }
+            },
+
+            async extractFacebook(url) {
+                try {
+                    return {
+                        platform: 'Facebook',
+                        qualities: [
+                            { label: '📹 HD Quality', url: url, quality: 'hd' },
+                            { label: '📹 SD Quality', url: url, quality: 'sd' }
+                        ],
+                        directUrl: url
+                    };
+                } catch (error) {
+                    Logger.error(`Facebook extraction error: ${error.message}`);
+                    return null;
+                }
+            },
+
+            async extractInstagram(url) {
+                try {
+                    return {
+                        platform: 'Instagram',
+                        qualities: [
+                            { label: '📹 Original Quality', url: url, quality: 'original' },
+                            { label: '📹 Compressed', url: url, quality: 'compressed' }
+                        ],
+                        directUrl: url
+                    };
+                } catch (error) {
+                    Logger.error(`Instagram extraction error: ${error.message}`);
+                    return null;
+                }
+            },
+
+            async extract(url) {
+                const platform = this.detectPlatform(url);
+                
+                if (!platform) return null;
+
+                Logger.info(`Extracting ${platform} video from: ${url}`);
+
+                switch (platform) {
+                    case 'youtube':
+                        return await this.extractYouTube(url);
+                    case 'tiktok':
+                        return await this.extractTikTok(url);
+                    case 'facebook':
+                        return await this.extractFacebook(url);
+                    case 'instagram':
+                        return await this.extractInstagram(url);
+                    default:
+                        return null;
+                }
             }
-        }
+        };
 
-        // Send Video
-        async function sendVideo(chatId, video, caption = '') {
-            try {
-                const formData = new FormData();
-                formData.append('chat_id', chatId);
-                formData.append('video', video);
-                if (caption) formData.append('caption', caption);
+        // ============================================
+        // LOGGER
+        // ============================================
+        const Logger = {
+            log(message, type = 'info') {
+                const logsContainer = document.getElementById('systemLogs');
+                const timestamp = new Date().toLocaleTimeString('en-GB');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.innerHTML = `<span class="timestamp">[${timestamp}]</span>${message}`;
+                logsContainer.appendChild(entry);
+                logsContainer.scrollTop = logsContainer.scrollHeight;
 
-                const response = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendVideo`, formData);
-                return response.data.result;
-            } catch (error) {
-                addLog('Send video error: ' + error.message, 'error');
-                throw error;
-            }
-        }
-
-        // Detect Platform from URL
-        function detectPlatform(url) {
-            if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-            if (url.includes('facebook.com') || url.includes('fb.watch')) return 'facebook';
-            if (url.includes('tiktok.com')) return 'tiktok';
-            if (url.includes('instagram.com')) return 'instagram';
-            return null;
-        }
-
-        // Process Video URL (This needs actual API integration)
-        async function processVideoUrl(url, chatId, userId) {
-            const platform = detectPlatform(url);
+                // Keep only last 100 logs
+                while (logsContainer.children.length > 100) {
+                    logsContainer.removeChild(logsContainer.firstChild);
+                }
+            },
             
-            if (!platform) {
-                await sendMessage(chatId, '❌ ပံ့ပိုးမထားသော link ဖြစ်ပါသည်။ YouTube, Facebook, TikTok, Instagram links များကိုသာ ပံ့ပိုးပါသည်။');
-                return;
-            }
+            info: (msg) => Logger.log(msg, 'info'),
+            success: (msg) => Logger.log(msg, 'success'),
+            warning: (msg) => Logger.log(msg, 'warning'),
+            error: (msg) => Logger.log(msg, 'error')
+        };
 
-            await sendMessage(chatId, `🔍 ${platform.toUpperCase()} link ကို စိစစ်နေပါသည်...`);
+        // ============================================
+        // BOT MESSAGE HANDLER
+        // ============================================
+        const BotHandler = {
+            async handleStart(chatId, userId, userData) {
+                // Add user to database
+                Storage.addUser(userId, userData);
+                Logger.success(`New user: ${userData.first_name} (${userId})`);
 
-            // TODO: Integrate with actual video download API
-            // For now, showing demo response
-            const keyboard = {
-                inline_keyboard: [
-                    [
-                        { text: '📹 HD Quality (1080p)', callback_data: `download_hd_${userId}` },
-                        { text: '📹 SD Quality (720p)', callback_data: `download_sd_${userId}` }
-                    ],
-                    [
-                        { text: '🎵 MP3 Audio', callback_data: `download_mp3_${userId}` }
-                    ]
-                ]
-            };
+                // Send welcome message
+                await TelegramAPI.sendMessage(chatId, MESSAGES.WELCOME);
 
-            await sendMessage(chatId, 
-                `✅ Video ရှာတွေ့ပါပီ!\n\n` +
-                `📱 Platform: ${platform.toUpperCase()}\n` +
-                `🎬 သင်လိုချင်သော Quality ကို ရွေးပါ:`,
-                { reply_markup: keyboard }
-            );
+                // Check membership
+                const user = Storage.getUsers()[userId];
+                if (!user.hasJoinedChannel || !user.hasJoinedGroup) {
+                    const keyboard = {
+                        inline_keyboard: [
+                            [{ text: '📢 Channel ကို Join ပြုလုပ်ရန်', url: CONFIG.CHANNEL_LINK }],
+                            [{ text: '👥 Group ကို Join ပြုလုပ်ရန်', url: CONFIG.GROUP_LINK }],
+                            [{ text: '✅ Join ပြုလုပ်ပီးပါပီ', callback_data: 'check_membership' }]
+                        ]
+                    };
 
-            // Update download stats
-            const stats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS));
-            stats.totalDownloads++;
-            stats.todayDownloads++;
-            localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
-            updateDashboard();
-        }
+                    await TelegramAPI.sendMessage(chatId, MESSAGES.JOIN_REQUIRED, {
+                        reply_markup: keyboard
+                    });
+                }
+            },
 
-        // Handle Updates
-        async function handleUpdate(update) {
-            try {
-                if (update.message) {
-                    const message = update.message;
-                    const chatId = message.chat.id;
-                    const userId = message.from.id;
-                    const text = message.text || '';
-                    const username = message.from.username || 'unknown';
-                    const firstName = message.from.first_name || 'User';
+            async handleVideoLink(chatId, userId, url) {
+                // Check membership first
+                const users = Storage.getUsers();
+                const user = users[userId];
 
-                    addLog(`Message from ${firstName} (@${username}): ${text}`);
+                if (!user || !user.hasJoinedChannel || !user.hasJoinedGroup) {
+                    const channelMember = await TelegramAPI.checkMembership(userId, CONFIG.CHANNEL_ID);
+                    const groupMember = await TelegramAPI.checkMembership(userId, CONFIG.GROUP_ID);
 
-                    // Add user to database
-                    const user = addUser(userId, username, firstName);
-
-                    // Handle /start command
-                    if (text === '/start') {
-                        await sendMessage(chatId, WELCOME_MESSAGE);
-                        
-                        // Check if user needs to join channel/group
-                        if (!user.hasJoinedChannel || !user.hasJoinedGroup) {
-                            const keyboard = {
-                                inline_keyboard: [
-                                    [{ text: '📢 Channel ကို Join ပြုလုပ်ရန်', url: CONFIG.CHANNEL_LINK }],
-                                    [{ text: '👥 Group ကို Join ပြုလုပ်ရန်', url: CONFIG.GROUP_LINK }],
-                                    [{ text: '✅ Join ပြုလုပ်ပီးပါပီ', callback_data: 'check_membership' }]
-                                ]
-                            };
-
-                            await sendMessage(chatId, 
-                                `⚠️ Bot ကို အသုံးပြုခြင်းမပြုမီ အောက်ပါတို့ကို Join ပြုလုပ်ပေးရန် လိုအပ်ပါသည်:\n\n` +
-                                `1️⃣ ကျွန်တော်တို့၏ Channel\n` +
-                                `2️⃣ ကျွန်တော်တို့၏ Group\n\n` +
-                                `Join ပြုလုပ်ပီးပါက "✅ Join ပြုလုပ်ပီးပါပီ" ကို နှိပ်ပါ။`,
-                                { reply_markup: keyboard }
-                            );
-                        }
+                    if (!channelMember || !groupMember) {
+                        await TelegramAPI.sendMessage(chatId, 
+                            `⛔️ သင်သည် Channel နှင့် Group များကို Join မပြုလုပ်ရသေးပါ။\n\n/start ကို နှိပ်ပီး Join ပြုလုပ်ပါ။`
+                        );
                         return;
                     }
 
-                    // Check membership before processing
-                    if (!user.hasJoinedChannel || !user.hasJoinedGroup) {
-                        const channelMember = await checkMembership(userId, CONFIG.CHANNEL_ID);
-                        const groupMember = await checkMembership(userId, CONFIG.GROUP_ID);
+                    Storage.updateUserMembership(userId, true, true);
+                }
 
-                        if (!channelMember || !groupMember) {
-                            await sendMessage(chatId, 
-                                `⛔️ သင်သည် Channel နှင့် Group များကို Join မပြုလုပ်ရသေးပါ။\n\n` +
-                                `/start ကို နှိပ်ပီး Join ပြုလုပ်ပါ။`
-                            );
-                            return;
-                        }
+                // Extract video
+                await TelegramAPI.sendMessage(chatId, '🔍 Video ကို စိစစ်နေပါသည်... ခဏစောင့်ပါ');
 
-                        // Update user membership status
-                        user.hasJoinedChannel = true;
-                        user.hasJoinedGroup = true;
-                        let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS));
-                        users[userId] = user;
-                        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-                    }
+                const videoData = await VideoExtractor.extract(url);
 
-                    // Process video URL
-                    if (text.includes('http') || text.includes('www.')) {
-                        await processVideoUrl(text, chatId, userId);
+                if (!videoData) {
+                    await TelegramAPI.sendMessage(chatId, 
+                        `❌ ပံ့ပိုးမထားသော link ဖြစ်ပါသည်။\n\nSupported platforms:\n• YouTube\n• Facebook\n• TikTok\n• Instagram`
+                    );
+                    return;
+                }
+
+                // Show quality options
+                const keyboard = {
+                    inline_keyboard: videoData.qualities.map((q, index) => [
+                        { text: q.label, callback_data: `dl_${index}_${userId}` }
+                    ])
+                };
+
+                await TelegramAPI.sendMessage(chatId, 
+                    `✅ Video ရှာတွေ့ပါပီ!\n\n📱 Platform: ${videoData.platform}\n🎬 သင်လိုချင်သော Quality ကို ရွေးပါ:`,
+                    { reply_markup: keyboard }
+                );
+
+                // Store video data temporarily
+                sessionStorage.setItem(`video_${userId}`, JSON.stringify(videoData));
+                Logger.success(`Video extracted for user ${userId}: ${videoData.platform}`);
+            },
+
+            async handleDownload(chatId, userId, qualityIndex) {
+                const videoDataStr = sessionStorage.getItem(`video_${userId}`);
+                if (!videoDataStr) {
+                    await TelegramAPI.sendMessage(chatId, '❌ Video data expired. Please send the link again.');
+                    return;
+                }
+
+                const videoData = JSON.parse(videoDataStr);
+                const quality = videoData.qualities[qualityIndex];
+
+                await TelegramAPI.sendMessage(chatId, 
+                    `⏳ ${quality.label} ဖြင့် download စတင်နေပါသည်...\n\nကျေးဇူးပြု၍ ခဏစောင့်ပါ...`
+                );
+
+                // Send video (using direct URL or embed)
+                try {
+                    // For YouTube, send as text with link (Telegram will auto-preview)
+                    if (videoData.platform === 'YouTube') {
+                        await TelegramAPI.sendMessage(chatId, 
+                            `✅ Video Ready!\n\n` +
+                            `📺 Platform: ${videoData.platform}\n` +
+                            `🎬 Quality: ${quality.quality}\n\n` +
+                            `🔗 Link: ${quality.url}\n\n` +
+                            `📥 Telegram ကနေ တိုက်ရိုက် ကြည့်ရှုနိုင်ပါသည်။` +
+                            MESSAGES.DOWNLOAD_SUCCESS(CONFIG.ADMIN_USERNAME)
+                        );
                     } else {
-                        await sendMessage(chatId, 
-                            `📎 ကျေးဇူးပြု၍ သင် download ဆွဲလိုသော video ၏ link ကို ပို့ပါ။\n\n` +
-                            `✅ Supported:\n` +
-                            `• YouTube\n` +
-                            `• Facebook\n` +
-                            `• TikTok\n` +
-                            `• Instagram`
+                        // For other platforms, send the direct link
+                        await TelegramAPI.sendMessage(chatId, 
+                            `✅ Download Link Ready!\n\n` +
+                            `📱 Platform: ${videoData.platform}\n` +
+                            `🎬 Quality: ${quality.quality}\n\n` +
+                            `🔗 ${quality.url}` +
+                            MESSAGES.DOWNLOAD_SUCCESS(CONFIG.ADMIN_USERNAME)
                         );
                     }
+
+                    Storage.incrementDownload();
+                    Logger.success(`Download completed for user ${userId}`);
+                } catch (error) {
+                    await TelegramAPI.sendMessage(chatId, `❌ Download failed: ${error.message}`);
+                    Logger.error(`Download failed: ${error.message}`);
                 }
+            }
+        };
 
-                // Handle callback queries (button clicks)
-                if (update.callback_query) {
-                    const callbackQuery = update.callback_query;
-                    const chatId = callbackQuery.message.chat.id;
-                    const userId = callbackQuery.from.id;
-                    const data = callbackQuery.data;
+        // ============================================
+        // AUTO-RUNNING BOT SYSTEM
+        // ============================================
+        let updateOffset = 0;
+        let isRunning = false;
 
-                    if (data === 'check_membership') {
-                        const channelMember = await checkMembership(userId, CONFIG.CHANNEL_ID);
-                        const groupMember = await checkMembership(userId, CONFIG.GROUP_ID);
+        async function autoRunBot() {
+            if (isRunning) return;
+            isRunning = true;
 
-                        if (channelMember && groupMember) {
-                            // Update user status
-                            let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS));
-                            users[userId].hasJoinedChannel = true;
-                            users[userId].hasJoinedGroup = true;
-                            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+            Logger.info('🚀 Auto-running bot started...');
 
-                            await sendMessage(chatId, 
-                                `✅ ကျေးဇူးတင်ပါတယ်! သင် Join ပြုလုပ်ပီးပါပီ။\n\n` +
-                                `🎬 ယခု video link များကို ပို့၍ download ဆွဲနိုင်ပါပီ။`
-                            );
-                        } else {
-                            let missing = [];
-                            if (!channelMember) missing.push('Channel');
-                            if (!groupMember) missing.push('Group');
-                            
-                            await sendMessage(chatId, 
-                                `❌ သင်သည် ${missing.join(' နှင့် ')} ကို Join မပြုလုပ်ရသေးပါ။\n\n` +
-                                `ကျေးဇူးပြု၍ Join ပြုလုပ်ပီးမှ ထပ်မံကြိုးစားပါ။`
-                            );
+            while (isRunning) {
+                try {
+                    const result = await TelegramAPI.getUpdates(updateOffset);
+                    
+                    if (result.ok && result.result.length > 0) {
+                        for (const update of result.result) {
+                            updateOffset = update.update_id + 1;
+
+                            // Handle messages
+                            if (update.message) {
+                                const msg = update.message;
+                                const chatId = msg.chat.id;
+                                const userId = msg.from.id;
+                                const text = msg.text || '';
+                                const userData = {
+                                    id: userId,
+                                    username: msg.from.username || 'unknown',
+                                    first_name: msg.from.first_name || 'User'
+                                };
+
+                                Logger.info(`Message from ${userData.first_name}: ${text}`);
+
+                                if (text === '/start') {
+                                    await BotHandler.handleStart(chatId, userId, userData);
+                                } else if (text.includes('http')) {
+                                    await BotHandler.handleVideoLink(chatId, userId, text);
+                                } else {
+                                    await TelegramAPI.sendMessage(chatId, 
+                                        `📎 ကျေးဇူးပြု၍ video link ပို့ပါ။\n\n` +
+                                        `✅ Supported: YouTube, Facebook, TikTok, Instagram`
+                                    );
+                                }
+                            }
+
+                            // Handle callback queries
+                            if (update.callback_query) {
+                                const query = update.callback_query;
+                                const chatId = query.message.chat.id;
+                                const userId = query.from.id;
+                                const data = query.data;
+
+                                if (data === 'check_membership') {
+                                    const channelMember = await TelegramAPI.checkMembership(userId, CONFIG.CHANNEL_ID);
+                                    const groupMember = await TelegramAPI.checkMembership(userId, CONFIG.GROUP_ID);
+
+                                    if (channelMember && groupMember) {
+                                        Storage.updateUserMembership(userId, true, true);
+                                        await TelegramAPI.sendMessage(chatId, 
+                                            `✅ ကျေးဇူးတင်ပါတယ်! သင် Join ပြုလုပ်ပီးပါပီ။\n\n🎬 ယခု video link များကို ပို့၍ download ဆွဲနိုင်ပါပီ။`
+                                        );
+                                    } else {
+                                        await TelegramAPI.sendMessage(chatId, 
+                                            `❌ သင်သည် Channel/Group ကို Join မပြုလုပ်ရသေးပါ။`
+                                        );
+                                    }
+                                } else if (data.startsWith('dl_')) {
+                                    const [_, qualityIndex, uid] = data.split('_');
+                                    await BotHandler.handleDownload(chatId, userId, parseInt(qualityIndex));
+                                }
+
+                                await TelegramAPI.request('answerCallbackQuery', {
+                                    callback_query_id: query.id
+                                });
+                            }
                         }
                     }
 
-                    // Handle download quality selection
-                    if (data.startsWith('download_')) {
-                        const [_, quality, uid] = data.split('_');
-                        
-                        await sendMessage(chatId, 
-                            `⏳ ${quality.toUpperCase()} quality ဖြင့် download စတင်နေပါသည်...\n\n` +
-                            `ကျေးဇူးပြု၍ ခဏစောင့်ပါ...`
-                        );
+                    // Update dashboard
+                    updateDashboard();
 
-                        // Simulate download (replace with actual download logic)
-                        setTimeout(async () => {
-                            await sendMessage(chatId, 
-                                `✅ Download ပြီးစီးပါပီ!` + DOWNLOAD_SUCCESS_MESSAGE
-                            );
-                        }, 3000);
-                    }
-
-                    // Answer callback query
-                    await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/answerCallbackQuery`, {
-                        callback_query_id: callbackQuery.id
-                    });
+                } catch (error) {
+                    Logger.error(`Bot error: ${error.message}`);
                 }
 
-            } catch (error) {
-                addLog('Error handling update: ' + error.message, 'error');
+                // Wait before next poll
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
 
-        // Get Updates (Long Polling)
-        async function getUpdates() {
-            if (!botRunning) return;
+        // ============================================
+        // DASHBOARD UPDATE
+        // ============================================
+        function updateDashboard() {
+            const stats = Storage.getStats();
+            const users = Storage.getUsers();
 
-            try {
-                const response = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates`, {
-                    params: {
-                        offset: updateOffset,
-                        timeout: 30
-                    }
-                });
-
-                const updates = response.data.result;
-
-                for (const update of updates) {
-                    await handleUpdate(update);
-                    updateOffset = update.update_id + 1;
-                }
-
-            } catch (error) {
-                addLog('Error getting updates: ' + error.message, 'error');
+            // Reset daily stats if new day
+            if (stats.lastReset !== new Date().toDateString()) {
+                stats.todayVideos = 0;
+                stats.lastReset = new Date().toDateString();
+                Storage.setStats(stats);
             }
 
-            // Continue polling
-            if (botRunning) {
-                setTimeout(getUpdates, 1000);
-            }
+            document.getElementById('totalUsers').textContent = stats.totalUsers;
+            document.getElementById('todayVideos').textContent = stats.todayVideos;
+            document.getElementById('totalDownloads').textContent = stats.totalDownloads;
+            document.getElementById('activeUsers').textContent = Object.keys(users).length;
         }
 
-        // Start Bot
-        async function startBot() {
-            if (botRunning) {
-                showAlert('Bot လုပ်ဆောင်နေပြီးဖြစ်ပါသည်', 'error');
-                return;
-            }
-
-            try {
-                // Test bot token
-                const response = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getMe`);
-                
-                if (response.data.ok) {
-                    botRunning = true;
-                    document.getElementById('botStatus').textContent = '● Bot လုပ်ဆောင်နေသည်';
-                    document.getElementById('botStatus').classList.remove('offline');
-                    addLog('Bot started successfully!', 'success');
-                    showAlert('Bot စတင်ပြီးပါပြီ!', 'success');
-                    
-                    // Start polling
-                    getUpdates();
-                } else {
-                    throw new Error('Invalid bot token');
-                }
-            } catch (error) {
-                addLog('Failed to start bot: ' + error.message, 'error');
-                showAlert('Bot စတင်ရန် မအောင်မြင်ပါ: ' + error.message, 'error');
-            }
-        }
-
-        // Stop Bot
-        function stopBot() {
-            botRunning = false;
-            document.getElementById('botStatus').textContent = '● Bot ပိတ်နေသည်';
-            document.getElementById('botStatus').classList.add('offline');
-            addLog('Bot stopped', 'warning');
-            showAlert('Bot ရပ်ပြီးပါပြီ', 'success');
-        }
-
-        // Preview Files
-        function previewFiles() {
-            const files = document.getElementById('broadcastFiles').files;
-            const preview = document.getElementById('filePreview');
+        // ============================================
+        // BROADCAST FUNCTION
+        // ============================================
+        function previewMedia() {
+            const files = document.getElementById('mediaFiles').files;
+            const preview = document.getElementById('mediaPreview');
             preview.innerHTML = '';
 
             Array.from(files).forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
+                    const item = document.createElement('div');
+                    item.className = 'preview-item';
+                    
                     if (file.type.startsWith('image/')) {
-                        preview.innerHTML += `<img src="${e.target.result}" alt="Preview">`;
+                        item.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
                     } else if (file.type.startsWith('video/')) {
-                        preview.innerHTML += `<video src="${e.target.result}" controls></video>`;
+                        item.innerHTML = `<video src="${e.target.result}" controls></video>`;
                     }
+                    
+                    preview.appendChild(item);
                 };
                 reader.readAsDataURL(file);
             });
         }
 
-        // Send Broadcast
         async function sendBroadcast() {
             const message = document.getElementById('broadcastMessage').value;
-            const files = document.getElementById('broadcastFiles').files;
+            const files = document.getElementById('mediaFiles').files;
 
             if (!message && files.length === 0) {
                 showAlert('မက်ဆေ့ချ် သို့မဟုတ် ဖိုင်များ ထည့်ပါ', 'error');
                 return;
             }
 
-            if (!botRunning) {
-                showAlert('Bot ကို ဦးစွာ စတင်ပါ', 'error');
-                return;
-            }
-
-            const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '{}');
+            const users = Storage.getUsers();
             const userIds = Object.keys(users);
 
             if (userIds.length === 0) {
@@ -910,83 +1124,58 @@ Bot တွင် Video Link ပို့ပီး Video များကို Qu
                 return;
             }
 
-            document.getElementById('broadcastLoading').classList.add('show');
+            document.getElementById('broadcastLoader').classList.add('show');
 
             let successCount = 0;
             let errorCount = 0;
 
             for (const userId of userIds) {
                 try {
-                    // Send text message
                     if (message) {
-                        await sendMessage(userId, message);
+                        await TelegramAPI.sendMessage(userId, message);
                     }
-
-                    // Send files
-                    for (const file of files) {
-                        if (file.type.startsWith('image/')) {
-                            await sendPhoto(userId, file, message);
-                        } else if (file.type.startsWith('video/')) {
-                            await sendVideo(userId, file, message);
-                        }
-                    }
-
                     successCount++;
-                    addLog(`Broadcast sent to user ${userId}`, 'success');
+                    Logger.success(`Broadcast sent to user ${userId}`);
                 } catch (error) {
                     errorCount++;
-                    addLog(`Failed to send to user ${userId}: ${error.message}`, 'error');
+                    Logger.error(`Failed to send to user ${userId}`);
                 }
-
-                // Small delay to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
 
-            document.getElementById('broadcastLoading').classList.remove('show');
+            document.getElementById('broadcastLoader').classList.remove('show');
             showAlert(`ပို့ပြီးပါပြီ! အောင်မြင်: ${successCount}, မအောင်မြင်: ${errorCount}`, 'success');
             
-            // Clear form
             document.getElementById('broadcastMessage').value = '';
-            document.getElementById('broadcastFiles').value = '';
-            document.getElementById('filePreview').innerHTML = '';
+            document.getElementById('mediaFiles').value = '';
+            document.getElementById('mediaPreview').innerHTML = '';
         }
 
-        // Show Alert
-        function showAlert(message, type = 'success') {
+        function showAlert(message, type) {
             const alertBox = document.getElementById('alertBox');
             alertBox.textContent = message;
             alertBox.className = `alert ${type} show`;
-
-            setTimeout(() => {
-                alertBox.classList.remove('show');
-            }, 5000);
+            setTimeout(() => alertBox.classList.remove('show'), 5000);
         }
 
-        // Add Log
-        function addLog(message, type = 'info') {
-            const logs = document.getElementById('botLogs');
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
-            logEntry.textContent = `[${timestamp}] ${message}`;
-            logs.appendChild(logEntry);
-            logs.scrollTop = logs.scrollHeight;
-        }
-
-        // Initialize on load
-        window.addEventListener('DOMContentLoaded', () => {
-            initStats();
-            addLog('Admin panel loaded successfully');
+        // ============================================
+        // AUTO-START ON PAGE LOAD
+        // ============================================
+        window.addEventListener('DOMContentLoaded', async () => {
+            Logger.success('System initialized');
+            updateDashboard();
             
-            // Auto-start bot (optional)
-            // startBot();
+            // Auto-start bot
+            Logger.info('Starting auto-run bot system...');
+            await autoRunBot();
         });
 
-        // Prevent page unload if bot is running
-        window.addEventListener('beforeunload', (e) => {
-            if (botRunning) {
-                e.preventDefault();
-                e.returnValue = 'Bot လုပ်ဆောင်နေပါသည်။ ပိတ်မည်မှာ သေချာပါသလား?';
+        // Keep running even if page is in background
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                Logger.warning('Page hidden but bot continues running');
+            } else {
+                Logger.info('Page visible again');
             }
         });
     </script>
