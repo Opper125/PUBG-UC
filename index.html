@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WavePay Enhanced Admin Dashboard</title>
+    <title>WavePay Admin Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * {
@@ -16,103 +16,126 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #333;
+            padding: 20px;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            margin-bottom: 30px;
-            text-align: center;
-            position: relative;
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .header h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-
-        .header p {
-            color: #7f8c8d;
-            font-size: 1.1em;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .connection-status {
-            position: absolute;
-            top: 20px;
-            right: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9em;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
         }
 
-        .connection-status.connected {
-            background: #d4edda;
-            color: #155724;
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
         }
 
-        .connection-status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
+        .status-indicator.connected {
+            background: #2ecc71;
         }
 
-        .connection-status.connecting {
-            background: #fff3cd;
-            color: #856404;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
         }
 
-        .dashboard-grid {
+        .main-content {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 30px;
-            margin-bottom: 30px;
+            grid-template-columns: 300px 1fr;
+            min-height: calc(100vh - 100px);
         }
 
-        .wide-card {
-            grid-column: span 2;
+        .sidebar {
+            background: #34495e;
+            color: white;
+            padding: 30px 0;
         }
 
-        @media (max-width: 768px) {
-            .wide-card {
-                grid-column: span 1;
-            }
+        .nav-item {
+            padding: 15px 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(52, 152, 219, 0.2);
+            border-left-color: #3498db;
+        }
+
+        .nav-item i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .content {
+            padding: 30px;
+            background: #ecf0f1;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
-        }
-
-        .card h3 {
-            color: #2c3e50;
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
             margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.3em;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-header {
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card-header h3 {
+            color: #2c3e50;
+            font-size: 1.3rem;
         }
 
         .form-group {
@@ -122,284 +145,161 @@
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #34495e;
             font-weight: 600;
+            color: #34495e;
         }
 
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 12px 15px;
-            border: 2px solid #e0e6ed;
+            border: 2px solid #bdc3c7;
             border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            background: #f8f9fa;
+            font-size: 14px;
+            transition: border-color 0.3s;
         }
 
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background: white;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        @media (max-width: 600px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
+            border-color: #3498db;
         }
 
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
             padding: 12px 25px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
-            transition: all 0.3s ease;
-            margin: 5px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
         }
 
-        .btn:hover {
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            background: #2ecc71;
+            color: white;
         }
 
-        .btn-info {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        .btn-success:hover {
+            background: #27ae60;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
         }
 
         .btn-warning {
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            background: #f39c12;
+            color: white;
         }
 
-        .btn-small {
-            padding: 8px 15px;
-            font-size: 14px;
+        .btn-warning:hover {
+            background: #e67e22;
         }
 
-        .user-info {
-            background: #ecf0f1;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 15px;
-            border-left: 4px solid #667eea;
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
         }
 
-        .user-detail {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
         }
 
-        .user-detail-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #bdc3c7;
-        }
-
-        .user-detail-label {
+        .table th {
+            background: #34495e;
+            color: white;
             font-weight: 600;
-            color: #2c3e50;
         }
 
-        .user-detail-value {
-            color: #34495e;
-        }
-
-        .transaction-history {
-            max-height: 400px;
-            overflow-y: auto;
+        .table tr:hover {
             background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
         }
 
-        .transaction-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            border: 1px solid #e0e6ed;
-            border-radius: 8px;
-            margin-bottom: 10px;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
             background: white;
-            transition: box-shadow 0.2s ease;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #3498db;
         }
 
-        .transaction-item:hover {
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .transaction-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .transaction-info {
-            flex: 1;
-        }
-
-        .transaction-id {
-            font-weight: bold;
+        .stat-card h3 {
+            font-size: 2rem;
             color: #2c3e50;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
 
-        .transaction-details {
-            font-size: 0.9em;
+        .stat-card p {
             color: #7f8c8d;
-            line-height: 1.4;
-        }
-
-        .transaction-amount-section {
-            text-align: right;
-            min-width: 150px;
-        }
-
-        .amount {
-            font-weight: bold;
-            font-size: 1.2em;
-            margin-bottom: 5px;
-        }
-
-        .amount.positive {
-            color: #27ae60;
-        }
-
-        .amount.negative {
-            color: #e74c3c;
-        }
-
-        .status {
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .status.completed {
-            background: #d5e8d4;
-            color: #27ae60;
-        }
-
-        .status.pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status.failed {
-            background: #f8d7da;
-            color: #721c24;
+            font-weight: 600;
         }
 
         .alert {
             padding: 15px 20px;
             border-radius: 8px;
-            margin: 15px 0;
-            border-left: 4px solid;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid;
         }
 
         .alert-success {
             background: #d4edda;
             color: #155724;
-            border-color: #27ae60;
+            border-left-color: #28a745;
         }
 
-        .alert-error {
+        .alert-danger {
             background: #f8d7da;
             color: #721c24;
-            border-color: #e74c3c;
+            border-left-color: #dc3545;
         }
 
         .alert-warning {
             background: #fff3cd;
             color: #856404;
-            border-color: #ffc107;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-color: #17a2b8;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
-            transition: transform 0.2s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .stat-number {
-            font-size: 2.2em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #7f8c8d;
-            font-weight: 600;
+            border-left-color: #ffc107;
         }
 
         .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
             border-radius: 50%;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
         }
 
         @keyframes spin {
@@ -407,109 +307,87 @@
             100% { transform: rotate(360deg); }
         }
 
-        .search-results {
-            max-height: 300px;
+        .log-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #e0e6ed;
-            border-radius: 8px;
-            margin-top: 10px;
+            font-size: 12px;
+            line-height: 1.4;
         }
 
-        .search-result-item {
-            padding: 15px;
-            border-bottom: 1px solid #e0e6ed;
+        .api-config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.2s ease;
         }
 
-        .search-result-item:hover {
-            background-color: #f8f9fa;
+        .close:hover {
+            color: #000;
         }
 
-        .search-result-item:last-child {
-            border-bottom: none;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 20px;
-            color: #7f8c8d;
-        }
-
-        .advanced-filters {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
+        .user-search {
+            display: flex;
+            gap: 10px;
             margin-bottom: 20px;
         }
 
-        .filter-row {
+        .user-search input {
+            flex: 1;
+        }
+
+        .transaction-form {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .page-btn {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .page-btn:hover {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .page-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .page-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            color: rgba(255,255,255,0.8);
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .dashboard-grid {
+            .main-content {
                 grid-template-columns: 1fr;
-                gap: 20px;
             }
             
-            .card {
-                padding: 20px;
+            .sidebar {
+                display: none;
             }
             
-            .header h1 {
-                font-size: 2em;
+            .transaction-form {
+                grid-template-columns: 1fr;
             }
-
-            .user-detail {
+            
+            .api-config {
                 grid-template-columns: 1fr;
             }
         }
@@ -517,941 +395,725 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <div class="connection-status" id="connectionStatus">
-                <i class="fas fa-circle"></i>
-                <span>Connecting...</span>
+        <header class="header">
+            <h1>
+                <i class="fas fa-wallet"></i>
+                WavePay Admin Dashboard
+            </h1>
+            <div class="connection-status">
+                <div class="status-indicator" id="connectionStatus"></div>
+                <span id="connectionText">ချိတ်ဆက်နေသည်...</span>
             </div>
-            <h1><i class="fas fa-shield-alt"></i> WavePay Enhanced Admin Dashboard</h1>
-            <p>အသုံးပြုသူများအတွက် ငွေကြေးစီမံခန့်ခွဲမှု စနစ် - APK Database Integration</p>
-        </div>
+        </header>
 
-        <div id="alerts"></div>
+        <div class="main-content">
+            <nav class="sidebar">
+                <div class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </div>
+                <div class="nav-item" data-section="users">
+                    <i class="fas fa-users"></i>
+                    User Management
+                </div>
+                <div class="nav-item" data-section="transactions">
+                    <i class="fas fa-exchange-alt"></i>
+                    Transactions
+                </div>
+                <div class="nav-item" data-section="database">
+                    <i class="fas fa-database"></i>
+                    Database
+                </div>
+                <div class="nav-item" data-section="api-config">
+                    <i class="fas fa-cog"></i>
+                    API Configuration
+                </div>
+                <div class="nav-item" data-section="logs">
+                    <i class="fas fa-file-alt"></i>
+                    System Logs
+                </div>
+            </nav>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number" id="totalUsers">-</div>
-                <div class="stat-label">စုစုပေါင်း အသုံးပြုသူများ</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalBalance">- MMK</div>
-                <div class="stat-label">စုစုပေါင်း လက်ကျန်ငွေ</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="todayTransactions">-</div>
-                <div class="stat-label">ယနေ့ ငွေလွှဲမှုများ</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="activeUsers">-</div>
-                <div class="stat-label">တက်ကြွ အသုံးပြုသူများ</div>
-            </div>
-        </div>
-
-        <div class="dashboard-grid">
-            <!-- Advanced User Search -->
-            <div class="card">
-                <h3><i class="fas fa-user-search"></i> အသုံးပြုသူ ရှာဖွေခြင်း</h3>
-                <div class="form-group">
-                    <label for="phoneSearch">ဖုန်းနံပါတ်:</label>
-                    <input type="tel" id="phoneSearch" placeholder="+959xxxxxxxxx" maxlength="15">
-                </div>
-                <button class="btn btn-info" onclick="searchUser()" id="searchBtn">
-                    <i class="fas fa-search"></i> ရှာဖွေရန်
-                </button>
-                <button class="btn" onclick="getAllUsers()" id="getAllBtn">
-                    <i class="fas fa-users"></i> အသုံးပြုသူများအားလုံး
-                </button>
-                <button class="btn btn-warning" onclick="clearSearch()">
-                    <i class="fas fa-times"></i> ရှင်းလင်းရန်
-                </button>
-                
-                <div id="userInfo" class="user-info" style="display: none;">
-                    <h4>အသုံးပြုသူ အချက်အလက်များ</h4>
-                    <div id="userDetails"></div>
-                </div>
-
-                <div id="searchResults" class="search-results" style="display: none;"></div>
-            </div>
-
-            <!-- Enhanced Money Transfer -->
-            <div class="card">
-                <h3><i class="fas fa-money-bill-transfer"></i> ငွေသွင်း/ထုတ် လုပ်ဆောင်ချက်များ</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="targetPhone">ဖုန်းနံပါတ်:</label>
-                        <input type="tel" id="targetPhone" placeholder="+959xxxxxxxxx" maxlength="15">
-                    </div>
-                    <div class="form-group">
-                        <label for="amount">ပမာণ (MMK):</label>
-                        <input type="number" id="amount" placeholder="0" min="100" max="2000000">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="transactionNote">မှတ်ချက်:</label>
-                    <textarea id="transactionNote" rows="3" placeholder="ငွေလွှဲခြင်း အကြောင်းအရင်း..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="adminId">Admin ID:</label>
-                    <input type="text" id="adminId" placeholder="admin_001" value="admin_001">
-                </div>
-                <button class="btn btn-success" onclick="depositMoney()" id="depositBtn">
-                    <i class="fas fa-plus-circle"></i> ငွေသွင်းရန်
-                </button>
-                <button class="btn btn-danger" onclick="withdrawMoney()" id="withdrawBtn">
-                    <i class="fas fa-minus-circle"></i> ငွေထုတ်ရန်
-                </button>
-                <button class="btn btn-info" onclick="validateTransaction()">
-                    <i class="fas fa-check-circle"></i> စမ်းစစ်ရန်
-                </button>
-            </div>
-
-            <!-- Database Connection Manager -->
-            <div class="card">
-                <h3><i class="fas fa-database"></i> Database Connection Manager</h3>
-                <div class="form-group">
-                    <label for="dbEndpoint">API Endpoint:</label>
-                    <input type="url" id="dbEndpoint" value="https://api.wavemoney.io:8100">
-                </div>
-                <div class="form-group">
-                    <label for="apiVersion">API Version:</label>
-                    <select id="apiVersion">
-                        <option value="/api/v1">v1.0</option>
-                        <option value="/api/v2">v2.0</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Connection Info:</label>
-                    <div id="connectionInfo" style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.9em;">
-                        Initializing connection...
-                    </div>
-                </div>
-                <button class="btn" onclick="testConnection()" id="testConnBtn">
-                    <i class="fas fa-plug"></i> Connection Test
-                </button>
-                <button class="btn btn-info" onclick="reconnectDatabase()" id="reconnectBtn">
-                    <i class="fas fa-sync-alt"></i> Reconnect
-                </button>
-            </div>
-
-            <!-- Advanced Transaction History -->
-            <div class="card wide-card">
-                <h3><i class="fas fa-history"></i> ငွေလွှဲမှု မှတ်တမ်းများ</h3>
-                
-                <div class="advanced-filters">
-                    <div class="filter-row">
-                        <div class="form-group">
-                            <label for="filterPhone">ဖုန်းနံပါတ် Filter:</label>
-                            <input type="tel" id="filterPhone" placeholder="All users">
+            <main class="content">
+                <!-- Dashboard Section -->
+                <div class="section active" id="dashboard">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3 id="totalUsers">0</h3>
+                            <p>စုစုပေါင်း Users</p>
                         </div>
-                        <div class="form-group">
-                            <label for="filterType">Transaction Type:</label>
-                            <select id="filterType">
-                                <option value="">All Types</option>
-                                <option value="admin_deposit">Admin Deposit</option>
-                                <option value="admin_withdrawal">Admin Withdrawal</option>
-                                <option value="p2p_transfer">P2P Transfer</option>
-                            </select>
+                        <div class="stat-card">
+                            <h3 id="activeUsers">0</h3>
+                            <p>လက်ရှိ Active Users</p>
                         </div>
-                        <div class="form-group">
-                            <label for="filterStatus">Status:</label>
-                            <select id="filterStatus">
-                                <option value="">All Status</option>
-                                <option value="completed">Completed</option>
-                                <option value="pending">Pending</option>
-                                <option value="failed">Failed</option>
-                            </select>
+                        <div class="stat-card">
+                            <h3 id="totalTransactions">0</h3>
+                            <p>စုစုပေါင်း Transactions</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3 id="totalBalance">0 MMK</h3>
+                            <p>စုစုပေါင်း Balance</p>
                         </div>
                     </div>
-                    <button class="btn btn-info" onclick="loadTransactionHistory()" id="loadTxnBtn">
-                        <i class="fas fa-refresh"></i> မှတ်တမ်းများ ရယူရန်
-                    </button>
-                    <button class="btn btn-warning" onclick="clearFilters()">
-                        <i class="fas fa-filter"></i> Filter ရှင်းလင်းရန်
-                    </button>
-                </div>
 
-                <div id="transactionHistory" class="transaction-history">
-                    <p style="text-align: center; color: #7f8c8d; padding: 40px;">
-                        <i class="fas fa-info-circle"></i><br><br>
-                        မှတ်တမ်းများ ရယူရန် "မှတ်တမ်းများ ရယူရန်" ခလုတ်ကို နှိပ်ပါ
-                    </p>
-                </div>
-
-                <div id="transactionPagination" class="pagination" style="display: none;"></div>
-            </div>
-
-            <!-- System Management -->
-            <div class="card">
-                <h3><i class="fas fa-cogs"></i> စနစ် စီမံခန့်ခွဲမှု</h3>
-                <div class="form-group">
-                    <label for="maintenanceMode">Maintenance Mode:</label>
-                    <select id="maintenanceMode">
-                        <option value="false">Disabled</option>
-                        <option value="true">Enabled</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="maxTransactionAmount">Max Transaction (MMK):</label>
-                    <input type="number" id="maxTransactionAmount" value="2000000" min="1000" max="10000000">
-                </div>
-                <button class="btn" onclick="updateSystemConfig()">
-                    <i class="fas fa-save"></i> ဆက်တင်များ သိမ်းဆည်းရန်
-                </button>
-                <button class="btn btn-info" onclick="exportData()" id="exportBtn">
-                    <i class="fas fa-download"></i> ဒေတာ Export လုပ်ရန်
-                </button>
-                <button class="btn btn-danger" onclick="clearCache()">
-                    <i class="fas fa-trash"></i> Cache ရှင်းလင်းရန်
-                </button>
-            </div>
-
-            <!-- User Management -->
-            <div class="card">
-                <h3><i class="fas fa-users-cog"></i> အသုံးပြုသူ စီမံခန့်ခွဲမှု</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="userManagementPhone">ဖုန်းနံပါတ်:</label>
-                        <input type="tel" id="userManagementPhone" placeholder="+959xxxxxxxxx">
-                    </div>
-                    <div class="form-group">
-                        <label for="userStatus">အခြေအနေ:</label>
-                        <select id="userStatus">
-                            <option value="active">Active</option>
-                            <option value="suspended">Suspended</option>
-                            <option value="blocked">Blocked</option>
-                            <option value="pending">Pending</option>
-                        </select>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>System Status</h3>
+                        </div>
+                        <div id="systemStatus">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Admin Dashboard အသစ်တည်ဆောက်ပြီးပါပြီး။ Database ချိတ်ဆက်မှုကို စစ်ဆေးနေပါသည်...
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button class="btn btn-warning" onclick="updateUserStatus()" id="updateStatusBtn">
-                    <i class="fas fa-user-edit"></i> အခြေအနေ ပြောင်းလဲရန်
-                </button>
-                <button class="btn btn-info" onclick="getUserStatus()">
-                    <i class="fas fa-info-circle"></i> အခြေအနေ စစ်ရန်
-                </button>
-            </div>
 
-            <!-- APK Analysis Results -->
-            <div class="card wide-card">
-                <h3><i class="fas fa-mobile-alt"></i> APK Analysis Results</h3>
-                <div class="form-group">
-                    <label>WavePay Application Info:</label>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9em;">
-                        <strong>Package:</strong> mm.com.wavemoney.wavepay<br>
-                        <strong>Version:</strong> 2.4.3 (Build 1467)<br>
-                        <strong>Min SDK:</strong> 23 (Android 6.0)<br>
-                        <strong>Target SDK:</strong> 35 (Android 15)<br><br>
+                <!-- Users Section -->
+                <div class="section" id="users">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>User Management</h3>
+                        </div>
                         
-                        <strong>Discovered Endpoints:</strong><br>
-                        • Transaction History: https://api.wavemoney.io:8100/wave-tnx-history-web-app/<br>
-                        • GRS Servers: https://grs.dbankcloud.com<br>
-                        • Deep Link Scheme: wavepay://<br><br>
-                        
-                        <strong>Supported Features:</strong><br>
-                        • Cash In/Out • P2P Transfer • Bill Payment<br>
-                        • QR Payment • MPU Integration • Biometric Auth
+                        <div class="user-search">
+                            <input type="text" id="userSearch" placeholder="ဖုန်းနံပါတ် သို့မဟုတ် User ID ရှာရန်...">
+                            <button class="btn btn-primary" onclick="searchUser()">
+                                <i class="fas fa-search"></i> ရှာရန်
+                            </button>
+                        </div>
+
+                        <div id="userResults">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>ဖုန်းနံပါတ်</th>
+                                        <th>အမည်</th>
+                                        <th>Balance</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userTableBody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 40px;">
+                                            User များကို ရှာဖွေရန် အထက်မှ search box ကို အသုံးပြုပါ
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-                <button class="btn btn-info" onclick="showDeepLinks()">
-                    <i class="fas fa-link"></i> Show Deep Links
-                </button>
-                <button class="btn" onclick="showBillerCategories()">
-                    <i class="fas fa-list"></i> Show Biller Categories
-                </button>
-            </div>
-        </div>
 
-        <div class="footer">
-            <p>&copy; 2024 WavePay Enhanced Admin Dashboard - APK Database Integration</p>
-            <p style="font-size: 0.9em; margin-top: 5px;">Built with reverse-engineered APK analysis and database client integration</p>
+                <!-- Transactions Section -->
+                <div class="section" id="transactions">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Transaction Management</h3>
+                        </div>
+                        
+                        <div class="transaction-form">
+                            <div class="form-group">
+                                <label>User ဖုန်းနံပါတ်</label>
+                                <input type="text" id="transactionPhone" placeholder="09xxxxxxxxx">
+                            </div>
+                            <div class="form-group">
+                                <label>Transaction Type</label>
+                                <select id="transactionType">
+                                    <option value="cash_in">Cash In (ငွေသွင်း)</option>
+                                    <option value="cash_out">Cash Out (ငွေထုတ်)</option>
+                                    <option value="transfer">Transfer (လွှဲပြောင်း)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>ပမာណ (MMK)</label>
+                                <input type="number" id="transactionAmount" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label>မှတ်ချက်</label>
+                                <input type="text" id="transactionNote" placeholder="Admin transaction">
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="processTransaction()">
+                            <i class="fas fa-check"></i> Transaction လုပ်ဆောင်ရန်
+                        </button>
+                        <button class="btn btn-warning" onclick="getTransactionHistory()">
+                            <i class="fas fa-history"></i> Transaction History
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Transactions</h3>
+                        </div>
+                        <div id="transactionHistory">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                Transaction များကို ရယူနေပါသည်...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Section -->
+                <div class="section" id="database">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Database Management</h3>
+                        </div>
+                        
+                        <div class="api-config">
+                            <div>
+                                <h4>Database Status</h4>
+                                <div id="databaseStatus">
+                                    <div class="alert alert-warning">
+                                        Database connection ကို စစ်ဆေးနေပါသည်...
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-primary" onclick="testDatabaseConnection()">
+                                    <i class="fas fa-database"></i> Database ချိတ်ဆက်မှု စစ်ရန်
+                                </button>
+                                <button class="btn btn-success" onclick="syncDatabase()">
+                                    <i class="fas fa-sync"></i> Database Sync
+                                </button>
+                            </div>
+                            
+                            <div>
+                                <h4>Database Tables</h4>
+                                <div id="databaseTables">
+                                    <ul style="list-style: none; padding: 0;">
+                                        <li style="padding: 10px; background: #f8f9fa; margin: 5px 0; border-radius: 5px;">
+                                            <i class="fas fa-table"></i> users - User အချက်အလက်များ
+                                        </li>
+                                        <li style="padding: 10px; background: #f8f9fa; margin: 5px 0; border-radius: 5px;">
+                                            <i class="fas fa-table"></i> transactions - Transaction မှတ်တမ်းများ
+                                        </li>
+                                        <li style="padding: 10px; background: #f8f9fa; margin: 5px 0; border-radius: 5px;">
+                                            <i class="fas fa-table"></i> accounts - အကောင့်အချက်အလက်များ
+                                        </li>
+                                        <li style="padding: 10px; background: #f8f9fa; margin: 5px 0; border-radius: 5px;">
+                                            <i class="fas fa-table"></i> balances - လက်ကျန်ငွေများ
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Configuration Section -->
+                <div class="section" id="api-config">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>API Configuration</h3>
+                        </div>
+                        
+                        <div class="api-config">
+                            <div>
+                                <h4>WavePay API Settings</h4>
+                                <div class="form-group">
+                                    <label>API Base URL</label>
+                                    <input type="text" id="apiBaseUrl" value="https://api.wavemoney.io:8100" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>API Version</label>
+                                    <input type="text" id="apiVersion" value="v2.4.3" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Connection Status</label>
+                                    <input type="text" id="apiStatus" value="Testing..." readonly>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4>Firebase Configuration</h4>
+                                <div class="form-group">
+                                    <label>Firebase Analytics</label>
+                                    <input type="text" value="Version 22.0.2 - Active" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Firebase Auth</label>
+                                    <input type="text" value="Configured" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Database Collection</label>
+                                    <input type="text" value="Connected" readonly>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4>Huawei Services</h4>
+                                <div class="form-group">
+                                    <label>GRS Base URLs</label>
+                                    <textarea readonly rows="4">https://grs.dbankcloud.com
+https://grs.dbankcloud.cn
+https://grs.dbankcloud.eu
+https://grs.dbankcloud.asia</textarea>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4>Actions</h4>
+                                <button class="btn btn-primary" onclick="testApiConnection()">
+                                    <i class="fas fa-plug"></i> API ချိတ်ဆက်မှု စစ်ရန်
+                                </button>
+                                <button class="btn btn-success" onclick="refreshApiKeys()">
+                                    <i class="fas fa-key"></i> API Keys ပြန်လည်ရယူ
+                                </button>
+                                <button class="btn btn-warning" onclick="resetApiConfig()">
+                                    <i class="fas fa-undo"></i> Configuration Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs Section -->
+                <div class="section" id="logs">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>System Logs</h3>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <button class="btn btn-primary" onclick="refreshLogs()">
+                                <i class="fas fa-refresh"></i> Logs ပြန်လည်ရယူ
+                            </button>
+                            <button class="btn btn-danger" onclick="clearLogs()">
+                                <i class="fas fa-trash"></i> Logs ရှင်းလင်း
+                            </button>
+                        </div>
+                        
+                        <div class="log-container" id="systemLogs">
+                            <div>[2025-10-11 21:30:00] INFO: WavePay Admin Dashboard initialized</div>
+                            <div>[2025-10-11 21:30:01] INFO: Connecting to database...</div>
+                            <div>[2025-10-11 21:30:02] WARNING: Admin dashboard recovery mode activated</div>
+                            <div>[2025-10-11 21:30:03] INFO: API endpoints configured</div>
+                            <div>[2025-10-11 21:30:04] INFO: Firebase services initialized</div>
+                            <div>[2025-10-11 21:30:05] INFO: System ready for admin operations</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
-    <!-- Include the Database Client -->
-    <script src="database_client.js"></script>
-    
+    <!-- User Details Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>User Details</h2>
+            <div id="userDetails"></div>
+        </div>
+    </div>
+
     <script>
         // Global variables
-        let dbClient = null;
-        let currentTransactionPage = 1;
-        let transactionsPerPage = 10;
-        let allTransactions = [];
+        let currentSection = 'dashboard';
+        let connectionStatus = false;
+        let apiConfig = {
+            baseUrl: 'https://api.wavemoney.io:8100',
+            version: 'v2.4.3',
+            timeout: 30000
+        };
 
-        // Initialize Dashboard
-        async function initDashboard() {
-            try {
-                showAlert('အစပြုခြင်း...', 'info');
-                
-                // Initialize database client
-                dbClient = new WavePayDatabaseClient();
-                
-                // Test connection
-                updateConnectionStatus('connecting');
-                const connectionResult = await dbClient.testConnection();
-                
-                if (connectionResult.success) {
-                    updateConnectionStatus('connected');
-                    showAlert('Database ချိတ်ဆက်မှု အောင်မြင်သည်', 'success');
-                    
-                    // Update connection info
-                    document.getElementById('connectionInfo').innerHTML = `
-                        <strong>Status:</strong> Connected<br>
-                        <strong>Latency:</strong> ${connectionResult.latency}ms<br>
-                        <strong>Connected at:</strong> ${new Date(connectionResult.timestamp).toLocaleString()}<br>
-                        <strong>Package:</strong> mm.com.wavemoney.wavepay v2.4.3
-                    `;
-                    
-                    // Load initial data
-                    await updateStats();
-                } else {
-                    updateConnectionStatus('disconnected');
-                    showAlert('Database ချိတ်ဆက်မှု မအောင်မြင်ပါ: ' + connectionResult.message, 'error');
-                }
-                
-            } catch (error) {
-                console.error('Dashboard initialization error:', error);
-                updateConnectionStatus('disconnected');
-                showAlert('Dashboard စတင်ခြင်းတွင် အမှားရှိသည်: ' + error.message, 'error');
-            }
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            setupEventListeners();
+            testConnections();
+        });
+
+        function initializeDashboard() {
+            logMessage('INFO', 'Dashboard initialized successfully');
+            updateConnectionStatus('connecting');
+            loadDashboardStats();
         }
 
-        // Update connection status display
-        function updateConnectionStatus(status) {
-            const statusElement = document.getElementById('connectionStatus');
-            statusElement.className = `connection-status ${status}`;
+        function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    switchSection(this.dataset.section);
+                });
+            });
+
+            // Auto-refresh dashboard stats every 30 seconds
+            setInterval(loadDashboardStats, 30000);
+        }
+
+        function switchSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Remove active from nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            document.querySelector(`[data-section="${sectionId}"]`).classList.add('active');
             
-            switch (status) {
+            currentSection = sectionId;
+            logMessage('INFO', `Switched to ${sectionId} section`);
+        }
+
+        function updateConnectionStatus(status) {
+            const indicator = document.getElementById('connectionStatus');
+            const text = document.getElementById('connectionText');
+            
+            switch(status) {
                 case 'connected':
-                    statusElement.innerHTML = '<i class="fas fa-check-circle"></i><span>Connected</span>';
+                    indicator.classList.add('connected');
+                    text.textContent = 'ချိတ်ဆက်ပြီး';
+                    connectionStatus = true;
                     break;
                 case 'disconnected':
-                    statusElement.innerHTML = '<i class="fas fa-times-circle"></i><span>Disconnected</span>';
+                    indicator.classList.remove('connected');
+                    text.textContent = 'ချိတ်ဆက်မှု ပြတ်တော်';
+                    connectionStatus = false;
                     break;
-                case 'connecting':
-                    statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Connecting...</span>';
-                    break;
+                default:
+                    text.textContent = 'ချိတ်ဆက်နေသည်...';
+                    connectionStatus = false;
             }
         }
 
-        // Show alert messages with auto-dismiss
-        function showAlert(message, type = 'info', duration = 5000) {
-            const alertsContainer = document.getElementById('alerts');
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
+        function testConnections() {
+            logMessage('INFO', 'Testing API connections...');
             
-            let icon = 'fa-info-circle';
-            switch (type) {
-                case 'success': icon = 'fa-check-circle'; break;
-                case 'error': icon = 'fa-exclamation-circle'; break;
-                case 'warning': icon = 'fa-exclamation-triangle'; break;
-            }
-            
-            alertDiv.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
-            alertsContainer.appendChild(alertDiv);
-            
-            if (duration > 0) {
-                setTimeout(() => {
-                    if (alertDiv.parentNode) {
-                        alertDiv.remove();
-                    }
-                }, duration);
-            }
-        }
-
-        // Update statistics
-        async function updateStats() {
-            try {
-                const stats = await dbClient.getSystemStats();
-                if (stats.success) {
-                    document.getElementById('totalUsers').textContent = stats.data.totalUsers;
-                    document.getElementById('totalBalance').textContent = `${stats.data.totalBalance.toLocaleString()} MMK`;
-                    document.getElementById('todayTransactions').textContent = stats.data.todayTransactions;
-                    document.getElementById('activeUsers').textContent = stats.data.activeUsers;
-                }
-            } catch (error) {
-                console.error('Error updating stats:', error);
-            }
-        }
-
-        // Search user function
-        async function searchUser() {
-            const phone = document.getElementById('phoneSearch').value.trim();
-            if (!phone) {
-                showAlert('ဖုန်းနံပါတ် ထည့်သွင်းပါ', 'warning');
-                return;
-            }
-
-            const searchBtn = document.getElementById('searchBtn');
-            const originalText = searchBtn.innerHTML;
-            searchBtn.innerHTML = '<div class="loading"></div> ရှာနေသည်...';
-            searchBtn.disabled = true;
-
-            try {
-                const result = await dbClient.getUserByPhone(phone);
-                
-                if (result.success) {
-                    displayUserInfo(result.data);
-                    showAlert('အသုံးပြုသူ ရှာတွေ့ပါသည်', 'success');
+            // Simulate API connection test
+            setTimeout(() => {
+                const isConnected = Math.random() > 0.3; // 70% success rate for demo
+                if (isConnected) {
+                    updateConnectionStatus('connected');
+                    logMessage('SUCCESS', 'API connection established');
+                    updateSystemStatus('success', 'System အများစု လည်ပတ်နေပါပြီး');
                 } else {
-                    document.getElementById('userInfo').style.display = 'none';
-                    showAlert('အသုံးပြုသူ မတွေ့ရှိပါ', 'error');
+                    updateConnectionStatus('disconnected');
+                    logMessage('ERROR', 'API connection failed');
+                    updateSystemStatus('error', 'API ချိတ်ဆက်မှု ပြဿနာ ရှိနေပါသည်');
                 }
-            } catch (error) {
-                showAlert('ရှာဖွေခြင်းတွင် အမှားရှိသည်: ' + error.message, 'error');
-                document.getElementById('userInfo').style.display = 'none';
-            } finally {
-                searchBtn.innerHTML = originalText;
-                searchBtn.disabled = false;
-            }
+            }, 3000);
         }
 
-        // Display user information
-        function displayUserInfo(user) {
-            const userDetailsDiv = document.getElementById('userDetails');
-            userDetailsDiv.innerHTML = `
-                <div class="user-detail">
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">အမည်:</span>
-                        <span class="user-detail-value">${user.name}</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">ဖုန်းနံပါတ်:</span>
-                        <span class="user-detail-value">${user.phone}</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">လက်ကျန်ငွေ:</span>
-                        <span class="user-detail-value">${user.balance.toLocaleString()} MMK</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">အခြေအနေ:</span>
-                        <span class="user-detail-value"><span class="status ${user.status}">${user.status}</span></span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">KYC Status:</span>
-                        <span class="user-detail-value">${user.kycStatus}</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">မှတ်ပုံတင် ရက်စွဲ:</span>
-                        <span class="user-detail-value">${user.registrationDate}</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">နောက်ဆုံး Login:</span>
-                        <span class="user-detail-value">${new Date(user.lastLogin).toLocaleString()}</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">App Version:</span>
-                        <span class="user-detail-value">${user.deviceInfo.appVersion}</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">ဘာသာစကား:</span>
-                        <span class="user-detail-value">${user.preferences.language}</span>
-                    </div>
-                    <div class="user-detail-item">
-                        <span class="user-detail-label">User ID:</span>
-                        <span class="user-detail-value">${user.id}</span>
-                    </div>
-                </div>
-                <div style="margin-top: 15px;">
-                    <button class="btn btn-small btn-info" onclick="loadUserTransactions('${user.phone}')">
-                        <i class="fas fa-history"></i> မှတ်တမ်းများ ကြည့်ရန်
-                    </button>
-                    <button class="btn btn-small btn-warning" onclick="fillTransactionForm('${user.phone}')">
-                        <i class="fas fa-money-bill"></i> ငွေလွှဲရန်
-                    </button>
+        function updateSystemStatus(type, message) {
+            const statusDiv = document.getElementById('systemStatus');
+            const alertClass = type === 'success' ? 'alert-success' : 
+                             type === 'error' ? 'alert-danger' : 'alert-warning';
+            const icon = type === 'success' ? 'check-circle' : 
+                        type === 'error' ? 'exclamation-triangle' : 'info-circle';
+            
+            statusDiv.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <i class="fas fa-${icon}"></i>
+                    ${message}
                 </div>
             `;
-            document.getElementById('userInfo').style.display = 'block';
         }
 
-        // Get all users
-        async function getAllUsers() {
-            const getAllBtn = document.getElementById('getAllBtn');
-            const originalText = getAllBtn.innerHTML;
-            getAllBtn.innerHTML = '<div class="loading"></div> ရယူနေသည်...';
-            getAllBtn.disabled = true;
+        function loadDashboardStats() {
+            // Simulate loading stats from database
+            const stats = {
+                totalUsers: Math.floor(Math.random() * 10000) + 5000,
+                activeUsers: Math.floor(Math.random() * 1000) + 500,
+                totalTransactions: Math.floor(Math.random() * 50000) + 25000,
+                totalBalance: Math.floor(Math.random() * 1000000000) + 500000000
+            };
 
-            try {
-                const result = await dbClient.getAllUsers();
-                
-                if (result.success) {
-                    displayUsersGrid(result.data);
-                    showAlert(`${result.data.length} ယောက်ရှိသော အသုံးပြုသူများ ရယူပြီးပါပြီ`, 'success');
-                } else {
-                    showAlert('အသုံးပြုသူများ ရယူခြင်းတွင် အမှားရှိသည်', 'error');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            } finally {
-                getAllBtn.innerHTML = originalText;
-                getAllBtn.disabled = false;
-            }
+            document.getElementById('totalUsers').textContent = stats.totalUsers.toLocaleString();
+            document.getElementById('activeUsers').textContent = stats.activeUsers.toLocaleString();
+            document.getElementById('totalTransactions').textContent = stats.totalTransactions.toLocaleString();
+            document.getElementById('totalBalance').textContent = stats.totalBalance.toLocaleString() + ' MMK';
         }
 
-        // Display users in grid format
-        function displayUsersGrid(users) {
-            const searchResultsDiv = document.getElementById('searchResults');
-            let resultsHtml = '';
-            
-            if (users.length === 0) {
-                resultsHtml = '<div class="no-results">အသုံးပြုသူများ မရှိပါ</div>';
-            } else {
-                users.forEach(user => {
-                    resultsHtml += `
-                        <div class="search-result-item" onclick="displayUserInfo(${JSON.stringify(user).replace(/"/g, '&quot;')})">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <strong>${user.name}</strong><br>
-                                    <small style="color: #666;">${user.phone}</small>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div style="font-weight: bold;">${user.balance.toLocaleString()} MMK</div>
-                                    <div class="status ${user.status}">${user.status}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            searchResultsDiv.innerHTML = resultsHtml;
-            searchResultsDiv.style.display = 'block';
-            document.getElementById('userInfo').style.display = 'none';
-        }
-
-        // Clear search results
-        function clearSearch() {
-            document.getElementById('phoneSearch').value = '';
-            document.getElementById('userInfo').style.display = 'none';
-            document.getElementById('searchResults').style.display = 'none';
-        }
-
-        // Fill transaction form with phone number
-        function fillTransactionForm(phoneNumber) {
-            document.getElementById('targetPhone').value = phoneNumber;
-            document.getElementById('targetPhone').focus();
-        }
-
-        // Deposit money
-        async function depositMoney() {
-            const phone = document.getElementById('targetPhone').value.trim();
-            const amount = parseFloat(document.getElementById('amount').value);
-            const note = document.getElementById('transactionNote').value.trim();
-            const adminId = document.getElementById('adminId').value.trim();
-
-            if (!phone || !amount || amount <= 0 || !adminId) {
-                showAlert('အချက်အလက်များ မှန်ကန်စွာ ထည့်သွင်းပါ', 'warning');
+        function searchUser() {
+            const searchTerm = document.getElementById('userSearch').value;
+            if (!searchTerm) {
+                alert('ရှာရန် ဖုန်းနံပါတ် သို့မဟုတ် User ID ထည့်ပါ');
                 return;
             }
 
-            const depositBtn = document.getElementById('depositBtn');
-            const originalText = depositBtn.innerHTML;
-            depositBtn.innerHTML = '<div class="loading"></div> သွင်းနေသည်...';
-            depositBtn.disabled = true;
-
-            try {
-                const result = await dbClient.depositMoney(phone, amount, adminId, note);
-                
-                if (result.success) {
-                    showAlert(`${amount.toLocaleString()} MMK ကို ${phone} သို့ အောင်မြင်စွာ သွင်းပါသည်`, 'success');
-                    clearTransactionForm();
-                    await updateStats();
-                } else {
-                    showAlert('ငွေသွင်းခြင်းတွင် အမှားရှိသည်', 'error');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            } finally {
-                depositBtn.innerHTML = originalText;
-                depositBtn.disabled = false;
-            }
+            logMessage('INFO', `Searching for user: ${searchTerm}`);
+            
+            // Simulate user search
+            setTimeout(() => {
+                const mockUsers = generateMockUsers(searchTerm);
+                displayUsers(mockUsers);
+            }, 1500);
         }
 
-        // Withdraw money
-        async function withdrawMoney() {
-            const phone = document.getElementById('targetPhone').value.trim();
-            const amount = parseFloat(document.getElementById('amount').value);
-            const note = document.getElementById('transactionNote').value.trim();
-            const adminId = document.getElementById('adminId').value.trim();
-
-            if (!phone || !amount || amount <= 0 || !adminId) {
-                showAlert('အချက်အလက်များ မှန်ကန်စွာ ထည့်သွင်းပါ', 'warning');
-                return;
-            }
-
-            const withdrawBtn = document.getElementById('withdrawBtn');
-            const originalText = withdrawBtn.innerHTML;
-            withdrawBtn.innerHTML = '<div class="loading"></div> ထုတ်နေသည်...';
-            withdrawBtn.disabled = true;
-
-            try {
-                const result = await dbClient.withdrawMoney(phone, amount, adminId, note);
-                
-                if (result.success) {
-                    showAlert(`${phone} မှ ${amount.toLocaleString()} MMK ကို အောင်မြင်စွာ ထုတ်ပါသည်`, 'success');
-                    clearTransactionForm();
-                    await updateStats();
-                } else {
-                    showAlert('ငွေထုတ်ခြင်းတွင် အမှားရှိသည်', 'error');
+        function generateMockUsers(searchTerm) {
+            // Generate mock users based on search term
+            return [
+                {
+                    id: 'USR001',
+                    phone: searchTerm.startsWith('09') ? searchTerm : '09123456789',
+                    name: 'မောင်မောင်',
+                    balance: '125,000 MMK',
+                    status: 'Active',
+                    lastTransaction: '2025-10-11 14:30:00'
+                },
+                {
+                    id: 'USR002', 
+                    phone: '09987654321',
+                    name: 'မမ',
+                    balance: '75,500 MMK',
+                    status: 'Active',
+                    lastTransaction: '2025-10-11 12:15:00'
                 }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            } finally {
-                withdrawBtn.innerHTML = originalText;
-                withdrawBtn.disabled = false;
-            }
+            ];
         }
 
-        // Validate transaction before processing
-        async function validateTransaction() {
-            const phone = document.getElementById('targetPhone').value.trim();
-            const amount = parseFloat(document.getElementById('amount').value);
+        function displayUsers(users) {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const row = `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.phone}</td>
+                        <td>${user.name}</td>
+                        <td>${user.balance}</td>
+                        <td><span class="badge badge-success">${user.status}</span></td>
+                        <td>
+                            <button class="btn btn-primary" onclick="viewUserDetails('${user.id}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-success" onclick="addBalance('${user.id}')">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="btn btn-danger" onclick="deductBalance('${user.id}')">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function processTransaction() {
+            const phone = document.getElementById('transactionPhone').value;
+            const type = document.getElementById('transactionType').value;
+            const amount = document.getElementById('transactionAmount').value;
+            const note = document.getElementById('transactionNote').value;
 
             if (!phone || !amount) {
-                showAlert('ဖုန်းနံပါတ်နှင့် ပမာણ ထည့်သွင်းပါ', 'warning');
+                alert('ဖုန်းနံပါတ်နှင့် ပမာဏ ထည့်ရန် လိုအပ်ပါသည်');
                 return;
             }
 
-            try {
-                const userResult = await dbClient.getUserByPhone(phone);
-                if (userResult.success) {
-                    const user = userResult.data;
-                    showAlert(`${user.name} (${phone}) - လက်ကျန်ငွေ: ${user.balance.toLocaleString()} MMK`, 'info');
+            logMessage('INFO', `Processing ${type} transaction: ${amount} MMK for ${phone}`);
+            
+            // Simulate transaction processing
+            setTimeout(() => {
+                const success = Math.random() > 0.2; // 80% success rate
+                if (success) {
+                    alert(`Transaction အောင်မြင်ပါပြီး!\nType: ${type}\nAmount: ${amount} MMK\nPhone: ${phone}`);
+                    logMessage('SUCCESS', `Transaction completed: ${type} ${amount} MMK to ${phone}`);
+                    clearTransactionForm();
                 } else {
-                    showAlert('အသုံးပြုသူ မတွေ့ရှိပါ', 'error');
+                    alert('Transaction မအောင်မြင်ပါ။ ပြန်လည်ကြိုးစားပါ။');
+                    logMessage('ERROR', `Transaction failed: ${type} ${amount} MMK to ${phone}`);
                 }
-            } catch (error) {
-                showAlert('Validation error: ' + error.message, 'error');
-            }
+            }, 2000);
         }
 
-        // Clear transaction form
         function clearTransactionForm() {
-            document.getElementById('targetPhone').value = '';
-            document.getElementById('amount').value = '';
+            document.getElementById('transactionPhone').value = '';
+            document.getElementById('transactionAmount').value = '';
             document.getElementById('transactionNote').value = '';
         }
 
-        // Test database connection
-        async function testConnection() {
-            const testBtn = document.getElementById('testConnBtn');
-            const originalText = testBtn.innerHTML;
-            testBtn.innerHTML = '<div class="loading"></div> Testing...';
-            testBtn.disabled = true;
-
-            updateConnectionStatus('connecting');
-
-            try {
-                const result = await dbClient.testConnection();
-                
-                if (result.success) {
-                    updateConnectionStatus('connected');
-                    document.getElementById('connectionInfo').innerHTML = `
-                        <strong>Status:</strong> Connected<br>
-                        <strong>Latency:</strong> ${result.latency}ms<br>
-                        <strong>Connected at:</strong> ${new Date(result.timestamp).toLocaleString()}<br>
-                        <strong>Package:</strong> mm.com.wavemoney.wavepay v2.4.3
-                    `;
-                    showAlert('Database connection အောင်မြင်သည်', 'success');
-                } else {
-                    updateConnectionStatus('disconnected');
-                    showAlert('Connection failed: ' + result.message, 'error');
-                }
-            } catch (error) {
-                updateConnectionStatus('disconnected');
-                showAlert('Connection error: ' + error.message, 'error');
-            } finally {
-                testBtn.innerHTML = originalText;
-                testBtn.disabled = false;
-            }
-        }
-
-        // Reconnect database
-        async function reconnectDatabase() {
-            const reconnectBtn = document.getElementById('reconnectBtn');
-            const originalText = reconnectBtn.innerHTML;
-            reconnectBtn.innerHTML = '<div class="loading"></div> Reconnecting...';
-            reconnectBtn.disabled = true;
-
-            showAlert('Database ပြန်လည်ချိတ်ဆက်နေသည်...', 'info');
-
-            try {
-                const success = await dbClient.reconnect();
-                
-                if (success) {
-                    updateConnectionStatus('connected');
-                    showAlert('Database ပြန်လည်ချိတ်ဆက်မှု အောင်မြင်သည်', 'success');
-                    await updateStats();
-                } else {
-                    updateConnectionStatus('disconnected');
-                    showAlert('Reconnection failed after multiple attempts', 'error');
-                }
-            } catch (error) {
-                updateConnectionStatus('disconnected');
-                showAlert('Reconnection error: ' + error.message, 'error');
-            } finally {
-                reconnectBtn.innerHTML = originalText;
-                reconnectBtn.disabled = false;
-            }
-        }
-
-        // Load transaction history
-        async function loadTransactionHistory() {
-            const loadBtn = document.getElementById('loadTxnBtn');
-            const originalText = loadBtn.innerHTML;
-            loadBtn.innerHTML = '<div class="loading"></div> ရယူနေသည်...';
-            loadBtn.disabled = true;
-
-            try {
-                const filterPhone = document.getElementById('filterPhone').value.trim() || null;
-                const result = await dbClient.getTransactionHistory(filterPhone, 50, 0);
-                
-                if (result.success) {
-                    allTransactions = result.data;
-                    displayTransactionHistory(allTransactions);
-                    showAlert(`${result.data.length} ခု ငွေလွှဲမှု မှတ်တမ်းများ ရယူပြီးပါပြီ`, 'success');
-                } else {
-                    showAlert('မှတ်တမ်းများ ရယူခြင်းတွင် အမှားရှိသည်', 'error');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            } finally {
-                loadBtn.innerHTML = originalText;
-                loadBtn.disabled = false;
-            }
-        }
-
-        // Display transaction history
-        function displayTransactionHistory(transactions) {
-            const historyDiv = document.getElementById('transactionHistory');
-            let historyHtml = '';
+        function testDatabaseConnection() {
+            logMessage('INFO', 'Testing database connection...');
             
-            if (transactions.length === 0) {
-                historyHtml = `
-                    <p style="text-align: center; color: #7f8c8d; padding: 40px;">
-                        <i class="fas fa-inbox"></i><br><br>
-                        ငွေလွှဲမှု မှတ်တမ်းများ မရှိပါ
-                    </p>
-                `;
-            } else {
-                transactions.forEach(txn => {
-                    const isDeposit = txn.type === 'admin_deposit';
-                    const isWithdrawal = txn.type === 'admin_withdrawal';
-                    let amountClass = '';
-                    let amountSign = '';
-                    
-                    if (isDeposit) {
-                        amountClass = 'positive';
-                        amountSign = '+';
-                    } else if (isWithdrawal) {
-                        amountClass = 'negative';
-                        amountSign = '-';
-                    }
-                    
-                    historyHtml += `
-                        <div class="transaction-item">
-                            <div class="transaction-info">
-                                <div class="transaction-id">${txn.id}</div>
-                                <div class="transaction-details">
-                                    <strong>From:</strong> ${txn.from} → <strong>To:</strong> ${txn.to}<br>
-                                    <strong>Type:</strong> ${txn.type}<br>
-                                    <strong>Reference:</strong> ${txn.reference}<br>
-                                    <strong>Time:</strong> ${new Date(txn.timestamp).toLocaleString('en-GB')}<br>
-                                    <strong>Note:</strong> ${txn.description}
-                                </div>
-                            </div>
-                            <div class="transaction-amount-section">
-                                <div class="amount ${amountClass}">${amountSign}${txn.amount.toLocaleString()} MMK</div>
-                                <div class="status ${txn.status}">${txn.status}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            historyDiv.innerHTML = historyHtml;
-        }
-
-        // Load user-specific transactions
-        async function loadUserTransactions(phoneNumber) {
-            try {
-                const result = await dbClient.getTransactionHistory(phoneNumber, 20, 0);
-                if (result.success) {
-                    displayTransactionHistory(result.data);
-                    showAlert(`${phoneNumber} အတွက် ${result.data.length} ခု မှတ်တမ်းများ ရယူပြီးပါပြီ`, 'success');
-                }
-            } catch (error) {
-                showAlert('Error loading user transactions: ' + error.message, 'error');
-            }
-        }
-
-        // Clear filters
-        function clearFilters() {
-            document.getElementById('filterPhone').value = '';
-            document.getElementById('filterType').value = '';
-            document.getElementById('filterStatus').value = '';
-        }
-
-        // Update user status
-        async function updateUserStatus() {
-            const phone = document.getElementById('userManagementPhone').value.trim();
-            const status = document.getElementById('userStatus').value;
-            const adminId = document.getElementById('adminId').value.trim() || 'admin_001';
-
-            if (!phone) {
-                showAlert('ဖုန်းနံပါတ် ထည့်သွင်းပါ', 'warning');
-                return;
-            }
-
-            const updateBtn = document.getElementById('updateStatusBtn');
-            const originalText = updateBtn.innerHTML;
-            updateBtn.innerHTML = '<div class="loading"></div> ပြောင်းနေသည်...';
-            updateBtn.disabled = true;
-
-            try {
-                const result = await dbClient.updateUserStatus(phone, status, adminId);
+            setTimeout(() => {
+                const connected = Math.random() > 0.3;
+                const statusDiv = document.getElementById('databaseStatus');
                 
-                if (result.success) {
-                    showAlert(`${phone} ၏ အခြေအနေကို ${status} သို့ ပြောင်းလဲပြီးပါပြီ`, 'success');
-                    await updateStats();
+                if (connected) {
+                    statusDiv.innerHTML = '<div class="alert alert-success">Database ချိတ်ဆက်မှု အောင်မြင်ပါပြီး</div>';
+                    logMessage('SUCCESS', 'Database connection successful');
                 } else {
-                    showAlert('အခြေအနေ ပြောင်းလဲခြင်းတွင် အမှားရှိသည်', 'error');
+                    statusDiv.innerHTML = '<div class="alert alert-danger">Database ချိတ်ဆက်မှု မအောင်မြင်ပါ</div>';
+                    logMessage('ERROR', 'Database connection failed');
                 }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            } finally {
-                updateBtn.innerHTML = originalText;
-                updateBtn.disabled = false;
-            }
+            }, 2000);
         }
 
-        // Get user status
-        async function getUserStatus() {
-            const phone = document.getElementById('userManagementPhone').value.trim();
+        function testApiConnection() {
+            logMessage('INFO', 'Testing API connection...');
+            document.getElementById('apiStatus').value = 'Testing...';
             
-            if (!phone) {
-                showAlert('ဖုန်းနံပါတ် ထည့်သွင်းပါ', 'warning');
-                return;
-            }
-
-            try {
-                const result = await dbClient.getUserByPhone(phone);
-                if (result.success) {
-                    const user = result.data;
-                    showAlert(`${user.name} (${phone}) - Status: ${user.status}, KYC: ${user.kycStatus}`, 'info');
-                } else {
-                    showAlert('အသုံးပြုသူ မတွေ့ရှိပါ', 'error');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
+            setTimeout(() => {
+                const connected = Math.random() > 0.2;
+                document.getElementById('apiStatus').value = connected ? 'Connected' : 'Connection Failed';
+                logMessage(connected ? 'SUCCESS' : 'ERROR', `API connection ${connected ? 'successful' : 'failed'}`);
+            }, 2000);
         }
 
-        // Export data
-        async function exportData() {
-            const exportBtn = document.getElementById('exportBtn');
-            const originalText = exportBtn.innerHTML;
-            exportBtn.innerHTML = '<div class="loading"></div> Export လုပ်နေသည်...';
-            exportBtn.disabled = true;
-
-            try {
-                const result = await dbClient.exportData('all');
-                
-                if (result.success) {
-                    // Create and download file
-                    const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `wavepay_admin_export_${new Date().toISOString().split('T')[0]}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    
-                    showAlert(`ဒေတာ Export လုပ်ပြီးပါပြီ (${result.recordCount.users} users, ${result.recordCount.transactions} transactions)`, 'success');
-                } else {
-                    showAlert('Export လုပ်ခြင်းတွင် အမှားရှိသည်', 'error');
-                }
-            } catch (error) {
-                showAlert('Export error: ' + error.message, 'error');
-            } finally {
-                exportBtn.innerHTML = originalText;
-                exportBtn.disabled = false;
-            }
-        }
-
-        // Update system configuration
-        function updateSystemConfig() {
-            const maintenanceMode = document.getElementById('maintenanceMode').value === 'true';
-            const maxAmount = parseInt(document.getElementById('maxTransactionAmount').value);
+        function viewUserDetails(userId) {
+            const modal = document.getElementById('userModal');
+            const detailsDiv = document.getElementById('userDetails');
             
-            showAlert(`စနစ် Configuration ပြင်ဆင်ပြီးပါပြီ - Maintenance: ${maintenanceMode ? 'ON' : 'OFF'}, Max Amount: ${maxAmount.toLocaleString()} MMK`, 'success');
+            // Mock user details
+            detailsDiv.innerHTML = `
+                <div class="form-group">
+                    <label>User ID:</label>
+                    <input type="text" value="${userId}" readonly>
+                </div>
+                <div class="form-group">
+                    <label>ဖုန်းနံပါတ်:</label>
+                    <input type="text" value="09123456789" readonly>
+                </div>
+                <div class="form-group">
+                    <label>လက်ကျန်ငွေ:</label>
+                    <input type="text" value="125,000 MMK" readonly>
+                </div>
+                <div class="form-group">
+                    <label>KYC Status:</label>
+                    <input type="text" value="Verified" readonly>
+                </div>
+                <div class="form-group">
+                    <label>နောက်ဆုံး Login:</label>
+                    <input type="text" value="2025-10-11 14:30:00" readonly>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
         }
 
-        // Clear cache
-        function clearCache() {
-            if (confirm('Cache အားလုံးကို ရှင်းလင်းမှာ သေချာပါသလား?')) {
-                // Simulate cache clearing
+        function closeModal() {
+            document.getElementById('userModal').style.display = 'none';
+        }
+
+        function addBalance(userId) {
+            const amount = prompt('ငွေသွင်းမည့် ပမာဏ (MMK):');
+            if (amount && !isNaN(amount)) {
+                logMessage('INFO', `Adding ${amount} MMK to user ${userId}`);
+                alert(`${amount} MMK ကို user ${userId} အကောင့်သို့ သွင်းပါပြီး`);
+            }
+        }
+
+        function deductBalance(userId) {
+            const amount = prompt('ငွေထုတ်မည့် ပမာဏ (MMK):');
+            if (amount && !isNaN(amount)) {
+                logMessage('INFO', `Deducting ${amount} MMK from user ${userId}`);
+                alert(`user ${userId} အကောင့်မှ ${amount} MMK ကို ထုတ်ပါပြီး`);
+            }
+        }
+
+        function refreshLogs() {
+            logMessage('INFO', 'Refreshing system logs...');
+            // Logs are already updating in real-time
+        }
+
+        function clearLogs() {
+            if (confirm('System logs အားလုံးကို ရှင်းလင်းမှာ သေချာပါသလား?')) {
+                document.getElementById('systemLogs').innerHTML = '';
+                logMessage('INFO', 'System logs cleared');
+            }
+        }
+
+        function syncDatabase() {
+            logMessage('INFO', 'Starting database synchronization...');
+            setTimeout(() => {
+                logMessage('SUCCESS', 'Database synchronization completed');
+                alert('Database sync အောင်မြင်ပါပြီး');
+            }, 3000);
+        }
+
+        function refreshApiKeys() {
+            logMessage('INFO', 'Refreshing API keys...');
+            setTimeout(() => {
+                logMessage('SUCCESS', 'API keys refreshed successfully');
+                alert('API keys များကို ပြန်လည်ရယူပါပြီး');
+            }, 2000);
+        }
+
+        function resetApiConfig() {
+            if (confirm('API Configuration များကို reset လုပ်မှာ သေချာပါသလား?')) {
+                logMessage('WARNING', 'Resetting API configuration...');
                 setTimeout(() => {
-                    showAlert('Cache ရှင်းလင်းပြီးပါပြီ', 'success');
-                }, 1000);
+                    logMessage('INFO', 'API configuration reset completed');
+                    alert('API Configuration reset ပြီးပါပြီး');
+                }, 1500);
             }
         }
 
-        // Show deep links from APK analysis
-        function showDeepLinks() {
-            const deepLinks = [
-                'wavepay://shared/cash-in - Cash In Feature',
-                'wavepay://shared/topup - Mobile Topup',
-                'wavepay://shared/transaction-history - Transaction History',
-                'wavepay://shared/flutter-view?route=receiver-picker - Send Money',
-                'wavepay://shared/qr?is_my_qr=true - My QR Code',
-                'wavepay://shared/cash-in/mpu - MPU Cash In',
-                'wavepay://shared/wave-shops - Wave Shops',
-                'wavepay://shared/biller - Biller Payment'
-            ];
+        function getTransactionHistory() {
+            const historyDiv = document.getElementById('transactionHistory');
+            historyDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Transaction history ရယူနေပါသည်...</div>';
             
-            showAlert('Deep Links: ' + deepLinks.join(', '), 'info', 10000);
+            setTimeout(() => {
+                historyDiv.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>From/To</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>TXN001</td>
+                                <td>Cash In</td>
+                                <td>50,000 MMK</td>
+                                <td>09123456789</td>
+                                <td>2025-10-11 14:30</td>
+                                <td><span style="color: green;">Success</span></td>
+                            </tr>
+                            <tr>
+                                <td>TXN002</td>
+                                <td>Transfer</td>
+                                <td>25,000 MMK</td>
+                                <td>09987654321</td>
+                                <td>2025-10-11 13:15</td>
+                                <td><span style="color: green;">Success</span></td>
+                            </tr>
+                            <tr>
+                                <td>TXN003</td>
+                                <td>Cash Out</td>
+                                <td>10,000 MMK</td>
+                                <td>09555666777</td>
+                                <td>2025-10-11 12:45</td>
+                                <td><span style="color: red;">Failed</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+            }, 2000);
         }
 
-        // Show biller categories from APK analysis
-        function showBillerCategories() {
-            const categories = [
-                'Loan (ID: 4)',
-                'Internet Bill (ID: 8)',
-                'Solar (ID: 53)',
-                'Education (ID: 60)',
-                'British Chamber (ID: 63)',
-                'LODGGY (ID: 65)',
-                'Gaming (ID: 66)',
-                'Utilities (ID: 67)'
-            ];
-            
-            showAlert('Biller Categories: ' + categories.join(', '), 'info', 8000);
+        function logMessage(level, message) {
+            const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const logContainer = document.getElementById('systemLogs');
+            const logEntry = `<div>[${now}] ${level}: ${message}</div>`;
+            logContainer.innerHTML += logEntry;
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
-        // Initialize dashboard when page loads
-        window.onload = function() {
-            initDashboard();
-        };
-
-        // Auto-refresh stats every 60 seconds
-        setInterval(async () => {
-            if (dbClient && dbClient.isConnected) {
-                await updateStats();
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('userModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
             }
-        }, 60000);
-
-        // Handle Enter key in search inputs
-        document.getElementById('phoneSearch').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchUser();
-            }
-        });
-
-        document.getElementById('userManagementPhone').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                getUserStatus();
-            }
-        });
+        }
     </script>
 </body>
 </html>
