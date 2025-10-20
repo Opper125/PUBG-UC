@@ -1,23 +1,19 @@
 // ========================================
 // ML DIAMOND SHOP - ADMIN PANEL
-// Production Ready with Real UniPin Integration
+// Production Ready - All Issues Fixed
 // ========================================
 
 // ========================================
-// CONFIGURATION
+// CONFIGURATION WITH REAL CREDENTIALS
 // ========================================
 const CONFIG = {
-    // Supabase Configuration
     supabase: {
-        url: 'https://mgbltiztcxxeibocqgqd.supabase.co', // Replace: https://xxxxx.supabase.co
-        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYmx0aXp0Y3h4ZWlib2NxZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5Njg0OTQsImV4cCI6MjA3NjU0NDQ5NH0.GXpTp1O7r2weHeHInMGkAhWvVgejIKgRhK9LgBKaITc', // Replace with your anon key
-        serviceKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYmx0aXp0Y3h4ZWlib2NxZ3FkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk2ODQ5NCwiZXhwIjoyMDc2NTQ0NDk0fQ.sJsej-yj5E6PTGqpAnOLrN1NbsYKjf5UwaJrlG7uS8Y' // Replace with service_role key
+        url: 'https://mgbltiztcxxeibocqgqd.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYmx0aXp0Y3h4ZWlib2NxZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5Njg0OTQsImV4cCI6MjA3NjU0NDQ5NH0.GXpTp1O7r2weHeHInMGkAhWvVgejIKgRhK9LgBKaITc',
+        serviceKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYmx0aXp0Y3h4ZWlib2NxZ3FkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk2ODQ5NCwiZXhwIjoyMDc2NTQ0NDk0fQ.sJsej-yj5E6PTGqpAnOLrN1NbsYKjf5UwaJrlG7uS8Y'
     },
     
-    // Auto-refresh intervals (milliseconds)
-    autoRefreshInterval: 30000, // 30 seconds
-    
-    // Real-time subscriptions
+    autoRefreshInterval: 30000,
     enableRealtime: true
 };
 
@@ -38,18 +34,15 @@ const supabaseAdmin = window.supabase.createClient(
 let currentTab = 'orders';
 let currentOrderFilter = 'pending';
 let autoRefreshTimer = null;
-let unipinConfig = {};
 let orderSubscription = null;
 
 // ========================================
 // DOM ELEMENTS
 // ========================================
 const elements = {
-    // Screens
     loginScreen: document.getElementById('login-screen'),
     adminDashboard: document.getElementById('admin-dashboard'),
     
-    // Forms
     loginForm: document.getElementById('login-form'),
     unipinSettingsForm: document.getElementById('unipin-settings-form'),
     exchangeRateForm: document.getElementById('exchange-rate-form'),
@@ -57,21 +50,17 @@ const elements = {
     shopSettingsForm: document.getElementById('shop-settings-form'),
     paymentForm: document.getElementById('payment-form'),
     
-    // Tables
     ordersTbody: document.getElementById('orders-tbody'),
     logsTbody: document.getElementById('logs-tbody'),
     
-    // Containers
     paymentsGrid: document.getElementById('payments-grid'),
     packagesGrid: document.getElementById('packages-grid'),
     orderDetailContent: document.getElementById('order-detail-content'),
     
-    // Modals
     orderModal: document.getElementById('order-modal'),
     paymentModal: document.getElementById('payment-modal'),
     confirmModal: document.getElementById('confirm-modal'),
     
-    // Toast
     toast: document.getElementById('toast'),
     loadingOverlay: document.getElementById('loading-overlay')
 };
@@ -80,6 +69,7 @@ const elements = {
 // INITIALIZATION
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Admin Panel Initializing...');
     checkAuth();
     setupEventListeners();
 });
@@ -106,7 +96,8 @@ elements.loginForm.addEventListener('submit', async (e) => {
     setButtonLoading(submitBtn, true);
     
     try {
-        // Get admin password from database
+        console.log('🔐 Attempting login...');
+        
         const { data, error } = await supabase
             .from('settings')
             .select('value')
@@ -117,20 +108,16 @@ elements.loginForm.addEventListener('submit', async (e) => {
 
         if (password === data.value) {
             sessionStorage.setItem('admin_logged_in', 'true');
-            
-            // Log admin login
             await logAdminAction('admin_login', null, null, { success: true });
-            
+            console.log('✅ Login successful');
             showDashboard();
         } else {
             showToast('Invalid password!', 'error');
-            
-            // Log failed login attempt
             await logAdminAction('admin_login', null, null, { success: false });
         }
     } catch (error) {
-        console.error('Login error:', error);
-        showToast('Login failed. Please try again.', 'error');
+        console.error('❌ Login error:', error);
+        showToast('Login failed: ' + error.message, 'error');
     } finally {
         setButtonLoading(submitBtn, false);
     }
@@ -146,15 +133,13 @@ function showDashboard() {
     elements.loginScreen.style.display = 'none';
     elements.adminDashboard.style.display = 'block';
     
-    // Load all data
+    console.log('📊 Loading dashboard...');
     loadDashboard();
     
-    // Setup real-time subscriptions
     if (CONFIG.enableRealtime) {
         setupRealtimeSubscriptions();
     }
     
-    // Start auto-refresh
     startAutoRefresh();
 }
 
@@ -215,8 +200,9 @@ async function loadDashboard() {
             loadSettings(),
             checkUnipinStatus()
         ]);
+        console.log('✅ Dashboard loaded');
     } catch (error) {
-        console.error('Dashboard load error:', error);
+        console.error('❌ Dashboard load error:', error);
         showToast('Failed to load dashboard data', 'error');
     }
 }
@@ -226,7 +212,8 @@ async function loadDashboard() {
 // ========================================
 async function loadStats() {
     try {
-        // Use the calculate_order_stats function
+        console.log('📊 Loading statistics...');
+        
         const { data, error } = await supabaseAdmin
             .rpc('calculate_order_stats');
 
@@ -234,28 +221,23 @@ async function loadStats() {
 
         const stats = data[0];
         
-        // Update stat cards
         document.getElementById('stat-pending').textContent = stats.pending_orders || 0;
-        document.getElementById('stat-processing').textContent = 0; // Can add processing status
+        document.getElementById('stat-processing').textContent = 0;
         document.getElementById('stat-completed').textContent = stats.completed_orders || 0;
         document.getElementById('stat-revenue').textContent = formatPrice(stats.total_revenue || 0) + ' MMK';
         
-        // Update badges
         document.getElementById('badge-orders').textContent = stats.pending_orders || 0;
         
-        // Update filter counts
         document.getElementById('count-pending').textContent = stats.pending_orders || 0;
         document.getElementById('count-completed').textContent = stats.completed_orders || 0;
         document.getElementById('count-failed').textContent = stats.failed_orders || 0;
         
-        // Today's stats
-        document.getElementById('stat-completed-today').textContent = 
-            `Today: ${stats.today_orders || 0} orders`;
-        document.getElementById('stat-revenue-today').textContent = 
-            `Today: ${formatPrice(stats.today_revenue || 0)} MMK`;
+        document.getElementById('stat-completed-today').textContent = `Today: ${stats.today_orders || 0} orders`;
+        document.getElementById('stat-revenue-today').textContent = `Today: ${formatPrice(stats.today_revenue || 0)} MMK`;
             
+        console.log('✅ Stats loaded');
     } catch (error) {
-        console.error('Load stats error:', error);
+        console.error('❌ Load stats error:', error);
     }
 }
 
@@ -264,6 +246,8 @@ async function loadStats() {
 // ========================================
 async function loadOrders() {
     try {
+        console.log('📦 Loading orders...');
+        
         let query = supabaseAdmin
             .from('orders')
             .select(`
@@ -283,13 +267,10 @@ async function loadOrders() {
         if (error) throw error;
 
         displayOrders(data);
+        console.log(`✅ Loaded ${data.length} orders`);
     } catch (error) {
-        console.error('Load orders error:', error);
-        elements.ordersTbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="error">Failed to load orders</td>
-            </tr>
-        `;
+        console.error('❌ Load orders error:', error);
+        elements.ordersTbody.innerHTML = '<tr><td colspan="8" class="error">Failed to load orders</td></tr>';
     }
 }
 
@@ -298,11 +279,7 @@ async function loadOrders() {
 // ========================================
 function displayOrders(orders) {
     if (!orders || orders.length === 0) {
-        elements.ordersTbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="empty">No orders found</td>
-            </tr>
-        `;
+        elements.ordersTbody.innerHTML = '<tr><td colspan="8" class="empty">No orders found</td></tr>';
         return;
     }
 
@@ -337,23 +314,13 @@ function displayOrders(orders) {
                     ${getStatusIcon(order.status)} ${order.status.toUpperCase()}
                 </span>
             </td>
-            <td>
-                <div class="order-date">
-                    ${formatDateTime(order.created_at)}
-                </div>
-            </td>
+            <td><div class="order-date">${formatDateTime(order.created_at)}</div></td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-sm btn-primary" onclick="viewOrder('${order.id}')" title="View Details">
-                        👁️
-                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewOrder('${order.id}')" title="View">👁️</button>
                     ${order.status === 'pending' ? `
-                        <button class="btn btn-sm btn-success" onclick="approveOrder('${order.id}')" title="Approve & Send Diamonds">
-                            ✓
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectOrder('${order.id}')" title="Reject Order">
-                            ✗
-                        </button>
+                        <button class="btn btn-sm btn-success" onclick="approveOrder('${order.id}')" title="Approve">✓</button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectOrder('${order.id}')" title="Reject">✗</button>
                     ` : ''}
                 </div>
             </td>
@@ -370,13 +337,11 @@ async function viewOrder(orderId) {
     showLoadingOverlay('Loading order details...');
     
     try {
+        console.log('📋 Loading order:', orderId);
+        
         const { data: order, error } = await supabaseAdmin
             .from('orders')
-            .select(`
-                *,
-                diamond_packages (*),
-                payment_methods (*)
-            `)
+            .select(`*, diamond_packages (*), payment_methods (*)`)
             .eq('id', orderId)
             .single();
 
@@ -385,98 +350,39 @@ async function viewOrder(orderId) {
         elements.orderDetailContent.innerHTML = `
             <div class="order-detail">
                 <div class="detail-grid">
-                    <!-- Order Info -->
                     <div class="detail-section">
                         <h4>📋 Order Information</h4>
-                        <div class="detail-row">
-                            <span class="label">Order ID:</span>
-                            <span class="value">${order.id}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Reference No:</span>
-                            <span class="value"><strong>${order.reference_no}</strong></span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Status:</span>
-                            <span class="value">
-                                <span class="status-badge status-${order.status}">
-                                    ${getStatusIcon(order.status)} ${order.status.toUpperCase()}
-                                </span>
-                            </span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Created:</span>
-                            <span class="value">${formatDateTime(order.created_at)}</span>
-                        </div>
-                        ${order.completed_at ? `
-                            <div class="detail-row">
-                                <span class="label">Completed:</span>
-                                <span class="value">${formatDateTime(order.completed_at)}</span>
-                            </div>
-                        ` : ''}
+                        <div class="detail-row"><span class="label">Order ID:</span><span class="value">${order.id}</span></div>
+                        <div class="detail-row"><span class="label">Reference No:</span><span class="value"><strong>${order.reference_no}</strong></span></div>
+                        <div class="detail-row"><span class="label">Status:</span><span class="value"><span class="status-badge status-${order.status}">${getStatusIcon(order.status)} ${order.status.toUpperCase()}</span></span></div>
+                        <div class="detail-row"><span class="label">Created:</span><span class="value">${formatDateTime(order.created_at)}</span></div>
+                        ${order.completed_at ? `<div class="detail-row"><span class="label">Completed:</span><span class="value">${formatDateTime(order.completed_at)}</span></div>` : ''}
                     </div>
 
-                    <!-- Package Info -->
                     <div class="detail-section">
                         <h4>💎 Package Details</h4>
-                        <div class="detail-row">
-                            <span class="label">Package:</span>
-                            <span class="value">${order.diamond_packages.name}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Diamonds:</span>
-                            <span class="value"><strong>${order.diamond_packages.diamonds} 💎</strong></span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Price (IDR):</span>
-                            <span class="value">${formatPrice(order.diamond_packages.price_idr)} IDR</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Amount (MMK):</span>
-                            <span class="value"><strong>${formatPrice(order.amount)} MMK</strong></span>
-                        </div>
+                        <div class="detail-row"><span class="label">Package:</span><span class="value">${order.diamond_packages.name}</span></div>
+                        <div class="detail-row"><span class="label">Diamonds:</span><span class="value"><strong>${order.diamond_packages.diamonds} 💎</strong></span></div>
+                        <div class="detail-row"><span class="label">Price (IDR):</span><span class="value">${formatPrice(order.diamond_packages.price_idr)} IDR</span></div>
+                        <div class="detail-row"><span class="label">Amount (MMK):</span><span class="value"><strong>${formatPrice(order.amount)} MMK</strong></span></div>
                     </div>
 
-                    <!-- ML Account -->
                     <div class="detail-section">
                         <h4>🎮 Mobile Legends Account</h4>
-                        <div class="detail-row">
-                            <span class="label">User ID:</span>
-                            <span class="value"><code>${order.ml_user_id}</code></span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Zone ID:</span>
-                            <span class="value"><code>${order.ml_zone_id}</code></span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Username:</span>
-                            <span class="value"><strong>${order.ml_username || 'N/A'}</strong></span>
-                        </div>
+                        <div class="detail-row"><span class="label">User ID:</span><span class="value"><code>${order.ml_user_id}</code></span></div>
+                        <div class="detail-row"><span class="label">Zone ID:</span><span class="value"><code>${order.ml_zone_id}</code></span></div>
+                        <div class="detail-row"><span class="label">Username:</span><span class="value"><strong>${order.ml_username || 'N/A'}</strong></span></div>
                     </div>
 
-                    <!-- Payment Info -->
                     <div class="detail-section">
                         <h4>💳 Payment Information</h4>
-                        <div class="detail-row">
-                            <span class="label">Method:</span>
-                            <span class="value">${order.payment_methods.name}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Type:</span>
-                            <span class="value">${order.payment_methods.type}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Account:</span>
-                            <span class="value">${order.payment_methods.account_name}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Number:</span>
-                            <span class="value">${order.payment_methods.account_number}</span>
-                        </div>
+                        <div class="detail-row"><span class="label">Method:</span><span class="value">${order.payment_methods.name}</span></div>
+                        <div class="detail-row"><span class="label">Type:</span><span class="value">${order.payment_methods.type}</span></div>
+                        <div class="detail-row"><span class="label">Account:</span><span class="value">${order.payment_methods.account_name}</span></div>
+                        <div class="detail-row"><span class="label">Number:</span><span class="value">${order.payment_methods.account_number}</span></div>
                     </div>
                 </div>
 
-                <!-- Payment Proof -->
                 ${order.payment_proof_url ? `
                     <div class="detail-section full-width">
                         <h4>📸 Payment Proof</h4>
@@ -486,26 +392,17 @@ async function viewOrder(orderId) {
                     </div>
                 ` : ''}
 
-                <!-- UniPin Info -->
                 ${order.unipin_order_id ? `
                     <div class="detail-section full-width">
                         <h4>🔗 UniPin Transaction</h4>
-                        <div class="detail-row">
-                            <span class="label">UniPin Order ID:</span>
-                            <span class="value"><code>${order.unipin_order_id}</code></span>
-                        </div>
+                        <div class="detail-row"><span class="label">UniPin Order ID:</span><span class="value"><code>${order.unipin_order_id}</code></span></div>
                     </div>
                 ` : ''}
 
-                <!-- Actions -->
                 ${order.status === 'pending' ? `
                     <div class="detail-actions">
-                        <button class="btn btn-success btn-large" onclick="approveOrder('${order.id}')">
-                            ✓ Approve & Send Diamonds
-                        </button>
-                        <button class="btn btn-danger" onclick="rejectOrder('${order.id}')">
-                            ✗ Reject Order
-                        </button>
+                        <button class="btn btn-success btn-large" onclick="approveOrder('${order.id}')">✓ Approve & Send Diamonds</button>
+                        <button class="btn btn-danger" onclick="rejectOrder('${order.id}')">✗ Reject Order</button>
                     </div>
                 ` : ''}
 
@@ -520,7 +417,7 @@ async function viewOrder(orderId) {
 
         elements.orderModal.style.display = 'block';
     } catch (error) {
-        console.error('View order error:', error);
+        console.error('❌ View order error:', error);
         showToast('Failed to load order details', 'error');
     } finally {
         hideLoadingOverlay();
@@ -528,12 +425,12 @@ async function viewOrder(orderId) {
 }
 
 // ========================================
-// APPROVE ORDER (Send Diamonds via UniPin)
+// APPROVE ORDER (Send Diamonds via Database Function)
 // ========================================
 async function approveOrder(orderId) {
     const confirmed = await showConfirmDialog(
         'Approve Order',
-        'Are you sure you want to approve this order and send diamonds via UniPin API?'
+        'Send diamonds to customer via UniPin API?'
     );
     
     if (!confirmed) return;
@@ -541,114 +438,67 @@ async function approveOrder(orderId) {
     showLoadingOverlay('Processing diamond topup via UniPin...');
     
     try {
-        // 1. Get order details
+        console.log('✅ Approving order:', orderId);
+        
+        // Get order details
         const { data: order, error: orderError } = await supabaseAdmin
             .from('orders')
-            .select(`
-                *,
-                diamond_packages (*)
-            `)
+            .select(`*, diamond_packages (*)`)
             .eq('id', orderId)
             .single();
 
         if (orderError) throw orderError;
 
-        // 2. Get UniPin configuration
-        const { data: settings } = await supabaseAdmin
-            .from('settings')
-            .select('key, value')
-            .in('key', ['unipin_partner_id', 'unipin_secret_key', 'unipin_api_base', 'mlbb_game_code']);
-
-        const config = {};
-        settings.forEach(s => config[s.key] = s.value);
-
-        // 3. Update order status to processing
+        // Update to processing
         await supabaseAdmin
             .from('orders')
             .update({ status: 'processing' })
             .eq('id', orderId);
 
-        // 4. Call UniPin API to create topup order
-        const timestamp = Math.floor(Date.now() / 1000);
-        const path = '/in-game-topup/order/create';
-        const auth = await generateUnipinAuth(
-            config.unipin_partner_id,
-            timestamp,
-            path,
-            config.unipin_secret_key
-        );
+        console.log('📡 Calling UniPin API via Database Function...');
 
-        const response = await fetch(`${config.unipin_api_base}${path}`, {
-            method: 'POST',
-            headers: {
-                'partnerid': config.unipin_partner_id,
-                'timestamp': timestamp.toString(),
-                'path': path,
-                'auth': auth,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                game_code: config.mlbb_game_code,
-                denomination_id: order.diamond_packages.id,
-                fields: {
-                    userid: order.ml_user_id,
-                    zoneid: parseInt(order.ml_zone_id)
-                },
-                reference_no: order.reference_no
-            })
-        });
+        // Call Database Function to create UniPin order
+        const { data: result, error: unipinError } = await supabaseAdmin
+            .rpc('create_unipin_order', {
+                p_order_id: orderId,
+                p_user_id: order.ml_user_id,
+                p_zone_id: order.ml_zone_id,
+                p_denomination_id: order.diamond_packages.id,
+                p_reference_no: order.reference_no
+            });
 
-        const result = await response.json();
+        console.log('📡 UniPin Response:', result);
 
-        // 5. Handle UniPin response
-        if (result.status === 1) {
-            // Success - Update order
+        if (unipinError) throw unipinError;
+
+        if (result && result.success) {
+            // Success
             await supabaseAdmin
                 .from('orders')
                 .update({
                     status: 'completed',
-                    unipin_order_id: result.order_id,
+                    unipin_order_id: result.result.order_id,
                     completed_at: new Date().toISOString()
                 })
                 .eq('id', orderId);
 
-            // Log transaction
-            await supabaseAdmin
-                .from('transactions')
-                .insert({
-                    order_id: orderId,
-                    unipin_order_id: result.order_id,
-                    unipin_status: 'success',
-                    status: 'success',
-                    request_data: {
-                        game_code: config.mlbb_game_code,
-                        denomination_id: order.diamond_packages.id,
-                        user_id: order.ml_user_id,
-                        zone_id: order.ml_zone_id
-                    },
-                    response_data: result
-                });
-
-            // Log admin action
             await logAdminAction('order_approved', 'order', orderId, {
                 reference_no: order.reference_no,
-                unipin_order_id: result.order_id,
+                unipin_order_id: result.result.order_id,
                 diamonds: order.diamond_packages.diamonds
             });
 
             showToast('✓ Order approved! Diamonds sent successfully!', 'success');
             
-            // Refresh data
             await loadDashboard();
             elements.orderModal.style.display = 'none';
         } else {
-            throw new Error(result.reason || 'UniPin API error');
+            throw new Error(result?.error || 'UniPin API failed');
         }
 
     } catch (error) {
-        console.error('Approve order error:', error);
+        console.error('❌ Approve order error:', error);
         
-        // Revert order status
         await supabaseAdmin
             .from('orders')
             .update({ 
@@ -657,7 +507,7 @@ async function approveOrder(orderId) {
             })
             .eq('id', orderId);
 
-        showToast('Failed to approve order: ' + error.message, 'error');
+        showToast('Failed: ' + error.message, 'error');
     } finally {
         hideLoadingOverlay();
     }
@@ -696,33 +546,12 @@ async function rejectOrder(orderId) {
 }
 
 // ========================================
-// GENERATE UNIPIN AUTH SIGNATURE
-// ========================================
-async function generateUnipinAuth(partnerId, timestamp, path, secretKey) {
-    const message = `${partnerId}${timestamp}${path}`;
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secretKey);
-    const messageData = encoder.encode(message);
-
-    const cryptoKey = await crypto.subtle.importKey(
-        'raw',
-        keyData,
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-    );
-
-    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-    return Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-}
-
-// ========================================
 // LOAD PAYMENT METHODS
 // ========================================
 async function loadPaymentMethods() {
     try {
+        console.log('💳 Loading payment methods...');
+        
         const { data, error } = await supabaseAdmin
             .from('payment_methods')
             .select('*')
@@ -731,8 +560,9 @@ async function loadPaymentMethods() {
         if (error) throw error;
 
         displayPaymentMethods(data);
+        console.log(`✅ Loaded ${data.length} payment methods`);
     } catch (error) {
-        console.error('Load payment methods error:', error);
+        console.error('❌ Load payment methods error:', error);
         elements.paymentsGrid.innerHTML = '<div class="error">Failed to load payment methods</div>';
     }
 }
@@ -769,9 +599,7 @@ function displayPaymentMethods(payments) {
                         onclick="togglePaymentStatus('${payment.id}', ${!payment.is_active})">
                     ${payment.is_active ? 'Deactivate' : 'Activate'}
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="deletePaymentMethod('${payment.id}')">
-                    🗑️ Delete
-                </button>
+                <button class="btn btn-sm btn-danger" onclick="deletePaymentMethod('${payment.id}')">🗑️ Delete</button>
             </div>
         `;
         elements.paymentsGrid.appendChild(card);
@@ -781,7 +609,7 @@ function displayPaymentMethods(payments) {
 // ========================================
 // SAVE PAYMENT METHOD
 // ========================================
-elements.paymentForm.addEventListener('submit', async (e) => {
+async function savePaymentMethod(e) {
     e.preventDefault();
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -806,27 +634,23 @@ elements.paymentForm.addEventListener('submit', async (e) => {
 
         await logAdminAction('payment_method_added', 'payment_method', null, paymentData);
 
-        showToast('Payment method added successfully', 'success');
+        showToast('Payment method added', 'success');
         elements.paymentModal.style.display = 'none';
         elements.paymentForm.reset();
         await loadPaymentMethods();
     } catch (error) {
         console.error('Save payment error:', error);
-        showToast('Failed to save payment method', 'error');
+        showToast('Failed to save', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
     }
-});
+}
 
 // ========================================
 // DELETE PAYMENT METHOD
 // ========================================
 async function deletePaymentMethod(id) {
-    const confirmed = await showConfirmDialog(
-        'Delete Payment Method',
-        'Are you sure you want to delete this payment method?'
-    );
-    
+    const confirmed = await showConfirmDialog('Delete Payment Method', 'Are you sure?');
     if (!confirmed) return;
     
     try {
@@ -838,12 +662,11 @@ async function deletePaymentMethod(id) {
         if (error) throw error;
 
         await logAdminAction('payment_method_deleted', 'payment_method', id);
-
-        showToast('Payment method deleted', 'success');
+        showToast('Deleted', 'success');
         await loadPaymentMethods();
     } catch (error) {
         console.error('Delete payment error:', error);
-        showToast('Failed to delete payment method', 'error');
+        showToast('Failed to delete', 'error');
     }
 }
 
@@ -859,13 +682,12 @@ async function togglePaymentStatus(id, isActive) {
 
         if (error) throw error;
 
-        await logAdminAction('payment_method_status_changed', 'payment_method', id, { is_active: isActive });
-
-        showToast(`Payment method ${isActive ? 'activated' : 'deactivated'}`, 'success');
+        await logAdminAction('payment_status_changed', 'payment_method', id, { is_active: isActive });
+        showToast(`${isActive ? 'Activated' : 'Deactivated'}`, 'success');
         await loadPaymentMethods();
     } catch (error) {
-        console.error('Toggle payment status error:', error);
-        showToast('Failed to update payment status', 'error');
+        console.error('Toggle payment error:', error);
+        showToast('Failed to update', 'error');
     }
 }
 
@@ -874,6 +696,8 @@ async function togglePaymentStatus(id, isActive) {
 // ========================================
 async function loadPackages() {
     try {
+        console.log('💎 Loading packages...');
+        
         const { data, error } = await supabaseAdmin
             .from('diamond_packages')
             .select('*')
@@ -883,8 +707,9 @@ async function loadPackages() {
         if (error) throw error;
 
         displayPackages(data);
+        console.log(`✅ Loaded ${data.length} packages`);
     } catch (error) {
-        console.error('Load packages error:', error);
+        console.error('❌ Load packages error:', error);
         elements.packagesGrid.innerHTML = '<div class="error">Failed to load packages</div>';
     }
 }
@@ -894,7 +719,7 @@ async function loadPackages() {
 // ========================================
 function displayPackages(packages) {
     if (!packages || packages.length === 0) {
-        elements.packagesGrid.innerHTML = '<div class="empty">No packages available</div>';
+        elements.packagesGrid.innerHTML = '<div class="empty">No packages</div>';
         return;
     }
 
@@ -907,32 +732,13 @@ function displayPackages(packages) {
             <div class="package-icon">💎</div>
             <h3>${pkg.name}</h3>
             <div class="package-info">
-                <div class="info-row">
-                    <span>Diamonds:</span>
-                    <strong>${formatNumber(pkg.diamonds)}</strong>
-                </div>
-                <div class="info-row">
-                    <span>Price (IDR):</span>
-                    <strong>${formatPrice(pkg.price_idr)} IDR</strong>
-                </div>
-                <div class="info-row">
-                    <span>Price (MMK):</span>
-                    <strong>${formatPrice(pkg.price_mmk)} MMK</strong>
-                </div>
-                <div class="info-row">
-                    <span>Package ID:</span>
-                    <code>${pkg.id}</code>
-                </div>
-                <div class="info-row">
-                    <span>Status:</span>
-                    <span class="badge ${pkg.is_active ? 'active' : 'inactive'}">
-                        ${pkg.is_active ? '✓ Active' : '✗ Inactive'}
-                    </span>
-                </div>
+                <div class="info-row"><span>Diamonds:</span><strong>${formatNumber(pkg.diamonds)}</strong></div>
+                <div class="info-row"><span>Price (IDR):</span><strong>${formatPrice(pkg.price_idr)} IDR</strong></div>
+                <div class="info-row"><span>Price (MMK):</span><strong>${formatPrice(pkg.price_mmk)} MMK</strong></div>
+                <div class="info-row"><span>Package ID:</span><code>${pkg.id}</code></div>
+                <div class="info-row"><span>Status:</span><span class="badge ${pkg.is_active ? 'active' : 'inactive'}">${pkg.is_active ? '✓ Active' : '✗ Inactive'}</span></div>
             </div>
-            <div class="package-footer">
-                <small>Last updated: ${formatDateTime(pkg.updated_at)}</small>
-            </div>
+            <div class="package-footer"><small>Updated: ${formatDateTime(pkg.updated_at)}</small></div>
         `;
         elements.packagesGrid.appendChild(card);
     });
@@ -942,60 +748,38 @@ function displayPackages(packages) {
 // SYNC PACKAGES FROM UNIPIN
 // ========================================
 async function syncPackagesFromUnipin() {
-    const confirmed = await showConfirmDialog(
-        'Sync Packages',
-        'This will fetch latest packages from UniPin API and update the database. Continue?'
-    );
-    
+    const confirmed = await showConfirmDialog('Sync Packages', 'Fetch latest from UniPin API?');
     if (!confirmed) return;
     
     const syncBtn = document.getElementById('sync-packages-btn');
     setButtonLoading(syncBtn, true);
-    showLoadingOverlay('Syncing packages from UniPin API...');
+    showLoadingOverlay('Syncing from UniPin...');
     
     try {
-        // Get settings
-        const { data: settings } = await supabaseAdmin
-            .from('settings')
-            .select('key, value')
-            .in('key', ['unipin_partner_id', 'unipin_secret_key', 'unipin_api_base', 'mlbb_game_code', 'exchange_rate_idr_to_mmk']);
+        console.log('🔄 Syncing packages from UniPin...');
+        
+        // Call Database Function
+        const { data, error } = await supabaseAdmin.rpc('get_unipin_packages');
 
-        const config = {};
-        settings.forEach(s => config[s.key] = s.value);
+        if (error) throw error;
+        
+        console.log('📡 UniPin Response:', data);
 
-        // Call UniPin API to get packages
-        const timestamp = Math.floor(Date.now() / 1000);
-        const path = '/in-game-topup/list';
-        const auth = await generateUnipinAuth(
-            config.unipin_partner_id,
-            timestamp,
-            path,
-            config.unipin_secret_key
-        );
-
-        const response = await fetch(`${config.unipin_api_base}${path}`, {
-            method: 'POST',
-            headers: {
-                'partnerid': config.unipin_partner_id,
-                'timestamp': timestamp.toString(),
-                'path': path,
-                'auth': auth,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                game_code: config.mlbb_game_code
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.status !== 1 || !result.denominations) {
-            throw new Error('Failed to fetch packages from UniPin API');
+        if (data.status !== 1 || !data.denominations) {
+            throw new Error('Failed to fetch from UniPin');
         }
 
+        // Get exchange rate
+        const { data: settings } = await supabaseAdmin
+            .from('settings')
+            .select('value')
+            .eq('key', 'exchange_rate_idr_to_mmk')
+            .single();
+
+        const exchangeRate = parseFloat(settings?.value || 50);
+
         // Process packages
-        const exchangeRate = parseFloat(config.exchange_rate_idr_to_mmk);
-        const packages = result.denominations.map((denom, index) => ({
+        const packages = data.denominations.map((denom, index) => ({
             id: denom.id,
             name: denom.name,
             diamonds: extractDiamondCount(denom.name),
@@ -1006,7 +790,7 @@ async function syncPackagesFromUnipin() {
             sort_order: index
         }));
 
-        // Upsert packages to database
+        // Upsert
         const { error: upsertError } = await supabaseAdmin
             .from('diamond_packages')
             .upsert(packages, { onConflict: 'id' });
@@ -1015,19 +799,19 @@ async function syncPackagesFromUnipin() {
 
         await logAdminAction('packages_synced', null, null, { count: packages.length });
 
-        showToast(`✓ Successfully synced ${packages.length} packages from UniPin!`, 'success');
+        showToast(`✓ Synced ${packages.length} packages!`, 'success');
         await loadPackages();
     } catch (error) {
-        console.error('Sync packages error:', error);
-        showToast('Failed to sync packages: ' + error.message, 'error');
+        console.error('❌ Sync error:', error);
+        showToast('Sync failed: ' + error.message, 'error');
     } finally {
         setButtonLoading(syncBtn, false);
         hideLoadingOverlay();
     }
 }
 
-function extractDiamondCount(packageName) {
-    const match = packageName.match(/(\d+)/);
+function extractDiamondCount(name) {
+    const match = name.match(/(\d+)/);
     return match ? parseInt(match[1]) : 0;
 }
 
@@ -1036,20 +820,19 @@ function extractDiamondCount(packageName) {
 // ========================================
 async function loadSettings() {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('settings')
-            .select('*');
-
+        console.log('⚙️ Loading settings...');
+        
+        const { data, error } = await supabaseAdmin.from('settings').select('*');
         if (error) throw error;
 
         data.forEach(setting => {
             const element = document.getElementById(settingKeyToElementId(setting.key));
-            if (element) {
-                element.value = setting.value;
-            }
+            if (element) element.value = setting.value;
         });
+        
+        console.log('✅ Settings loaded');
     } catch (error) {
-        console.error('Load settings error:', error);
+        console.error('❌ Load settings error:', error);
     }
 }
 
@@ -1070,13 +853,11 @@ function settingKeyToElementId(key) {
 // ========================================
 async function saveUnipinSettings(e) {
     e.preventDefault();
-    
     const submitBtn = e.target.querySelector('button[type="submit"]');
     setButtonLoading(submitBtn, true);
     
     try {
         const secretKey = document.getElementById('secret-key').value;
-
         const { error } = await supabaseAdmin
             .from('settings')
             .update({ value: secretKey })
@@ -1085,12 +866,11 @@ async function saveUnipinSettings(e) {
         if (error) throw error;
 
         await logAdminAction('unipin_settings_updated');
-
-        showToast('UniPin settings saved successfully', 'success');
+        showToast('UniPin settings saved', 'success');
         await checkUnipinStatus();
     } catch (error) {
-        console.error('Save UniPin settings error:', error);
-        showToast('Failed to save UniPin settings', 'error');
+        console.error('Save error:', error);
+        showToast('Failed to save', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
     }
@@ -1098,13 +878,11 @@ async function saveUnipinSettings(e) {
 
 async function saveExchangeRate(e) {
     e.preventDefault();
-    
     const submitBtn = e.target.querySelector('button[type="submit"]');
     setButtonLoading(submitBtn, true);
     
     try {
         const rate = document.getElementById('exchange-rate').value;
-
         const { error } = await supabaseAdmin
             .from('settings')
             .update({ value: rate })
@@ -1113,11 +891,10 @@ async function saveExchangeRate(e) {
         if (error) throw error;
 
         await logAdminAction('exchange_rate_updated', null, null, { rate });
-
-        showToast('Exchange rate saved successfully', 'success');
+        showToast('Exchange rate saved', 'success');
     } catch (error) {
-        console.error('Save exchange rate error:', error);
-        showToast('Failed to save exchange rate', 'error');
+        console.error('Save error:', error);
+        showToast('Failed to save', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
     }
@@ -1131,7 +908,7 @@ async function changePassword(e) {
     const confirmPassword = document.getElementById('confirm-password').value;
     
     if (newPassword !== confirmPassword) {
-        showToast('New passwords do not match', 'error');
+        showToast('Passwords do not match', 'error');
         return;
     }
     
@@ -1139,7 +916,6 @@ async function changePassword(e) {
     setButtonLoading(submitBtn, true);
     
     try {
-        // Verify current password
         const { data } = await supabaseAdmin
             .from('settings')
             .select('value')
@@ -1150,7 +926,6 @@ async function changePassword(e) {
             throw new Error('Current password is incorrect');
         }
 
-        // Update password
         const { error } = await supabaseAdmin
             .from('settings')
             .update({ value: newPassword })
@@ -1159,12 +934,11 @@ async function changePassword(e) {
         if (error) throw error;
 
         await logAdminAction('password_changed');
-
-        showToast('Password changed successfully', 'success');
+        showToast('Password changed', 'success');
         elements.passwordForm.reset();
     } catch (error) {
         console.error('Change password error:', error);
-        showToast(error.message || 'Failed to change password', 'error');
+        showToast(error.message, 'error');
     } finally {
         setButtonLoading(submitBtn, false);
     }
@@ -1172,7 +946,6 @@ async function changePassword(e) {
 
 async function saveShopSettings(e) {
     e.preventDefault();
-    
     const submitBtn = e.target.querySelector('button[type="submit"]');
     setButtonLoading(submitBtn, true);
     
@@ -1186,65 +959,40 @@ async function saveShopSettings(e) {
         ]);
 
         await logAdminAction('shop_settings_updated');
-
-        showToast('Shop settings saved successfully', 'success');
+        showToast('Shop settings saved', 'success');
     } catch (error) {
-        console.error('Save shop settings error:', error);
-        showToast('Failed to save shop settings', 'error');
+        console.error('Save error:', error);
+        showToast('Failed to save', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
     }
 }
 
 // ========================================
-// CHECK UNIPIN API STATUS
+// CHECK UNIPIN STATUS
 // ========================================
 async function checkUnipinStatus() {
     const statusEl = document.getElementById('api-status');
     
     try {
-        const { data: settings } = await supabaseAdmin
-            .from('settings')
-            .select('key, value')
-            .in('key', ['unipin_partner_id', 'unipin_secret_key', 'unipin_api_base']);
+        console.log('🔌 Checking UniPin API status...');
+        
+        // Call database function to test
+        const { data, error } = await supabaseAdmin.rpc('get_unipin_packages');
 
-        const config = {};
-        settings.forEach(s => config[s.key] = s.value);
+        if (error) throw error;
 
-        // Simple ping test (list games)
-        const timestamp = Math.floor(Date.now() / 1000);
-        const path = '/in-game-topup/list';
-        const auth = await generateUnipinAuth(
-            config.unipin_partner_id,
-            timestamp,
-            path,
-            config.unipin_secret_key
-        );
-
-        const response = await fetch(`${config.unipin_api_base}${path}`, {
-            method: 'POST',
-            headers: {
-                'partnerid': config.unipin_partner_id,
-                'timestamp': timestamp.toString(),
-                'path': path,
-                'auth': auth,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({})
-        });
-
-        const result = await response.json();
-
-        if (result.status === 1) {
+        if (data && data.status === 1) {
             statusEl.innerHTML = '<span class="status-online">✓ API Online</span>';
             statusEl.className = 'api-status online';
+            console.log('✅ UniPin API is online');
         } else {
-            throw new Error('API returned error status');
+            throw new Error('API returned error');
         }
     } catch (error) {
         statusEl.innerHTML = '<span class="status-offline">✗ API Offline</span>';
         statusEl.className = 'api-status offline';
-        console.error('UniPin API status check failed:', error);
+        console.error('❌ UniPin API offline:', error);
     }
 }
 
@@ -1253,16 +1001,14 @@ async function checkUnipinStatus() {
 // ========================================
 async function logAdminAction(action, targetType = null, targetId = null, details = null) {
     try {
-        await supabaseAdmin
-            .from('admin_logs')
-            .insert({
-                action,
-                target_type: targetType,
-                target_id: targetId,
-                details: details ? JSON.stringify(details) : null
-            });
+        await supabaseAdmin.from('admin_logs').insert({
+            action,
+            target_type: targetType,
+            target_id: targetId,
+            details: details ? JSON.stringify(details) : null
+        });
     } catch (error) {
-        console.error('Log admin action error:', error);
+        console.error('Log error:', error);
     }
 }
 
@@ -1275,17 +1021,16 @@ async function loadActivityLogs() {
             .limit(100);
 
         if (error) throw error;
-
         displayActivityLogs(data);
     } catch (error) {
-        console.error('Load activity logs error:', error);
+        console.error('Load logs error:', error);
         elements.logsTbody.innerHTML = '<tr><td colspan="5" class="error">Failed to load logs</td></tr>';
     }
 }
 
 function displayActivityLogs(logs) {
     if (!logs || logs.length === 0) {
-        elements.logsTbody.innerHTML = '<tr><td colspan="5" class="empty">No activity logs</td></tr>';
+        elements.logsTbody.innerHTML = '<tr><td colspan="5" class="empty">No logs</td></tr>';
         return;
     }
 
@@ -1310,26 +1055,20 @@ function displayActivityLogs(logs) {
 function switchTab(tab) {
     currentTab = tab;
     
-    // Update tab buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     
-    // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.toggle('active', content.id === `${tab}-tab`);
     });
     
-    // Load tab data if needed
-    if (tab === 'logs') {
-        loadActivityLogs();
-    }
+    if (tab === 'logs') loadActivityLogs();
 }
 
 function filterOrders(status) {
     currentOrderFilter = status;
     
-    // Update filter buttons
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.status === status);
     });
@@ -1341,17 +1080,12 @@ function filterOrders(status) {
 // REALTIME SUBSCRIPTIONS
 // ========================================
 function setupRealtimeSubscriptions() {
-    // Subscribe to new orders
     orderSubscription = supabaseAdmin
         .channel('orders_changes')
-        .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'orders' },
-            (payload) => {
-                console.log('Order changed:', payload);
-                loadDashboard();
-            }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+            console.log('🔔 Order changed:', payload);
+            loadDashboard();
+        })
         .subscribe();
 }
 
@@ -1359,9 +1093,7 @@ function setupRealtimeSubscriptions() {
 // AUTO REFRESH
 // ========================================
 function startAutoRefresh() {
-    if (autoRefreshTimer) {
-        clearInterval(autoRefreshTimer);
-    }
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     
     autoRefreshTimer = setInterval(() => {
         if (currentTab === 'orders') {
@@ -1373,7 +1105,7 @@ function startAutoRefresh() {
 
 function refreshAll() {
     loadDashboard();
-    showToast('Refreshed successfully', 'success');
+    showToast('Refreshed', 'success');
 }
 
 // ========================================
@@ -1393,33 +1125,18 @@ function setButtonLoading(button, isLoading) {
     const loaderSpan = button.querySelector('.btn-loader');
     
     if (textSpan && loaderSpan) {
-        if (isLoading) {
-            button.disabled = true;
-            textSpan.style.display = 'none';
-            loaderSpan.style.display = 'inline-block';
-        } else {
-            button.disabled = false;
-            textSpan.style.display = 'inline';
-            loaderSpan.style.display = 'none';
-        }
+        button.disabled = isLoading;
+        textSpan.style.display = isLoading ? 'none' : 'inline';
+        loaderSpan.style.display = isLoading ? 'inline-block' : 'none';
     } else {
         button.disabled = isLoading;
-        if (isLoading) {
-            button.setAttribute('data-original-text', button.textContent);
-            button.innerHTML = '<span class="spinner-small"></span> Loading...';
-        } else {
-            button.textContent = button.getAttribute('data-original-text') || button.textContent;
-        }
     }
 }
 
 function showToast(message, type = 'info') {
     elements.toast.textContent = message;
     elements.toast.className = `toast toast-${type} show`;
-    
-    setTimeout(() => {
-        elements.toast.classList.remove('show');
-    }, 4000);
+    setTimeout(() => elements.toast.classList.remove('show'), 4000);
 }
 
 function showConfirmDialog(title, message) {
@@ -1429,18 +1146,15 @@ function showConfirmDialog(title, message) {
         elements.confirmModal.style.display = 'block';
         
         const confirmBtn = document.getElementById('confirm-btn');
-        const cancelHandler = () => {
-            elements.confirmModal.style.display = 'none';
-            resolve(false);
-        };
-        
-        const confirmHandler = () => {
+        confirmBtn.onclick = () => {
             elements.confirmModal.style.display = 'none';
             resolve(true);
         };
         
-        confirmBtn.onclick = confirmHandler;
-        document.querySelector('#confirm-modal .btn-secondary').onclick = cancelHandler;
+        document.querySelector('#confirm-modal .btn-secondary').onclick = () => {
+            elements.confirmModal.style.display = 'none';
+            resolve(false);
+        };
     });
 }
 
@@ -1449,7 +1163,7 @@ function closeConfirmModal() {
 }
 
 // ========================================
-// FORMATTING UTILITIES
+// FORMATTING
 // ========================================
 function formatPrice(price) {
     return new Intl.NumberFormat('en-US').format(Math.round(price));
@@ -1494,13 +1208,14 @@ function getStatusIcon(status) {
 }
 
 // ========================================
-// CLEANUP ON UNLOAD
+// CLEANUP
 // ========================================
 window.addEventListener('beforeunload', () => {
-    if (orderSubscription) {
-        orderSubscription.unsubscribe();
-    }
-    if (autoRefreshTimer) {
-        clearInterval(autoRefreshTimer);
-    }
+    if (orderSubscription) orderSubscription.unsubscribe();
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
 });
+
+// ========================================
+// INITIALIZATION COMPLETE
+// ========================================
+console.log('✅ Admin Panel Ready');
