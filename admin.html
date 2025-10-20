@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - ML Diamond Shop</title>
+    <link rel="stylesheet" href="admin.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+    
+    <!-- ========================================
+         LOGIN SCREEN
+    ========================================= -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="login-icon">🛡️</div>
+                <h1>Admin Panel</h1>
+                <p>ML Diamond Shop</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Admin Password</label>
+                    <input 
+                        type="password" 
+                        id="admin-password" 
+                        placeholder="Enter admin password" 
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span class="btn-text">🔐 Login</span>
+                    <span class="btn-loader" style="display: none;">
+                        <span class="spinner-small"></span> Logging in...
+                    </span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================
+         ADMIN DASHBOARD
+    ========================================= -->
+    <div id="admin-dashboard" style="display: none;">
+        
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="container">
+                <div class="header-left">
+                    <div class="logo">
+                        <span class="icon">🛡️</span>
+                        <span class="text">Admin Panel</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-sm btn-secondary" onclick="refreshAll()">
+                        🔄 Refresh
+                    </button>
+                    <a href="index.html" class="btn btn-sm btn-secondary">
+                        🏠 Shop
+                    </a>
+                    <button class="btn btn-sm btn-danger" id="logout-btn">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Dashboard -->
+        <section class="stats-section">
+            <div class="container">
+                <div class="stats-grid">
+                    <div class="stat-card pending">
+                        <div class="stat-header">
+                            <span class="stat-icon">⏳</span>
+                            <span class="stat-label">Pending Orders</span>
+                        </div>
+                        <div class="stat-value" id="stat-pending">0</div>
+                        <div class="stat-footer">
+                            <span class="stat-trend" id="stat-pending-trend"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card processing">
+                        <div class="stat-header">
+                            <span class="stat-icon">⚡</span>
+                            <span class="stat-label">Processing</span>
+                        </div>
+                        <div class="stat-value" id="stat-processing">0</div>
+                    </div>
+                    
+                    <div class="stat-card completed">
+                        <div class="stat-header">
+                            <span class="stat-icon">✓</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                        <div class="stat-value" id="stat-completed">0</div>
+                        <div class="stat-footer">
+                            <span class="stat-info" id="stat-completed-today"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card revenue">
+                        <div class="stat-header">
+                            <span class="stat-icon">💰</span>
+                            <span class="stat-label">Total Revenue</span>
+                        </div>
+                        <div class="stat-value" id="stat-revenue">0</div>
+                        <div class="stat-footer">
+                            <span class="stat-info" id="stat-revenue-today"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabs Navigation -->
+        <section class="tabs-section">
+            <div class="container">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="orders">
+                        📦 Orders <span class="badge" id="badge-orders">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="payments">
+                        💳 Payment Methods
+                    </button>
+                    <button class="tab-btn" data-tab="packages">
+                        💎 Packages
+                    </button>
+                    <button class="tab-btn" data-tab="settings">
+                        ⚙️ Settings
+                    </button>
+                    <button class="tab-btn" data-tab="logs">
+                        📋 Activity Logs
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             ORDERS TAB
+        ========================================= -->
+        <section id="orders-tab" class="tab-content active">
+            <div class="container">
+                <div class="section-header">
+                    <h2>📦 Order Management</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="loadOrders()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <button class="filter-btn active" data-status="pending">
+                        ⏳ Pending <span class="count" id="count-pending">0</span>
+                    </button>
+                    <button class="filter-btn" data-status="processing">
+                        ⚡ Processing <span class="count" id="count-processing">0</span>
+                    </button>
+                    <button class="filter-btn" data-status="completed">
+                        ✓ Completed <span class="count" id="count-completed">0</span>
+                    </button>
+                    <button class="filter-btn" data-status="failed">
+                        ✗ Failed <span class="count" id="count-failed">0</span>
+                    </button>
+                    <button class="filter-btn" data-status="all">
+                        📋 All
+                    </button>
+                </div>
+
+                <!-- Orders Table -->
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Package</th>
+                                <th>ML Account</th>
+                                <th>Payment</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-tbody">
+                            <tr>
+                                <td colspan="8" class="loading">
+                                    <div class="spinner"></div>
+                                    Loading orders...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             PAYMENT METHODS TAB
+        ========================================= -->
+        <section id="payments-tab" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2>💳 Payment Methods</h2>
+                    <button class="btn btn-primary" id="add-payment-btn">
+                        ➕ Add Payment Method
+                    </button>
+                </div>
+
+                <div id="payments-grid" class="payments-grid">
+                    <div class="loading-box">
+                        <div class="spinner"></div>
+                        <p>Loading payment methods...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             PACKAGES TAB
+        ========================================= -->
+        <section id="packages-tab" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2>💎 Diamond Packages</h2>
+                    <button class="btn btn-primary" id="sync-packages-btn">
+                        🔄 Sync from UniPin API
+                    </button>
+                </div>
+
+                <div class="info-box">
+                    <strong>ℹ️ Info:</strong> Packages များကို UniPin API မှ အလိုအလျောက် sync လုပ်ပါ။
+                    Price များသည် IDR မှ MMK သို့ exchange rate အတိုင်း ပြောင်းလဲပါမည်။
+                </div>
+
+                <div id="packages-grid" class="packages-admin-grid">
+                    <div class="loading-box">
+                        <div class="spinner"></div>
+                        <p>Loading packages...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SETTINGS TAB
+        ========================================= -->
+        <section id="settings-tab" class="tab-content">
+            <div class="container">
+                <h2>⚙️ Settings</h2>
+
+                <!-- UniPin API Settings -->
+                <div class="settings-card">
+                    <h3>🔌 UniPin API Configuration</h3>
+                    <form id="unipin-settings-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Partner ID</label>
+                                <input type="text" id="partner-id" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>API Base URL</label>
+                                <input type="text" id="api-base" readonly>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Secret Key</label>
+                            <input type="password" id="secret-key">
+                            <small>⚠️ Keep this secret! Never share with anyone.</small>
+                        </div>
+                        <div class="form-group">
+                            <div class="api-status" id="api-status">
+                                <span class="spinner-small"></span> Checking API status...
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            💾 Save UniPin Settings
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Exchange Rate -->
+                <div class="settings-card">
+                    <h3>💱 Exchange Rate</h3>
+                    <form id="exchange-rate-form">
+                        <div class="form-group">
+                            <label>1 IDR = ? MMK</label>
+                            <input type="number" id="exchange-rate" step="0.1" min="0">
+                            <small>လက်ရှိ exchange rate အတိုင်း ပြောင်းလဲပါ။</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            💾 Save Exchange Rate
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Admin Password -->
+                <div class="settings-card">
+                    <h3>🔐 Change Admin Password</h3>
+                    <form id="password-form">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" id="current-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="new-password" required minlength="6">
+                            <small>အနည်းဆုံး ၆ လုံး ရှိရမည်။</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="confirm-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            💾 Change Password
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Shop Settings -->
+                <div class="settings-card">
+                    <h3>🏪 Shop Information</h3>
+                    <form id="shop-settings-form">
+                        <div class="form-group">
+                            <label>Shop Name</label>
+                            <input type="text" id="shop-name">
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Email</label>
+                            <input type="email" id="shop-email">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            💾 Save Shop Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             ACTIVITY LOGS TAB
+        ========================================= -->
+        <section id="logs-tab" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2>📋 Admin Activity Logs</h2>
+                    <button class="btn btn-secondary" onclick="loadActivityLogs()">
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Action</th>
+                                <th>Target</th>
+                                <th>Details</th>
+                                <th>IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <tr>
+                                <td colspan="5" class="loading">Loading logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ========================================
+         MODALS
+    ========================================= -->
+
+    <!-- Order Detail Modal -->
+    <div id="order-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close">&times;</span>
+            <h2>📋 Order Details</h2>
+            <div id="order-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- Add Payment Method Modal -->
+    <div id="payment-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>💳 Add Payment Method</h2>
+            <form id="payment-form">
+                <div class="form-group">
+                    <label>Payment Name <span class="required">*</span></label>
+                    <input type="text" id="payment-name" placeholder="e.g., KBZ Pay" required>
+                </div>
+                <div class="form-group">
+                    <label>Type <span class="required">*</span></label>
+                    <select id="payment-type" required>
+                        <option value="mobile-banking">Mobile Banking</option>
+                        <option value="e-wallet">E-Wallet</option>
+                        <option value="bank-transfer">Bank Transfer</option>
+                        <option value="crypto">Cryptocurrency</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Account Name <span class="required">*</span></label>
+                    <input type="text" id="payment-account-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Account Number <span class="required">*</span></label>
+                    <input type="text" id="payment-account-number" required>
+                </div>
+                <div class="form-group">
+                    <label>Additional Details (Optional)</label>
+                    <textarea id="payment-details" rows="3" placeholder="Instructions for customers"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    💾 Save Payment Method
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content modal-small">
+            <h3 id="confirm-title">Confirm Action</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn btn-primary" id="confirm-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loading-text">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
