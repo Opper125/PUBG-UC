@@ -1,39 +1,26 @@
 // ========================================
 // ML DIAMOND SHOP - USER INTERFACE
-// Updated with Supabase Edge Function + Better Error Handling
+// Fixed Version - No CORS Issues
 // ========================================
 
 // ========================================
 // CONFIGURATION
 // ========================================
 const CONFIG = {
-    // Supabase Configuration
     supabase: {
-        url: 'https://mgbltiztcxxeibocqgqd.supabase.co', // Replace: https://xxxxx.supabase.co
-        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYmx0aXp0Y3h4ZWlib2NxZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5Njg0OTQsImV4cCI6MjA3NjU0NDQ5NH0.GXpTp1O7r2weHeHInMGkAhWvVgejIKgRhK9LgBKaITc' // Replace with your anon key
+        url: 'https://mgbltiztcxxeibocqgqd.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYmx0aXp0Y3h4ZWlib2NxZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5Njg0OTQsImV4cCI6MjA3NjU0NDQ5NH0.GXpTp1O7r2weHeHInMGkAhWvVgejIKgRhK9LgBKaITc'
     },
     
-    // Edge Function URL (if using Supabase Edge Functions)
-    edgeFunction: {
-        validateAccount: 'https://mgbltiztcxxeibocqgqd.supabase.co/functions/v1/validate-ml-account'
-        // Example: https://xxxxx.supabase.co/functions/v1/validate-ml-account
-    },
-    
-    // Use Edge Function or Direct API Call
-    useEdgeFunction: true, // Set to true if Edge Function is deployed
-    
-    // File Upload Limits
-    maxFileSize: 5 * 1024 * 1024, // 5MB
+    maxFileSize: 5 * 1024 * 1024,
     allowedFileTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
     
-    // Validation
     minUserId: 4,
     maxUserId: 12,
     minZoneId: 4,
     maxZoneId: 6
 };
 
-// Initialize Supabase Client
 const supabase = window.supabase.createClient(
     CONFIG.supabase.url,
     CONFIG.supabase.anonKey
@@ -57,17 +44,14 @@ const elements = {
     orderModal: document.getElementById('order-modal'),
     orderForm: document.getElementById('order-form'),
     
-    // Inputs
     mlUserId: document.getElementById('ml-user-id'),
     mlZoneId: document.getElementById('ml-zone-id'),
     paymentProof: document.getElementById('payment-proof'),
     termsAgree: document.getElementById('terms-agree'),
     
-    // Buttons
     validateBtn: document.getElementById('validate-btn'),
     submitBtn: document.getElementById('submit-btn'),
     
-    // Containers
     packageInfo: document.getElementById('package-info'),
     validationResult: document.getElementById('validation-result'),
     paymentMethods: document.getElementById('payment-methods'),
@@ -76,7 +60,6 @@ const elements = {
     orderSummary: document.getElementById('order-summary'),
     successMessage: document.getElementById('success-message'),
     
-    // Toast
     toast: document.getElementById('toast')
 };
 
@@ -85,14 +68,14 @@ const elements = {
 // ========================================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        console.log('🚀 Initializing application...');
         await loadPackages();
         setupEventListeners();
-        checkDatabaseConnection();
-        
-        console.log('✅ Application initialized successfully');
+        await testDatabaseConnection();
+        console.log('✅ Application ready');
     } catch (error) {
         console.error('❌ Initialization error:', error);
-        showToast('Failed to initialize. Please refresh the page.', 'error');
+        showToast('Failed to initialize. Please refresh.', 'error');
     }
 });
 
@@ -100,26 +83,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 // EVENT LISTENERS
 // ========================================
 function setupEventListeners() {
-    // Close modal
     document.querySelector('.close').addEventListener('click', closeModal);
     
-    // Modal outside click
     window.addEventListener('click', (e) => {
-        if (e.target === elements.orderModal) {
-            closeModal();
-        }
+        if (e.target === elements.orderModal) closeModal();
     });
     
-    // Validate button
     elements.validateBtn.addEventListener('click', validateAccount);
-    
-    // Form submit
     elements.orderForm.addEventListener('submit', submitOrder);
-    
-    // File input
     elements.paymentProof.addEventListener('change', handleFileSelect);
     
-    // Input validation
     elements.mlUserId.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/[^0-9]/g, '');
     });
@@ -134,6 +107,8 @@ function setupEventListeners() {
 // ========================================
 async function loadPackages() {
     try {
+        console.log('📦 Loading packages...');
+        
         const { data, error } = await supabase
             .from('diamond_packages')
             .select('*')
@@ -147,18 +122,13 @@ async function loadPackages() {
             displayPackages(data);
             console.log(`✅ Loaded ${data.length} packages`);
         } else {
-            elements.packagesGrid.innerHTML = `
-                <div class="no-packages">
-                    <p>No packages available at the moment.</p>
-                    <p>Please try again later.</p>
-                </div>
-            `;
+            elements.packagesGrid.innerHTML = '<div class="no-packages">No packages available</div>';
         }
     } catch (error) {
         console.error('❌ Load packages error:', error);
         elements.packagesGrid.innerHTML = `
             <div class="error-message">
-                <p>Failed to load packages.</p>
+                <p>Failed to load packages</p>
                 <button class="btn btn-secondary" onclick="loadPackages()">Retry</button>
             </div>
         `;
@@ -176,10 +146,7 @@ function displayPackages(packages) {
     packages.forEach(pkg => {
         const card = document.createElement('div');
         card.className = 'package-card';
-        
-        if (pkg.is_featured) {
-            card.classList.add('featured');
-        }
+        if (pkg.is_featured) card.classList.add('featured');
         
         card.innerHTML = `
             <div class="package-badge">${pkg.is_featured ? '⭐ Popular' : ''}</div>
@@ -203,13 +170,11 @@ async function openOrderModal(pkg) {
     selectedPackage = pkg;
     currentStep = 1;
     
-    // Reset form
     elements.orderForm.reset();
     validatedAccount = null;
     selectedPayment = null;
     uploadedProofFile = null;
     
-    // Display package info
     elements.packageInfo.innerHTML = `
         <div class="selected-package">
             <h3>💎 ${pkg.name}</h3>
@@ -226,20 +191,13 @@ async function openOrderModal(pkg) {
         </div>
     `;
     
-    // Load payment methods
     await loadPaymentMethods();
-    
-    // Reset steps
     resetSteps();
     
-    // Show modal
     elements.orderModal.style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
 
-// ========================================
-// CLOSE MODAL
-// ========================================
 function closeModal() {
     elements.orderModal.style.display = 'none';
     document.body.style.overflow = 'auto';
@@ -252,14 +210,9 @@ function closeModal() {
 // ========================================
 function resetSteps() {
     currentStep = 1;
-    
-    document.querySelectorAll('.form-step').forEach(step => {
-        step.classList.remove('active');
-    });
-    
+    document.querySelectorAll('.form-step').forEach(step => step.classList.remove('active'));
     document.getElementById('step-1').classList.add('active');
     updateStepIndicator();
-    
     elements.validationResult.innerHTML = '';
     elements.preview.innerHTML = '';
 }
@@ -267,25 +220,18 @@ function resetSteps() {
 function updateStepIndicator() {
     document.querySelectorAll('.step-item').forEach((item, index) => {
         const stepNum = index + 1;
-        if (stepNum < currentStep) {
-            item.classList.add('completed');
-            item.classList.remove('active');
-        } else if (stepNum === currentStep) {
-            item.classList.add('active');
-            item.classList.remove('completed');
-        } else {
-            item.classList.remove('active', 'completed');
-        }
+        item.classList.remove('active', 'completed');
+        if (stepNum < currentStep) item.classList.add('completed');
+        else if (stepNum === currentStep) item.classList.add('active');
     });
 }
 
 function nextStep() {
-    if (currentStep === 1) {
-        if (!validatedAccount) {
-            showToast('Please validate your ML account first', 'warning');
-            return;
-        }
-    } else if (currentStep === 2) {
+    if (currentStep === 1 && !validatedAccount) {
+        showToast('Please validate your ML account first', 'warning');
+        return;
+    }
+    if (currentStep === 2) {
         if (!selectedPayment) {
             showToast('Please select a payment method', 'warning');
             return;
@@ -294,40 +240,34 @@ function nextStep() {
             showToast('Please upload payment proof', 'warning');
             return;
         }
-        
         generateOrderSummary();
     }
     
     currentStep++;
     if (currentStep > 3) currentStep = 3;
-    
     showStep(currentStep);
 }
 
 function previousStep() {
     currentStep--;
     if (currentStep < 1) currentStep = 1;
-    
     showStep(currentStep);
 }
 
 function showStep(step) {
-    document.querySelectorAll('.form-step').forEach(s => {
-        s.classList.remove('active');
-    });
-    
+    document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
     document.getElementById(`step-${step}`).classList.add('active');
     updateStepIndicator();
 }
 
 // ========================================
-// VALIDATE ACCOUNT (IMPROVED WITH MULTIPLE METHODS)
+// VALIDATE ACCOUNT (Using Supabase RPC)
 // ========================================
 async function validateAccount() {
     const userId = elements.mlUserId.value.trim();
     const zoneId = elements.mlZoneId.value.trim();
     
-    console.log('🔍 Starting validation...', { userId, zoneId });
+    console.log('🔍 Validating account...', { userId, zoneId });
     
     // Basic validation
     if (!userId || !zoneId) {
@@ -345,38 +285,35 @@ async function validateAccount() {
         return;
     }
     
-    // Show loading
     setButtonLoading(elements.validateBtn, true);
     
     try {
-        let result;
+        console.log('📡 Calling Supabase RPC function...');
         
-        // Method 1: Try Edge Function (Recommended)
-        if (CONFIG.useEdgeFunction) {
-            console.log('📡 Trying Edge Function validation...');
-            result = await validateViaEdgeFunction(userId, zoneId);
-        }
-        
-        // Method 2: Fallback to basic validation
-        if (!result || result.status !== 1) {
-            console.log('⚠️ Edge Function failed, using basic validation...');
-            result = await validateBasic(userId, zoneId);
-        }
-        
-        if (result && result.status === 1) {
+        // Call Supabase Database Function
+        const { data, error } = await supabase
+            .rpc('validate_ml_account', {
+                p_user_id: userId,
+                p_zone_id: zoneId
+            });
+
+        console.log('📡 RPC Response:', { data, error });
+
+        if (error) throw error;
+
+        if (data && data.status === 1) {
             validatedAccount = {
                 userId,
                 zoneId,
-                username: result.username || `User${userId}`,
-                validationToken: result.validation_token
+                username: data.username || `Player${userId}`,
+                validationToken: data.validation_token
             };
             
             console.log('✅ Validation successful:', validatedAccount);
             showValidationSuccess(validatedAccount.username);
-            
             setTimeout(() => nextStep(), 1000);
         } else {
-            throw new Error(result?.reason || 'Account validation failed');
+            throw new Error(data?.reason || 'Account not found');
         }
         
     } catch (error) {
@@ -387,135 +324,6 @@ async function validateAccount() {
     }
 }
 
-// ========================================
-// VALIDATION METHOD 1: EDGE FUNCTION
-// ========================================
-async function validateViaEdgeFunction(userId, zoneId) {
-    try {
-        const response = await fetch(CONFIG.edgeFunction.validateAccount, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': CONFIG.supabase.anonKey,
-                'Authorization': `Bearer ${CONFIG.supabase.anonKey}`
-            },
-            body: JSON.stringify({
-                userId: userId,
-                zoneId: zoneId
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('📡 Edge Function response:', result);
-        return result;
-        
-    } catch (error) {
-        console.error('Edge Function error:', error);
-        return null;
-    }
-}
-
-// ========================================
-// VALIDATION METHOD 2: BASIC VALIDATION (FALLBACK)
-// ========================================
-async function validateBasic(userId, zoneId) {
-    try {
-        console.log('🔄 Using basic validation (fallback)...');
-        
-        // Get settings from Supabase
-        const { data: settings, error } = await supabase
-            .from('settings')
-            .select('key, value')
-            .in('key', ['unipin_partner_id', 'unipin_secret_key', 'unipin_api_base', 'mlbb_game_code']);
-        
-        if (error) throw error;
-        
-        const config = {};
-        settings.forEach(s => {
-            config[s.key] = s.value;
-        });
-        
-        console.log('⚙️ Config loaded:', Object.keys(config));
-        
-        // Try direct UniPin API call
-        const timestamp = Math.floor(Date.now() / 1000);
-        const path = '/in-game-topup/user/validate';
-        const auth = await generateUnipinAuth(
-            config.unipin_partner_id,
-            timestamp,
-            path,
-            config.unipin_secret_key
-        );
-        
-        console.log('🔐 Auth generated, calling UniPin API...');
-        
-        const response = await fetch(`${config.unipin_api_base}${path}`, {
-            method: 'POST',
-            headers: {
-                'partnerid': config.unipin_partner_id,
-                'timestamp': timestamp.toString(),
-                'path': path,
-                'auth': auth,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                game_code: config.mlbb_game_code,
-                fields: {
-                    userid: userId,
-                    zoneid: parseInt(zoneId)
-                }
-            })
-        });
-        
-        const result = await response.json();
-        console.log('📡 UniPin API response:', result);
-        
-        return result;
-        
-    } catch (error) {
-        console.error('Basic validation error:', error);
-        
-        // Ultimate fallback: Accept with warning
-        console.log('⚠️ Using offline validation...');
-        return {
-            status: 1,
-            username: `User${userId}`,
-            validation_token: 'offline_validation',
-            offline: true
-        };
-    }
-}
-
-// ========================================
-// GENERATE UNIPIN AUTH SIGNATURE
-// ========================================
-async function generateUnipinAuth(partnerId, timestamp, path, secretKey) {
-    const message = `${partnerId}${timestamp}${path}`;
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secretKey);
-    const messageData = encoder.encode(message);
-
-    const cryptoKey = await crypto.subtle.importKey(
-        'raw',
-        keyData,
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-    );
-
-    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-    return Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-}
-
-// ========================================
-// VALIDATION UI FEEDBACK
-// ========================================
 function showValidationSuccess(username) {
     elements.validationResult.className = 'validation-result success';
     elements.validationResult.innerHTML = `
@@ -551,19 +359,13 @@ async function loadPaymentMethods() {
             .order('sort_order', { ascending: true });
 
         if (error) throw error;
-
         displayPaymentMethods(data);
     } catch (error) {
         console.error('Load payment methods error:', error);
-        elements.paymentMethods.innerHTML = `
-            <div class="error-message">Failed to load payment methods</div>
-        `;
+        elements.paymentMethods.innerHTML = '<div class="error-message">Failed to load payment methods</div>';
     }
 }
 
-// ========================================
-// DISPLAY PAYMENT METHODS
-// ========================================
 function displayPaymentMethods(payments) {
     elements.paymentMethods.innerHTML = '';
 
@@ -577,21 +379,14 @@ function displayPaymentMethods(payments) {
                 <p>${payment.type}</p>
             </div>
         `;
-
         div.addEventListener('click', () => selectPayment(payment, div));
         elements.paymentMethods.appendChild(div);
     });
 }
 
-// ========================================
-// SELECT PAYMENT METHOD
-// ========================================
 function selectPayment(payment, element) {
     selectedPayment = payment;
-
-    document.querySelectorAll('.payment-method').forEach(el => {
-        el.classList.remove('selected');
-    });
+    document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('selected'));
     element.classList.add('selected');
 
     elements.paymentDetails.innerHTML = `
@@ -613,17 +408,13 @@ function selectPayment(payment, element) {
                 <span class="label">Amount to Pay:</span>
                 <span class="value">${formatPrice(selectedPackage.price_mmk)} MMK</span>
             </div>
-            ${payment.details ? `
-                <div class="payment-note">
-                    <strong>📌 Note:</strong> ${payment.details}
-                </div>
-            ` : ''}
+            ${payment.details ? `<div class="payment-note"><strong>📌 Note:</strong> ${payment.details}</div>` : ''}
         </div>
     `;
 }
 
 // ========================================
-// HANDLE FILE SELECT
+// FILE HANDLING
 // ========================================
 function handleFileSelect(e) {
     const file = e.target.files[0];
@@ -667,13 +458,12 @@ function removePreview() {
 }
 
 // ========================================
-// GENERATE ORDER SUMMARY
+// ORDER SUMMARY
 // ========================================
 function generateOrderSummary() {
     elements.orderSummary.innerHTML = `
         <div class="summary-box">
             <h4>📋 Order Summary</h4>
-            
             <div class="summary-section">
                 <h5>💎 Package</h5>
                 <div class="summary-row">
@@ -681,35 +471,17 @@ function generateOrderSummary() {
                     <span>${formatPrice(selectedPackage.price_mmk)} MMK</span>
                 </div>
             </div>
-            
             <div class="summary-section">
                 <h5>🎮 ML Account</h5>
-                <div class="summary-row">
-                    <span>User ID:</span>
-                    <span>${validatedAccount.userId}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Zone ID:</span>
-                    <span>${validatedAccount.zoneId}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Username:</span>
-                    <span>${validatedAccount.username}</span>
-                </div>
+                <div class="summary-row"><span>User ID:</span><span>${validatedAccount.userId}</span></div>
+                <div class="summary-row"><span>Zone ID:</span><span>${validatedAccount.zoneId}</span></div>
+                <div class="summary-row"><span>Username:</span><span>${validatedAccount.username}</span></div>
             </div>
-            
             <div class="summary-section">
                 <h5>💳 Payment</h5>
-                <div class="summary-row">
-                    <span>Method:</span>
-                    <span>${selectedPayment.name}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Account:</span>
-                    <span>${selectedPayment.account_number}</span>
-                </div>
+                <div class="summary-row"><span>Method:</span><span>${selectedPayment.name}</span></div>
+                <div class="summary-row"><span>Account:</span><span>${selectedPayment.account_number}</span></div>
             </div>
-            
             <div class="summary-total">
                 <span>Total Amount:</span>
                 <span>${formatPrice(selectedPackage.price_mmk)} MMK</span>
@@ -738,14 +510,9 @@ async function submitOrder(e) {
         
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('payment-proofs')
-            .upload(fileName, uploadedProofFile, {
-                cacheControl: '3600',
-                upsert: false
-            });
+            .upload(fileName, uploadedProofFile);
 
         if (uploadError) throw uploadError;
-
-        console.log('✅ Payment proof uploaded');
 
         const { data: urlData } = supabase.storage
             .from('payment-proofs')
@@ -772,7 +539,6 @@ async function submitOrder(e) {
         if (orderError) throw orderError;
 
         console.log('✅ Order created:', orderData);
-
         showSuccessMessage(orderData.reference_no);
         
     } catch (error) {
@@ -783,19 +549,15 @@ async function submitOrder(e) {
     }
 }
 
-// ========================================
-// SHOW SUCCESS MESSAGE
-// ========================================
 function showSuccessMessage(referenceNo) {
     elements.orderForm.style.display = 'none';
     elements.successMessage.style.display = 'block';
     document.getElementById('order-ref-no').textContent = referenceNo;
-    
     elements.orderModal.querySelector('.modal-content').scrollTop = 0;
 }
 
 // ========================================
-// UTILITY FUNCTIONS
+// UTILITIES
 // ========================================
 function formatPrice(price) {
     return new Intl.NumberFormat('en-US').format(Math.round(price));
@@ -817,7 +579,7 @@ function getPaymentIcon(type) {
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        showToast('Copied to clipboard!', 'success');
+        showToast('Copied!', 'success');
     });
 }
 
@@ -825,39 +587,26 @@ function setButtonLoading(button, isLoading) {
     const textSpan = button.querySelector('.btn-text');
     const loaderSpan = button.querySelector('.btn-loader');
     
-    if (isLoading) {
-        button.disabled = true;
-        if (textSpan) textSpan.style.display = 'none';
-        if (loaderSpan) loaderSpan.style.display = 'inline-block';
-    } else {
-        button.disabled = false;
-        if (textSpan) textSpan.style.display = 'inline';
-        if (loaderSpan) loaderSpan.style.display = 'none';
+    if (textSpan && loaderSpan) {
+        button.disabled = isLoading;
+        textSpan.style.display = isLoading ? 'none' : 'inline';
+        loaderSpan.style.display = isLoading ? 'inline-block' : 'none';
     }
 }
 
 function showToast(message, type = 'info') {
-    const toast = elements.toast;
-    toast.textContent = message;
-    toast.className = `toast toast-${type} show`;
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    elements.toast.textContent = message;
+    elements.toast.className = `toast toast-${type} show`;
+    setTimeout(() => elements.toast.classList.remove('show'), 3000);
 }
 
-async function checkDatabaseConnection() {
+async function testDatabaseConnection() {
     try {
-        const { error } = await supabase
-            .from('settings')
-            .select('key')
-            .limit(1);
-        
+        const { error } = await supabase.from('settings').select('key').limit(1);
         if (error) throw error;
-        
         console.log('✅ Database connected');
     } catch (error) {
-        console.error('❌ Database connection failed:', error);
+        console.error('❌ Database error:', error);
         showToast('Database connection error', 'error');
     }
 }
@@ -867,11 +616,6 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         e.preventDefault();
         const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
     });
 });
