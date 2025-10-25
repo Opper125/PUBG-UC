@@ -3,270 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ML Diamond Shop - ချက်ခြင်း Diamond ဝယ်ယူပါ!</title>
-    <meta name="description" content="Mobile Legends Diamond Shop - လုံခြုံပြီး မြန်ဆန်တဲ့ Diamond Topup Service">
+    <title>PUBG API Assets Viewer</title>
     <link rel="stylesheet" href="index.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="container">
-            <div class="logo">
-                <span class="icon">💎</span>
-                <span class="text">ML Diamond Shop</span>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <h1>🎮 PUBG API Assets Viewer</h1>
+                <p>Real-time data from GitHub Repository</p>
             </div>
-            <nav>
-                <a href="#packages">📦 Packages</a>
-                <a href="#how-to-order">📖 How to Order</a>
-                <a href="admin.html" class="admin-link">🔐 Admin</a>
-            </nav>
-        </div>
-    </header>
+        </header>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <h1>🎮 Mobile Legends Diamond Shop</h1>
-            <p class="subtitle">ချက်ခြင်း Diamond ရယူပါ! • လုံခြုံတယ် • မြန်ဆန်တယ် • ယုံကြည်စိတ်ချရတယ်</p>
-            <div class="hero-features">
-                <div class="feature">
-                    <span class="feature-icon">⚡</span>
-                    <span>ချက်ခြင်း Delivery</span>
-                </div>
-                <div class="feature">
-                    <span class="feature-icon">🔒</span>
-                    <span>100% လုံခြုံ</span>
-                </div>
-                <div class="feature">
-                    <span class="feature-icon">💯</span>
-                    <span>Official UniPin</span>
-                </div>
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-category="telemetry">📊 Telemetry Events</button>
+            <button class="tab-btn" data-category="maps">🗺️ Maps</button>
+            <button class="tab-btn" data-category="items">🎯 Items</button>
+            <button class="tab-btn" data-category="seasons">🏆 Seasons</button>
+        </nav>
+
+        <!-- Search & Filter -->
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 ရှာဖွေရန် စာရိုက်ပါ...">
+            <button id="refreshBtn" class="refresh-btn">🔄 Refresh</button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>ဒေတာများ ရယူနေပါသည်...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div class="error" id="error" style="display: none;">
+            <p>❌ ဒေတာ ရယူ၍မရပါ။ ထပ်မံကြိုးစားပါ။</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <h3 id="totalItems">0</h3>
+                <p>စုစုပေါင်း Items</p>
             </div>
-            <a href="#packages" class="btn btn-primary btn-large">
-                💎 ဝယ်ယူမည်
-            </a>
-        </div>
-    </section>
-
-    <!-- Packages Section -->
-    <section id="packages" class="packages">
-        <div class="container">
-            <h2>💎 Diamond Packages</h2>
-            <p class="section-subtitle">သင့်လျော်သော Package ကို ရွေးချယ်ပါ</p>
-            
-            <div id="packages-loading" class="loading">
-                <div class="spinner"></div>
-                <p>Loading packages...</p>
+            <div class="stat-card">
+                <h3 id="totalCategories">0</h3>
+                <p>Categories</p>
             </div>
-            
-            <div id="packages-grid" class="packages-grid"></div>
-        </div>
-    </section>
-
-    <!-- How to Order -->
-    <section id="how-to-order" class="how-to-order">
-        <div class="container">
-            <h2>📖 ဘယ်လို မှာယူရမလဲ?</h2>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>Package ရွေးပါ</h3>
-                    <p>သင်လိုချင်တဲ့ Diamond အရေအတွက် ရွေးချယ်ပါ</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>ML ID ထည့်ပါ</h3>
-                    <p>Mobile Legends User ID နှင့် Server ID ထည့်သွင်းပါ</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>ငွေပေးချေပါ</h3>
-                    <p>KBZ/Wave/CB Pay ဖြင့် ငွေလွှဲပြီး Screenshot ပို့ပါ</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <h3>Diamond ရယူပါ</h3>
-                    <p>Admin အတည်ပြုပြီး Diamond များ ချက်ခြင်းရောက်မည်!</p>
-                </div>
+            <div class="stat-card">
+                <h3 id="lastUpdated">-</h3>
+                <p>နောက်ဆုံး Update</p>
             </div>
         </div>
-    </section>
 
-    <!-- Order Modal -->
-    <div id="order-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            
-            <!-- Step Indicator -->
-            <div class="step-indicator">
-                <div class="step-item active" data-step="1">
-                    <div class="step-circle">1</div>
-                    <div class="step-label">ML Account</div>
-                </div>
-                <div class="step-item" data-step="2">
-                    <div class="step-circle">2</div>
-                    <div class="step-label">Payment</div>
-                </div>
-                <div class="step-item" data-step="3">
-                    <div class="step-circle">3</div>
-                    <div class="step-label">Confirm</div>
-                </div>
-            </div>
-
-            <!-- Package Info -->
-            <div id="package-info" class="package-info"></div>
-
-            <!-- Order Form -->
-            <form id="order-form">
-                <!-- Step 1: ML Account -->
-                <div id="step-1" class="form-step active">
-                    <h3>🎮 Enter Your Mobile Legends Account</h3>
-                    
-                    <div class="form-group">
-                        <label>User ID <span class="required">*</span></label>
-                        <input 
-                            type="text" 
-                            id="ml-user-id" 
-                            placeholder="Enter your User ID" 
-                            pattern="[0-9]+" 
-                            required
-                            autocomplete="off"
-                        >
-                        <small>ဥပမာ: 123456789</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Server ID / Zone ID <span class="required">*</span></label>
-                        <input 
-                            type="text" 
-                            id="ml-zone-id" 
-                            placeholder="Enter your Server ID" 
-                            pattern="[0-9]+" 
-                            required
-                            autocomplete="off"
-                        >
-                        <small>ဥပမာ: 12345</small>
-                    </div>
-
-                    <div class="form-group">
-                        <button type="button" id="validate-btn" class="btn btn-primary btn-block">
-                            <span class="btn-text">✓ Validate Account</span>
-                            <span class="btn-loader" style="display: none;">
-                                <span class="spinner-small"></span> Validating...
-                            </span>
-                        </button>
-                    </div>
-
-                    <div id="validation-result"></div>
-                </div>
-
-                <!-- Step 2: Payment -->
-                <div id="step-2" class="form-step">
-                    <h3>💳 Choose Payment Method</h3>
-                    
-                    <div id="payment-methods" class="payment-methods"></div>
-                    
-                    <div id="payment-details" class="payment-details"></div>
-
-                    <div class="form-group">
-                        <label>📸 Payment Proof (Screenshot) <span class="required">*</span></label>
-                        <input 
-                            type="file" 
-                            id="payment-proof" 
-                            accept="image/jpeg,image/jpg,image/png,image/webp"
-                            required
-                        >
-                        <small>ငွေလွှဲပြီး Screenshot ရိုက်ပြီး Upload လုပ်ပါ (Max 5MB)</small>
-                        <div id="preview" class="image-preview"></div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">
-                            ← နောက်သို့
-                        </button>
-                        <button type="button" class="btn btn-primary" onclick="nextStep()">
-                            ရှေ့ဆက် →
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Step 3: Confirm -->
-                <div id="step-3" class="form-step">
-                    <h3>✓ Confirm Your Order</h3>
-                    
-                    <div id="order-summary" class="order-summary"></div>
-
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="terms-agree" required>
-                            <span>ငါသည် အချက်အလက်များ မှန်ကန်ကြောင်း အတည်ပြုပါသည်</span>
-                        </label>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">
-                            ← နောက်သို့
-                        </button>
-                        <button type="submit" id="submit-btn" class="btn btn-success btn-block">
-                            <span class="btn-text">🛒 Submit Order</span>
-                            <span class="btn-loader" style="display: none;">
-                                <span class="spinner-small"></span> Submitting...
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            </form>
-
-            <!-- Success Message -->
-            <div id="success-message" style="display: none;">
-                <div class="success-box">
-                    <div class="success-icon">✓</div>
-                    <h3>Order Submitted Successfully!</h3>
-                    <p class="order-id">Order ID: <strong id="order-ref-no"></strong></p>
-                    <div class="success-info">
-                        <p>✅ သင့် Order ကို လက်ခံရရှိပြီးပါပြီ</p>
-                        <p>⏳ Admin မှ ငွေလွှဲမှု စစ်ဆေးပြီး အတည်ပြုပါမည်</p>
-                        <p>💎 အတည်ပြုပြီးပါက Diamond များ သင့် account သို့ ချက်ခြင်းရောက်ရှိပါမည်</p>
-                        <p class="success-note">⏱️ ပုံမှန် 10-30 မိနစ်အတွင်း ပြီးစီးပါမည်</p>
-                    </div>
-                    <button class="btn btn-primary" onclick="closeModal()">OK</button>
-                </div>
-            </div>
+        <!-- Content Display -->
+        <div class="content-container">
+            <div id="dataContainer" class="data-grid"></div>
         </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>📡 Data Source: <a href="https://github.com/pubg/api-assets" target="_blank">PUBG API Assets</a></p>
+            <p>Real-time data without database</p>
+        </footer>
     </div>
 
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>ML Diamond Shop</h4>
-                    <p>တရားဝင် UniPin API ဖြင့် လုံခြုံစိတ်ချရသော Diamond Topup Service</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Contact</h4>
-                    <p>📧 Email: support@mldiamondshop.com</p>
-                    <p>💬 Telegram: @MLDiamondShop</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Payment Methods</h4>
-                    <p>KBZ Pay • Wave Money • CB Pay • AYA Pay</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 ML Diamond Shop. Powered by UniPin API</p>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
-
-    <!-- Supabase Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Main Script -->
     <script src="index.js"></script>
 </body>
 </html>
