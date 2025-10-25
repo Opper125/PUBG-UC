@@ -3,193 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PUBG Mobile - Complete Game Database</title>
+    <title>PUBG Mobile - Complete Database</title>
     <link rel="stylesheet" href="index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- Header -->
-    <header class="main-header">
-        <div class="header-container">
+    <header class="header">
+        <div class="container">
             <div class="logo">
-                <i class="fas fa-crosshairs"></i>
-                <h1>PUBG MOBILE</h1>
+                <h1>⚔️ PUBG MOBILE DATABASE</h1>
             </div>
-            <nav class="main-nav">
-                <a href="#home" class="nav-link active">
-                    <i class="fas fa-home"></i> Home
-                </a>
-                <a href="#weapons" class="nav-link">
-                    <i class="fas fa-gun"></i> Weapons
-                </a>
-                <a href="#vehicles" class="nav-link">
-                    <i class="fas fa-car"></i> Vehicles
-                </a>
-                <a href="#maps" class="nav-link">
-                    <i class="fas fa-map"></i> Maps
-                </a>
-                <a href="#items" class="nav-link">
-                    <i class="fas fa-box"></i> Items
-                </a>
+            <nav class="nav">
+                <button class="nav-btn active" data-tab="overview">📊 Overview</button>
+                <button class="nav-btn" data-tab="weapons">🔫 Weapons</button>
+                <button class="nav-btn" data-tab="items">📦 Items</button>
+                <button class="nav-btn" data-tab="vehicles">🚗 Vehicles</button>
+                <button class="nav-btn" data-tab="maps">🗺️ Maps</button>
+                <button class="nav-btn" data-tab="data">💾 All Data</button>
             </nav>
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section id="home" class="hero-section">
-        <div class="hero-content">
-            <h1 class="hero-title">PUBG MOBILE DATABASE</h1>
-            <p class="hero-subtitle">Complete Game Information & Statistics</p>
-            <div class="hero-stats">
-                <div class="stat-box">
-                    <h2 id="totalWeapons">0</h2>
-                    <p>Weapons</p>
-                </div>
-                <div class="stat-box">
-                    <h2 id="totalVehicles">0</h2>
-                    <p>Vehicles</p>
-                </div>
-                <div class="stat-box">
-                    <h2 id="totalMaps">0</h2>
-                    <p>Maps</p>
-                </div>
-                <div class="stat-box">
-                    <h2 id="totalItems">0</h2>
-                    <p>Items</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Search & Filter Section -->
-    <section class="search-section">
+    <!-- Search Bar -->
+    <div class="search-bar">
         <div class="container">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="ရှာဖွေရန်... (Weapons, Items, Maps, etc.)">
-            </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active" data-filter="all">
-                    <i class="fas fa-globe"></i> All Platforms
-                </button>
-                <button class="filter-btn" data-filter="pc">
-                    <i class="fas fa-desktop"></i> PC
-                </button>
-                <button class="filter-btn" data-filter="console">
-                    <i class="fas fa-gamepad"></i> Console
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p>Loading PUBG Data...</p>
+            <input type="text" id="globalSearch" placeholder="🔍 Search anything...">
+            <select id="platformFilter">
+                <option value="all">All Platforms</option>
+                <option value="pc">PC</option>
+                <option value="console">Console</option>
+                <option value="kakao">Kakao</option>
+            </select>
         </div>
     </div>
 
-    <!-- Weapons Section -->
-    <section id="weapons" class="content-section">
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loader"></div>
+        <p>Loading PUBG Data from GitHub...</p>
+        <div class="progress-bar">
+            <div class="progress" id="loadProgress"></div>
+        </div>
+        <p id="loadStatus">Initializing...</p>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
         <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-gun"></i> Weapons Arsenal</h2>
-                <div class="weapon-categories">
-                    <button class="cat-btn active" data-category="all">All</button>
-                    <button class="cat-btn" data-category="assault">Assault Rifles</button>
-                    <button class="cat-btn" data-category="sniper">Sniper Rifles</button>
-                    <button class="cat-btn" data-category="smg">SMG</button>
-                    <button class="cat-btn" data-category="shotgun">Shotguns</button>
-                    <button class="cat-btn" data-category="dmr">DMR</button>
-                    <button class="cat-btn" data-category="lmg">LMG</button>
-                    <button class="cat-btn" data-category="pistol">Pistols</button>
+            
+            <!-- Overview Tab -->
+            <div class="tab-content active" id="overview">
+                <h2>📊 Database Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🔫</div>
+                        <div class="stat-number" id="statWeapons">0</div>
+                        <div class="stat-label">Weapons</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-number" id="statItems">0</div>
+                        <div class="stat-label">Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🚗</div>
+                        <div class="stat-number" id="statVehicles">0</div>
+                        <div class="stat-label">Vehicles</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🗺️</div>
+                        <div class="stat-number" id="statMaps">0</div>
+                        <div class="stat-label">Maps</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-number" id="statGameModes">0</div>
+                        <div class="stat-label">Game Modes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📡</div>
+                        <div class="stat-number" id="statTelemetry">0</div>
+                        <div class="stat-label">Events</div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>📂 Repository Files</h3>
+                    <div id="repoFiles" class="file-list"></div>
                 </div>
             </div>
-            <div id="weaponsGrid" class="items-grid"></div>
-        </div>
-    </section>
 
-    <!-- Vehicles Section -->
-    <section id="vehicles" class="content-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-car"></i> Vehicles</h2>
+            <!-- Weapons Tab -->
+            <div class="tab-content" id="weapons">
+                <h2>🔫 Weapons Arsenal</h2>
+                <div class="filter-chips" id="weaponFilters"></div>
+                <div class="items-grid" id="weaponsGrid"></div>
             </div>
-            <div id="vehiclesGrid" class="items-grid"></div>
-        </div>
-    </section>
 
-    <!-- Maps Section -->
-    <section id="maps" class="content-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-map"></i> Battle Maps</h2>
+            <!-- Items Tab -->
+            <div class="tab-content" id="items">
+                <h2>📦 Items & Equipment</h2>
+                <div class="filter-chips" id="itemFilters"></div>
+                <div class="items-grid" id="itemsGrid"></div>
             </div>
-            <div id="mapsGrid" class="maps-grid"></div>
-        </div>
-    </section>
 
-    <!-- Items Section -->
-    <section id="items" class="content-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-box"></i> Items & Equipment</h2>
-                <div class="item-categories">
-                    <button class="cat-btn active" data-category="all">All</button>
-                    <button class="cat-btn" data-category="equipment">Equipment</button>
-                    <button class="cat-btn" data-category="attachment">Attachments</button>
-                    <button class="cat-btn" data-category="throwable">Throwables</button>
-                    <button class="cat-btn" data-category="heal">Healing</button>
-                    <button class="cat-btn" data-category="boost">Boost</button>
+            <!-- Vehicles Tab -->
+            <div class="tab-content" id="vehicles">
+                <h2>🚗 Vehicles</h2>
+                <div class="items-grid" id="vehiclesGrid"></div>
+            </div>
+
+            <!-- Maps Tab -->
+            <div class="tab-content" id="maps">
+                <h2>🗺️ Battle Maps</h2>
+                <div class="maps-grid" id="mapsGrid"></div>
+            </div>
+
+            <!-- All Data Tab -->
+            <div class="tab-content" id="data">
+                <h2>💾 Complete JSON Data</h2>
+                <div class="data-viewer">
+                    <div class="data-tabs" id="dataTabs"></div>
+                    <div class="json-viewer" id="jsonViewer"></div>
                 </div>
             </div>
-            <div id="itemsGrid" class="items-grid"></div>
-        </div>
-    </section>
 
-    <!-- Game Modes Section -->
-    <section class="content-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-trophy"></i> Game Modes & Seasons</h2>
-            </div>
-            <div id="gameModesGrid" class="game-modes-grid"></div>
         </div>
-    </section>
-
-    <!-- Telemetry Section -->
-    <section class="content-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-chart-line"></i> Telemetry Events</h2>
-            </div>
-            <div id="telemetryGrid" class="telemetry-grid"></div>
-        </div>
-    </section>
+    </main>
 
     <!-- Footer -->
-    <footer class="main-footer">
+    <footer class="footer">
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>PUBG Mobile Database</h3>
-                    <p>Complete game information from official API</p>
-                </div>
-                <div class="footer-section">
-                    <h3>Data Source</h3>
-                    <a href="https://github.com/pubg/api-assets" target="_blank">
-                        <i class="fab fa-github"></i> PUBG API Assets
-                    </a>
-                </div>
-                <div class="footer-section">
-                    <h3>Last Updated</h3>
-                    <p id="lastUpdate">Loading...</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 PUBG Database. Real-time data without database.</p>
-            </div>
+            <p>📡 Real-time data from: <a href="https://github.com/pubg/api-assets" target="_blank">PUBG API Assets GitHub</a></p>
+            <p>Last Updated: <span id="lastUpdate">-</span></p>
         </div>
     </footer>
 
