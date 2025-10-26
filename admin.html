@@ -1,458 +1,629 @@
 <!DOCTYPE html>
-<html lang="my">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - ML Diamond Shop</title>
+    <title>Admin Dashboard</title>
     <link rel="stylesheet" href="admin.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="admin1.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    
-    <!-- ========================================
-         LOGIN SCREEN
-    ========================================= -->
-    <div id="login-screen" class="login-screen">
-        <div class="login-box">
+    <!-- Admin Login -->
+    <div id="adminLoginScreen" class="admin-login-screen">
+        <div class="login-container">
             <div class="login-header">
-                <div class="login-icon">🛡️</div>
-                <h1>Admin Panel</h1>
-                <p>ML Diamond Shop</p>
+                <i class="fas fa-shield-halved"></i>
+                <h1>Admin Access</h1>
+                <p>Secure Administrator Portal</p>
             </div>
-            <form id="login-form">
-                <div class="form-group">
-                    <label>Admin Password</label>
-                    <input 
-                        type="password" 
-                        id="admin-password" 
-                        placeholder="Enter admin password" 
-                        required
-                        autocomplete="current-password"
-                    >
+            <div class="login-form">
+                <div class="input-group">
+                    <i class="fas fa-key"></i>
+                    <input type="password" id="adminPassword" placeholder="Enter Admin Password">
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">
-                    <span class="btn-text">🔐 Login</span>
-                    <span class="btn-loader" style="display: none;">
-                        <span class="spinner-small"></span> Logging in...
-                    </span>
+                <button class="login-btn" onclick="handleAdminLogin()">
+                    <span>Access Dashboard</span>
+                    <i class="fas fa-arrow-right"></i>
                 </button>
-            </form>
+                <div class="login-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>IP Address: <strong id="userIP">Loading...</strong></span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- ========================================
-         ADMIN DASHBOARD
-    ========================================= -->
-    <div id="admin-dashboard" style="display: none;">
-        
-        <!-- Header -->
-        <header class="admin-header">
-            <div class="container">
-                <div class="header-left">
-                    <div class="logo">
-                        <span class="icon">🛡️</span>
-                        <span class="text">Admin Panel</span>
+    <!-- Loading Screen -->
+    <div id="adminLoading" class="admin-loading">
+        <div class="loading-spinner"></div>
+        <p>Loading Dashboard...</p>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="admin-dashboard" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-crown"></i>
+                <h2>Admin Panel</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" onclick="showSection('overview')">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Overview</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('websiteSettings')">
+                    <i class="fas fa-cog"></i>
+                    <span>Website Settings</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('banners')">
+                    <i class="fas fa-images"></i>
+                    <span>Banners</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('categories')">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Categories</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('categoryCards')">
+                    <i class="fas fa-th-large"></i>
+                    <span>Category Cards</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('products')">
+                    <i class="fas fa-box"></i>
+                    <span>Products</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('inputTables')">
+                    <i class="fas fa-table"></i>
+                    <span>Input Tables</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('productBanners')">
+                    <i class="fas fa-image"></i>
+                    <span>Product Banners</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('guidelines')">
+                    <i class="fas fa-book"></i>
+                    <span>Guidelines</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('youtubeVideos')">
+                    <i class="fab fa-youtube"></i>
+                    <span>YouTube Videos</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('feedbackSettings')">
+                    <i class="fas fa-star"></i>
+                    <span>Feedback Settings</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('payments')">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Payment Methods</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('coupons')">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Coupons</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('orders')">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Orders</span>
+                    <span class="badge" id="pendingOrdersBadge">0</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('news')">
+                    <i class="fas fa-newspaper"></i>
+                    <span>News</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('contacts')">
+                    <i class="fas fa-address-book"></i>
+                    <span>Contacts</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('users')">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('music')">
+                    <i class="fas fa-music"></i>
+                    <span>Music</span>
+                </button>
+                
+                <button class="nav-btn" onclick="showSection('notifications')">
+                    <i class="fas fa-bell"></i>
+                    <span>Send Notifications</span>
+                </button>
+                
+                <button class="nav-btn logout-btn" onclick="handleAdminLogout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search...">
+                </div>
+                <div class="top-bar-actions">
+                    <button class="icon-btn" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <div class="admin-profile">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Administrator</span>
                     </div>
                 </div>
-                <div class="header-right">
-                    <button class="btn btn-sm btn-secondary" onclick="refreshAll()">
-                        🔄 Refresh
-                    </button>
-                    <a href="index.html" class="btn btn-sm btn-secondary">
-                        🏠 Shop
-                    </a>
-                    <button class="btn btn-sm btn-danger" id="logout-btn">
-                        🚪 Logout
-                    </button>
-                </div>
-            </div>
-        </header>
+            </header>
 
-        <!-- Stats Dashboard -->
-        <section class="stats-section">
-            <div class="container">
-                <div class="stats-grid">
-                    <div class="stat-card pending">
-                        <div class="stat-header">
-                            <span class="stat-icon">⏳</span>
-                            <span class="stat-label">Pending Orders</span>
+            <!-- Content Sections -->
+            <div class="content-wrapper">
+                <!-- Overview Section -->
+                <section id="overviewSection" class="content-section active">
+                    <div class="section-header">
+                        <h2>Dashboard Overview</h2>
+                        <p>Welcome to your admin dashboard</p>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalOrders">0</h3>
+                                <p>Total Orders</p>
+                            </div>
                         </div>
-                        <div class="stat-value" id="stat-pending">0</div>
-                        <div class="stat-footer">
-                            <span class="stat-trend" id="stat-pending-trend"></span>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="approvedOrders">0</h3>
+                                <p>Approved Orders</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="pendingOrders">0</h3>
+                                <p>Pending Orders</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="rejectedOrders">0</h3>
+                                <p>Rejected Orders</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalUsers">0</h3>
+                                <p>Total Users</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalProducts">0</h3>
+                                <p>Total Products</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9;">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalRevenue">0 Ks</h3>
+                                <p>Total Revenue</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="todayRevenue">0 Ks</h3>
+                                <p>Today's Revenue</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="stat-card processing">
-                        <div class="stat-header">
-                            <span class="stat-icon">⚡</span>
-                            <span class="stat-label">Processing</span>
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3>Recent Orders</h3>
+                            <div id="recentOrdersList" class="recent-orders-list"></div>
                         </div>
-                        <div class="stat-value" id="stat-processing">0</div>
+                        
+                        <div class="chart-card">
+                            <h3>Top Products</h3>
+                            <div id="topProductsList" class="top-products-list"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Website Settings Section -->
+                <section id="websiteSettingsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Website Settings</h2>
+                        <p>Manage your website appearance and configuration</p>
                     </div>
                     
-                    <div class="stat-card completed">
-                        <div class="stat-header">
-                            <span class="stat-icon">✓</span>
-                            <span class="stat-label">Completed</span>
+                    <div class="settings-grid">
+                        <div class="setting-card">
+                            <h3><i class="fas fa-image"></i> Logo Settings</h3>
+                            <div class="form-group">
+                                <label>Website Logo (90x90px recommended)</label>
+                                <input type="file" id="logoUpload" accept="image/*">
+                                <div class="preview-box" id="logoPreview"></div>
+                            </div>
                         </div>
-                        <div class="stat-value" id="stat-completed">0</div>
-                        <div class="stat-footer">
-                            <span class="stat-info" id="stat-completed-today"></span>
+                        
+                        <div class="setting-card">
+                            <h3><i class="fas fa-tag"></i> Website Information</h3>
+                            <div class="form-group">
+                                <label>Website Name</label>
+                                <input type="text" id="websiteName" placeholder="Enter website name">
+                            </div>
+                            <div class="form-group">
+                                <label>Website Version</label>
+                                <input type="text" id="websiteVersion" placeholder="e.g., 1.0.0">
+                            </div>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <h3><i class="fas fa-palette"></i> Background Settings</h3>
+                            <div class="form-group">
+                                <label>Main Background (Image/Video/Webp/Gif)</label>
+                                <input type="file" id="mainBackground" accept="image/*,video/*">
+                                <div class="preview-box" id="mainBgPreview"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <h3><i class="fas fa-mouse-pointer"></i> Button Background</h3>
+                            <div class="form-group">
+                                <label>Button Background Image</label>
+                                <input type="file" id="buttonBackground" accept="image/*">
+                                <div class="preview-box" id="buttonBgPreview"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <h3><i class="fas fa-spinner"></i> Loading Animations</h3>
+                            <div class="form-group">
+                                <label>Animation Type</label>
+                                <select id="loadingAnimationType">
+                                    <option value="default">Default</option>
+                                    <option value="page">Page Load</option>
+                                    <option value="order">Order Processing</option>
+                                    <option value="success">Success</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Animation File (GIF/PNG/JSON)</label>
+                                <input type="file" id="loadingAnimation" accept="image/gif,image/png,.json">
+                            </div>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <h3><i class="fas fa-desktop"></i> Product Page Backgrounds</h3>
+                            <div class="form-group">
+                                <label>Select Category Card</label>
+                                <select id="productPageBgCategory"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Background File</label>
+                                <input type="file" id="productPageBg" accept="image/*,video/*">
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="stat-card revenue">
-                        <div class="stat-header">
-                            <span class="stat-icon">💰</span>
-                            <span class="stat-label">Total Revenue</span>
-                        </div>
-                        <div class="stat-value" id="stat-revenue">0</div>
-                        <div class="stat-footer">
-                            <span class="stat-info" id="stat-revenue-today"></span>
-                        </div>
+                    <button class="save-btn" onclick="saveWebsiteSettings()">
+                        <i class="fas fa-save"></i> Save All Settings
+                    </button>
+                </section>
+
+                <!-- Banners Section -->
+                <section id="bannersSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Banner Management</h2>
+                        <p>Manage homepage banners</p>
                     </div>
-                </div>
-            </div>
-        </section>
+                    
+                    <div class="action-tabs">
+                        <button class="tab-btn active" onclick="switchBannerTab('main')">Main Banners</button>
+                        <button class="tab-btn" onclick="switchBannerTab('link')">Link Banners</button>
+                    </div>
+                    
+                    <!-- Main Banners -->
+                    <div id="mainBannersTab" class="tab-content active">
+                        <div class="form-card">
+                            <h3>Add Main Banner</h3>
+                            <div class="form-group">
+                                <label>Banner Image (1280x720)</label>
+                                <input type="file" id="mainBannerImage" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Banner Title (Optional)</label>
+                                <input type="text" id="mainBannerTitle" placeholder="Enter title">
+                            </div>
+                            <button class="add-btn" onclick="addMainBanner()">
+                                <i class="fas fa-plus"></i> Add Banner
+                            </button>
+                        </div>
+                        
+                        <div class="items-grid" id="mainBannersList"></div>
+                    </div>
+                    
+                    <!-- Link Banners -->
+                    <div id="linkBannersTab" class="tab-content">
+                        <div class="form-card">
+                            <h3>Add Link Banner</h3>
+                            <div class="form-group">
+                                <label>Banner Image (1280x180)</label>
+                                <input type="file" id="linkBannerImage" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Banner Link URL</label>
+                                <input type="url" id="linkBannerUrl" placeholder="https://example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Banner Title (Optional)</label>
+                                <input type="text" id="linkBannerTitle" placeholder="Enter title">
+                            </div>
+                            <button class="add-btn" onclick="addLinkBanner()">
+                                <i class="fas fa-plus"></i> Add Link Banner
+                            </button>
+                        </div>
+                        
+                        <div class="items-grid" id="linkBannersList"></div>
+                    </div>
+                </section>
 
-        <!-- Tabs Navigation -->
-        <section class="tabs-section">
-            <div class="container">
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="orders">
-                        📦 Orders <span class="badge" id="badge-orders">0</span>
-                    </button>
-                    <button class="tab-btn" data-tab="payments">
-                        💳 Payment Methods
-                    </button>
-                    <button class="tab-btn" data-tab="packages">
-                        💎 Packages
-                    </button>
-                    <button class="tab-btn" data-tab="settings">
-                        ⚙️ Settings
-                    </button>
-                    <button class="tab-btn" data-tab="logs">
-                        📋 Activity Logs
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================
-             ORDERS TAB
-        ========================================= -->
-        <section id="orders-tab" class="tab-content active">
-            <div class="container">
-                <div class="section-header">
-                    <h2>📦 Order Management</h2>
-                    <div class="header-actions">
-                        <button class="btn btn-secondary" onclick="loadOrders()">
-                            🔄 Refresh
+                <!-- Categories Section -->
+                <section id="categoriesSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Categories Management</h2>
+                        <p>Create and manage product categories</p>
+                    </div>
+                    
+                    <div class="form-card">
+                        <h3>Add Category</h3>
+                        <div class="form-group">
+                            <label>Category Name</label>
+                            <input type="text" id="categoryName" placeholder="Enter category name">
+                        </div>
+                        <button class="add-btn" onclick="addCategory()">
+                            <i class="fas fa-plus"></i> Add Category
                         </button>
                     </div>
-                </div>
+                    
+                    <div class="items-grid" id="categoriesList"></div>
+                </section>
 
-                <!-- Filters -->
-                <div class="filters">
-                    <button class="filter-btn active" data-status="pending">
-                        ⏳ Pending <span class="count" id="count-pending">0</span>
-                    </button>
-                    <button class="filter-btn" data-status="processing">
-                        ⚡ Processing <span class="count" id="count-processing">0</span>
-                    </button>
-                    <button class="filter-btn" data-status="completed">
-                        ✓ Completed <span class="count" id="count-completed">0</span>
-                    </button>
-                    <button class="filter-btn" data-status="failed">
-                        ✗ Failed <span class="count" id="count-failed">0</span>
-                    </button>
-                    <button class="filter-btn" data-status="all">
-                        📋 All
-                    </button>
-                </div>
-
-                <!-- Orders Table -->
-                <div class="table-container">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Package</th>
-                                <th>ML Account</th>
-                                <th>Payment</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orders-tbody">
-                            <tr>
-                                <td colspan="8" class="loading">
-                                    <div class="spinner"></div>
-                                    Loading orders...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================
-             PAYMENT METHODS TAB
-        ========================================= -->
-        <section id="payments-tab" class="tab-content">
-            <div class="container">
-                <div class="section-header">
-                    <h2>💳 Payment Methods</h2>
-                    <button class="btn btn-primary" id="add-payment-btn">
-                        ➕ Add Payment Method
-                    </button>
-                </div>
-
-                <div id="payments-grid" class="payments-grid">
-                    <div class="loading-box">
-                        <div class="spinner"></div>
-                        <p>Loading payment methods...</p>
+                <!-- Category Cards Section -->
+                <section id="categoryCardsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Category Cards Management</h2>
+                        <p>Create cards under categories</p>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================
-             PACKAGES TAB
-        ========================================= -->
-        <section id="packages-tab" class="tab-content">
-            <div class="container">
-                <div class="section-header">
-                    <h2>💎 Diamond Packages</h2>
-                    <button class="btn btn-primary" id="sync-packages-btn">
-                        🔄 Sync from UniPin API
-                    </button>
-                </div>
-
-                <div class="info-box">
-                    <strong>ℹ️ Info:</strong> Packages များကို UniPin API မှ အလိုအလျောက် sync လုပ်ပါ။
-                    Price များသည် IDR မှ MMK သို့ exchange rate အတိုင်း ပြောင်းလဲပါမည်။
-                </div>
-
-                <div id="packages-grid" class="packages-admin-grid">
-                    <div class="loading-box">
-                        <div class="spinner"></div>
-                        <p>Loading packages...</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================
-             SETTINGS TAB
-        ========================================= -->
-        <section id="settings-tab" class="tab-content">
-            <div class="container">
-                <h2>⚙️ Settings</h2>
-
-                <!-- UniPin API Settings -->
-                <div class="settings-card">
-                    <h3>🔌 UniPin API Configuration</h3>
-                    <form id="unipin-settings-form">
+                    
+                    <div class="form-card">
+                        <h3>Add Category Card</h3>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Partner ID</label>
-                                <input type="text" id="partner-id" readonly>
+                                <label>Select Category</label>
+                                <select id="cardCategory"></select>
                             </div>
                             <div class="form-group">
-                                <label>API Base URL</label>
-                                <input type="text" id="api-base" readonly>
+                                <label>Card Name</label>
+                                <input type="text" id="cardName" placeholder="Enter card name">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label>Secret Key</label>
-                            <input type="password" id="secret-key">
-                            <small>⚠️ Keep this secret! Never share with anyone.</small>
-                        </div>
-                        <div class="form-group">
-                            <div class="api-status" id="api-status">
-                                <span class="spinner-small"></span> Checking API status...
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Card Icon</label>
+                                <input type="file" id="cardIcon" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Country Flag (Optional)</label>
+                                <input type="file" id="cardFlag" accept="image/*">
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">
-                            💾 Save UniPin Settings
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Discount Percentage (Optional)</label>
+                                <input type="number" id="cardDiscount" placeholder="e.g., 10" min="0" max="100">
+                            </div>
+                        </div>
+                        <button class="add-btn" onclick="addCategoryCard()">
+                            <i class="fas fa-plus"></i> Add Category Card
                         </button>
-                    </form>
-                </div>
+                    </div>
+                    
+                    <div class="items-grid" id="categoryCardsList"></div>
+                </section>
 
-                <!-- Exchange Rate -->
-                <div class="settings-card">
-                    <h3>💱 Exchange Rate</h3>
-                    <form id="exchange-rate-form">
-                        <div class="form-group">
-                            <label>1 IDR = ? MMK</label>
-                            <input type="number" id="exchange-rate" step="0.1" min="0">
-                            <small>လက်ရှိ exchange rate အတိုင်း ပြောင်းလဲပါ။</small>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            💾 Save Exchange Rate
-                        </button>
-                    </form>
-                </div>
+                <!-- Products Section -->
+                <section id="productsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Products Management</h2>
+                        <p>Add and manage products</p>
+                    </div>
+                    
+                    <div class="form-card" id="productForm"></div>
+                    
+                    <div class="items-grid" id="productsList"></div>
+                </section>
 
-                <!-- Admin Password -->
-                <div class="settings-card">
-                    <h3>🔐 Change Admin Password</h3>
-                    <form id="password-form">
-                        <div class="form-group">
-                            <label>Current Password</label>
-                            <input type="password" id="current-password" required>
-                        </div>
-                        <div class="form-group">
-                            <label>New Password</label>
-                            <input type="password" id="new-password" required minlength="6">
-                            <small>အနည်းဆုံး ၆ လုံး ရှိရမည်။</small>
-                        </div>
-                        <div class="form-group">
-                            <label>Confirm New Password</label>
-                            <input type="password" id="confirm-password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            💾 Change Password
-                        </button>
-                    </form>
-                </div>
+                <!-- More sections will be in next parts... -->
+                <section id="inputTablesSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Input Tables Management</h2>
+                        <p>Create custom input fields for products</p>
+                    </div>
+                    <div id="inputTablesContent"></div>
+                </section>
 
-                <!-- Shop Settings -->
-                <div class="settings-card">
-                    <h3>🏪 Shop Information</h3>
-                    <form id="shop-settings-form">
-                        <div class="form-group">
-                            <label>Shop Name</label>
-                            <input type="text" id="shop-name">
-                        </div>
-                        <div class="form-group">
-                            <label>Contact Email</label>
-                            <input type="email" id="shop-email">
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            💾 Save Shop Settings
-                        </button>
-                    </form>
-                </div>
+                <section id="productBannersSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Product Page Banners</h2>
+                        <p>Add banners to product pages</p>
+                    </div>
+                    <div id="productBannersContent"></div>
+                </section>
+
+                <section id="guidelinesSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Guidelines & Information</h2>
+                        <p>Add helpful guides for users</p>
+                    </div>
+                    <div id="guidelinesContent"></div>
+                </section>
+
+                <section id="youtubeVideosSection" class="content-section">
+                    <div class="section-header">
+                        <h2>YouTube Videos</h2>
+                        <p>Add tutorial videos</p>
+                    </div>
+                    <div id="youtubeVideosContent"></div>
+                </section>
+
+                <section id="feedbackSettingsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Feedback Settings</h2>
+                        <p>Configure product feedback system</p>
+                    </div>
+                    <div id="feedbackSettingsContent"></div>
+                </section>
+
+                <section id="paymentsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Payment Methods</h2>
+                        <p>Manage payment options</p>
+                    </div>
+                    <div id="paymentsContent"></div>
+                </section>
+
+                <section id="couponsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Coupons Management</h2>
+                        <p>Create and manage discount coupons</p>
+                    </div>
+                    <div id="couponsContent"></div>
+                </section>
+
+                <section id="ordersSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Orders Management</h2>
+                        <p>Review and process customer orders</p>
+                    </div>
+                    <div id="ordersContent"></div>
+                </section>
+
+                <section id="newsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>News Management</h2>
+                        <p>Post news and updates</p>
+                    </div>
+                    <div id="newsContent"></div>
+                </section>
+
+                <section id="contactsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Contacts Management</h2>
+                        <p>Manage contact information</p>
+                    </div>
+                    <div id="contactsContent"></div>
+                </section>
+
+                <section id="usersSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Users Management</h2>
+                        <p>Manage registered users</p>
+                    </div>
+                    <div id="usersContent"></div>
+                </section>
+
+                <section id="musicSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Background Music</h2>
+                        <p>Upload background music files</p>
+                    </div>
+                    <div id="musicContent"></div>
+                </section>
+
+                <section id="notificationsSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Send Notifications</h2>
+                        <p>Send messages and coupons to users</p>
+                    </div>
+                    <div id="notificationsContent"></div>
+                </section>
             </div>
-        </section>
-
-        <!-- ========================================
-             ACTIVITY LOGS TAB
-        ========================================= -->
-        <section id="logs-tab" class="tab-content">
-            <div class="container">
-                <div class="section-header">
-                    <h2>📋 Admin Activity Logs</h2>
-                    <button class="btn btn-secondary" onclick="loadActivityLogs()">
-                        🔄 Refresh
-                    </button>
-                </div>
-
-                <div class="table-container">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Action</th>
-                                <th>Target</th>
-                                <th>Details</th>
-                                <th>IP Address</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logs-tbody">
-                            <tr>
-                                <td colspan="5" class="loading">Loading logs...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
+        </main>
     </div>
 
-    <!-- ========================================
-         MODALS
-    ========================================= -->
+    <!-- Toast -->
+    <div id="adminToast" class="admin-toast"></div>
 
-    <!-- Order Detail Modal -->
-    <div id="order-modal" class="modal">
-        <div class="modal-content modal-large">
-            <span class="close">&times;</span>
-            <h2>📋 Order Details</h2>
-            <div id="order-detail-content"></div>
-        </div>
-    </div>
-
-    <!-- Add Payment Method Modal -->
-    <div id="payment-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>💳 Add Payment Method</h2>
-            <form id="payment-form">
-                <div class="form-group">
-                    <label>Payment Name <span class="required">*</span></label>
-                    <input type="text" id="payment-name" placeholder="e.g., KBZ Pay" required>
-                </div>
-                <div class="form-group">
-                    <label>Type <span class="required">*</span></label>
-                    <select id="payment-type" required>
-                        <option value="mobile-banking">Mobile Banking</option>
-                        <option value="e-wallet">E-Wallet</option>
-                        <option value="bank-transfer">Bank Transfer</option>
-                        <option value="crypto">Cryptocurrency</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Account Name <span class="required">*</span></label>
-                    <input type="text" id="payment-account-name" required>
-                </div>
-                <div class="form-group">
-                    <label>Account Number <span class="required">*</span></label>
-                    <input type="text" id="payment-account-number" required>
-                </div>
-                <div class="form-group">
-                    <label>Additional Details (Optional)</label>
-                    <textarea id="payment-details" rows="3" placeholder="Instructions for customers"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">
-                    💾 Save Payment Method
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Confirmation Modal -->
-    <div id="confirm-modal" class="modal">
-        <div class="modal-content modal-small">
-            <h3 id="confirm-title">Confirm Action</h3>
-            <p id="confirm-message"></p>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
-                <button class="btn btn-primary" id="confirm-btn">Confirm</button>
+    <!-- Confirm Dialog -->
+    <div id="confirmDialog" class="confirm-dialog">
+        <div class="confirm-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3 id="confirmTitle">Confirm Action</h3>
+            <p id="confirmMessage">Are you sure?</p>
+            <div class="confirm-actions">
+                <button class="cancel-btn" onclick="closeConfirmDialog()">Cancel</button>
+                <button class="confirm-btn" id="confirmBtn">Confirm</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay" style="display: none;">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <p id="loading-text">Processing...</p>
-        </div>
-    </div>
-
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin.js"></script>
+    <script src="admin1.js"></script>
+    <script src="admin2.js"></script>
+    <script src="admin3.js"></script>
+    <script src="admin4.js"></script>
+    <script src="admin5.js"></script>
 </body>
 </html>
