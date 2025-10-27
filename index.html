@@ -3,278 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#6366f1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Premium Digital Shopping Platform">
     <title>Premium Store</title>
-    <link rel="stylesheet" href="index.css">
+    
+    <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Noto+Sans+Myanmar:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="index1.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loadingScreen" class="loading-screen">
-        <div class="loading-content">
-            <div class="loading-animation">
-                <div class="spinner"></div>
-            </div>
-            <p class="loading-text">Loading...</p>
+    
+    <!-- Global Loading Screen -->
+    <div id="globalLoader" class="global-loader active">
+        <div class="loader-content">
+            <div class="loader-animation"></div>
+            <p class="loader-text">Loading Amazing Experience...</p>
         </div>
     </div>
 
     <!-- Auth Modal -->
-    <div id="authModal" class="modal">
-        <div class="modal-content auth-card">
-            <span class="close-modal">&times;</span>
-            <div class="auth-header">
-                <h2 id="authTitle">Welcome Back</h2>
-                <p id="authSubtitle">Sign in to continue</p>
-            </div>
+    <div id="authModal" class="auth-modal">
+        <div class="auth-modal-overlay"></div>
+        <div class="auth-modal-content">
+            <button class="auth-close-btn" onclick="closeAuthModal()">
+                <i class="fas fa-times"></i>
+            </button>
             
-            <div id="authForm">
+            <div class="auth-container">
                 <!-- Login Form -->
                 <div id="loginForm" class="auth-form active">
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="loginEmail" placeholder="Email Address" required>
+                    <div class="auth-header">
+                        <h2 class="auth-title">Welcome Back</h2>
+                        <p class="auth-subtitle">Login to continue your journey</p>
                     </div>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="loginPassword" placeholder="Password" required>
-                        <i class="fas fa-eye toggle-password"></i>
+                    
+                    <form id="loginFormElement" class="form-group">
+                        <div class="input-group">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                        </div>
+                        
+                        <div class="input-group">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                        
+                        <button type="submit" class="auth-submit-btn">
+                            <span>Login Now</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
+                    
+                    <div class="auth-switch">
+                        <p>Don't have an account? <span onclick="switchToSignup()">Sign Up</span></p>
                     </div>
-                    <button class="auth-btn" onclick="handleLogin()">
-                        <span>Sign In</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                    <p class="auth-switch">
-                        Don't have an account? 
-                        <span onclick="switchToSignup()">Sign Up</span>
-                    </p>
                 </div>
-
+                
                 <!-- Signup Form -->
                 <div id="signupForm" class="auth-form">
-                    <div class="input-group">
-                        <i class="fas fa-user"></i>
-                        <input type="text" id="signupUsername" placeholder="Username" required>
+                    <div class="auth-header">
+                        <h2 class="auth-title">Create Account</h2>
+                        <p class="auth-subtitle">Join our premium community</p>
                     </div>
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="signupEmail" placeholder="Email (@gmail.com only)" required>
+                    
+                    <form id="signupFormElement" class="form-group">
+                        <div class="input-group">
+                            <i class="fas fa-user input-icon"></i>
+                            <input type="text" id="signupUsername" placeholder="Choose username (English only)" required>
+                        </div>
+                        
+                        <div class="input-group">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input type="email" id="signupEmail" placeholder="Enter Gmail address" required>
+                        </div>
+                        
+                        <div class="input-group">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" id="signupPassword" placeholder="Create strong password" required>
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                        
+                        <div class="password-requirements">
+                            <p class="req-title">Password must contain:</p>
+                            <ul class="req-list">
+                                <li id="req1"><i class="fas fa-circle"></i> At least 8 characters</li>
+                                <li id="req2"><i class="fas fa-circle"></i> Start with uppercase letter</li>
+                                <li id="req3"><i class="fas fa-circle"></i> Special character (@#%*&®©)</li>
+                            </ul>
+                        </div>
+                        
+                        <button type="submit" class="auth-submit-btn">
+                            <span>Create Account</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
+                    
+                    <div class="auth-switch">
+                        <p>Already have an account? <span onclick="switchToLogin()">Login</span></p>
                     </div>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="signupPassword" placeholder="Password (min 8 chars)" required>
-                        <i class="fas fa-eye toggle-password"></i>
-                    </div>
-                    <div class="password-requirements">
-                        <p class="req-title">Password must contain:</p>
-                        <ul>
-                            <li id="req-length"><i class="fas fa-circle"></i> At least 8 characters</li>
-                            <li id="req-capital"><i class="fas fa-circle"></i> One uppercase letter</li>
-                            <li id="req-special"><i class="fas fa-circle"></i> One special character (@#%*&®©)</li>
-                        </ul>
-                    </div>
-                    <button class="auth-btn" onclick="handleSignup()">
-                        <span>Create Account</span>
-                        <i class="fas fa-user-plus"></i>
-                    </button>
-                    <p class="auth-switch">
-                        Already have an account? 
-                        <span onclick="switchToLogin()">Sign In</span>
-                    </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- App Container -->
-    <div id="app" class="app-container">
-        <!-- Top Bar -->
-        <header class="top-bar">
+    <!-- Top Bar -->
+    <div id="topBar" class="top-bar">
+        <div class="top-bar-content">
             <div class="logo-container">
                 <img id="websiteLogo" src="" alt="Logo" class="website-logo">
-                <span id="websiteName" class="website-name"></span>
             </div>
-            <div class="header-actions">
-                <button class="notification-btn" onclick="toggleNotifications()">
+            
+            <div class="top-bar-actions">
+                <div class="notification-btn" onclick="toggleNotifications()">
                     <i class="fas fa-bell"></i>
-                    <span class="notification-badge" id="notifCount">0</span>
-                </button>
-                <div class="user-profile-btn" onclick="navigateTo('profile')">
-                    <img id="userAvatar" src="" alt="Profile" class="user-avatar">
+                    <span id="notificationCount" class="notification-badge">0</span>
                 </div>
-            </div>
-        </header>
-
-        <!-- Notification Panel -->
-        <div id="notificationPanel" class="notification-panel">
-            <div class="notification-header">
-                <h3>Notifications</h3>
-                <button onclick="toggleNotifications()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div id="notificationList" class="notification-list">
-                <!-- Notifications will be loaded here -->
+                
+                <div class="user-profile-btn" onclick="toggleUserMenu()">
+                    <img id="userProfileImg" src="" alt="Profile" class="user-avatar">
+                </div>
             </div>
         </div>
-
-        <!-- Main Content -->
-        <main class="main-content" id="mainContent">
-            <!-- Home Page -->
-            <div id="homePage" class="page active">
-                <!-- Banners -->
-                <section class="banner-section">
-                    <div class="main-banner-slider" id="mainBanner">
-                        <!-- Banners loaded from DB -->
-                    </div>
-                    <div class="banner-indicators" id="bannerDots"></div>
-                </section>
-
-                <!-- Sub Banner (Link Banner) -->
-                <section class="sub-banner-section">
-                    <div class="sub-banner-slider" id="subBanner">
-                        <!-- Link banners loaded from DB -->
-                    </div>
-                </section>
-
-                <!-- Categories -->
-                <section class="categories-section">
-                    <div id="categoriesContainer">
-                        <!-- Categories and cards loaded from DB -->
-                    </div>
-                </section>
-            </div>
-
-            <!-- Order History Page -->
-            <div id="orderHistoryPage" class="page">
-                <div class="page-header">
-                    <h2>Order History</h2>
-                </div>
-                <div id="orderHistoryContainer" class="order-history-container">
-                    <!-- Orders loaded from DB -->
-                </div>
-            </div>
-
-            <!-- News Page -->
-            <div id="newsPage" class="page">
-                <div class="page-header">
-                    <h2>Latest News</h2>
-                </div>
-                <div id="newsContainer" class="news-container">
-                    <!-- News loaded from DB -->
-                </div>
-            </div>
-
-            <!-- Contacts Page -->
-            <div id="contactsPage" class="page">
-                <div class="page-header">
-                    <h2>Contact Us</h2>
-                </div>
-                <div id="contactsContainer" class="contacts-container">
-                    <!-- Contacts loaded from DB -->
-                </div>
-            </div>
-
-            <!-- Profile Page -->
-            <div id="profilePage" class="page">
-                <div class="profile-container">
-                    <div class="profile-header">
-                        <img id="profileAvatar" src="" alt="Avatar" class="profile-avatar">
-                        <h2 id="profileUsername"></h2>
-                        <p id="profileEmail"></p>
-                    </div>
-                    <div class="profile-info">
-                        <div class="info-item">
-                            <i class="fas fa-calendar"></i>
-                            <span>Joined: <span id="joinDate"></span></span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-shopping-bag"></i>
-                            <span>Total Orders: <span id="totalOrders">0</span></span>
-                        </div>
-                    </div>
-                    <div class="profile-settings">
-                        <h3>Settings</h3>
-                        <div class="setting-item">
-                            <span><i class="fas fa-volume-up"></i> Background Music</span>
-                            <label class="switch">
-                                <input type="checkbox" id="musicToggle" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <span><i class="fas fa-bell"></i> SMS Notifications</span>
-                            <label class="switch">
-                                <input type="checkbox" id="smsToggle" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <span><i class="fas fa-download"></i> Auto Download Orders</span>
-                            <label class="switch">
-                                <input type="checkbox" id="autoDownloadToggle">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <span><i class="fas fa-info-circle"></i> Website Version</span>
-                            <span id="websiteVersion">1.0.0</span>
-                        </div>
-                    </div>
-                    <button class="logout-btn" onclick="handleLogout()">
-                        <i class="fas fa-sign-out-alt"></i>
-                        Logout
-                    </button>
-                </div>
-            </div>
-
-            <!-- Product Detail Page -->
-            <div id="productDetailPage" class="page">
-                <div class="product-detail-container">
-                    <!-- Product details loaded dynamically -->
-                </div>
-            </div>
-        </main>
-
-        <!-- Bottom Navigation -->
-        <nav class="bottom-nav">
-            <button class="nav-item active" onclick="navigateTo('home')">
-                <i class="fas fa-home"></i>
-                <span>Home</span>
-            </button>
-            <button class="nav-item" onclick="navigateTo('orderHistory')">
-                <i class="fas fa-clock-rotate-left"></i>
-                <span>Orders</span>
-            </button>
-            <button class="nav-item" onclick="navigateTo('news')">
-                <i class="fas fa-newspaper"></i>
-                <span>News</span>
-            </button>
-            <button class="nav-item" onclick="navigateTo('contacts')">
-                <i class="fas fa-address-book"></i>
-                <span>Contacts</span>
-            </button>
-            <button class="nav-item" onclick="navigateTo('profile')">
-                <i class="fas fa-user"></i>
-                <span>Profile</span>
-            </button>
-        </nav>
     </div>
 
-    <!-- Background Music Player -->
-    <audio id="bgMusicPlayer" loop></audio>
+    <!-- Notification Panel -->
+    <div id="notificationPanel" class="notification-panel">
+        <div class="notification-header">
+            <h3>Notifications</h3>
+            <button onclick="closeNotifications()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="notificationList" class="notification-list">
+            <!-- Notifications will be loaded here -->
+        </div>
+    </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
+    <!-- User Menu Dropdown -->
+    <div id="userMenu" class="user-menu-dropdown">
+        <div class="user-menu-header">
+            <img id="userMenuAvatar" src="" alt="Avatar">
+            <div class="user-menu-info">
+                <h4 id="userMenuName"></h4>
+                <p id="userMenuEmail"></p>
+            </div>
+        </div>
+        <div class="user-menu-items">
+            <a href="#profile" class="user-menu-item">
+                <i class="fas fa-user"></i>
+                <span>My Profile</span>
+            </a>
+            <a href="#settings" class="user-menu-item">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+            <a href="#" class="user-menu-item" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.0/browser-image-compression.min.js"></script>
+    <!-- Main Content Area -->
+    <div id="mainContent" class="main-content">
+        
+        <!-- Home Page -->
+        <div id="homePage" class="page active">
+            <!-- Main Banner Slider -->
+            <div id="mainBannerSlider" class="main-banner-slider">
+                <div class="banner-slides"></div>
+                <div class="banner-indicators"></div>
+            </div>
+            
+            <!-- Secondary Banner -->
+            <div id="secondaryBanner" class="secondary-banner"></div>
+            
+            <!-- Categories Section -->
+            <div id="categoriesSection" class="categories-section">
+                <h2 class="section-title">Explore Categories</h2>
+                <div id="categoriesList" class="categories-list"></div>
+            </div>
+        </div>
+        
+        <!-- Order History Page -->
+        <div id="orderHistoryPage" class="page">
+            <div class="page-header">
+                <h2>Order History</h2>
+                <p>Track your purchases and downloads</p>
+            </div>
+            <div id="orderHistoryList" class="order-history-list"></div>
+        </div>
+        
+        <!-- News Page -->
+        <div id="newsPage" class="page">
+            <div class="page-header">
+                <h2>Latest News</h2>
+                <p>Stay updated with latest announcements</p>
+            </div>
+            <div id="newsList" class="news-list"></div>
+        </div>
+        
+        <!-- Contacts Page -->
+        <div id="contactsPage" class="page">
+            <div class="page-header">
+                <h2>Contact Us</h2>
+                <p>Get in touch with us</p>
+            </div>
+            <div id="contactsList" class="contacts-list"></div>
+        </div>
+        
+        <!-- Profile Page -->
+        <div id="profilePage" class="page">
+            <div class="page-header">
+                <h2>My Profile</h2>
+                <p>Manage your account settings</p>
+            </div>
+            <div id="profileContent" class="profile-content"></div>
+        </div>
+
+        <!-- Category Products Page -->
+        <div id="categoryProductsPage" class="page">
+            <div class="products-page-header">
+                <button class="back-btn" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="products-page-info">
+                    <img id="categoryIcon" src="" alt="">
+                    <h2 id="categoryName"></h2>
+                </div>
+            </div>
+            
+            <div id="productsPageBanner" class="products-page-banner"></div>
+            
+            <div id="productInputTables" class="product-input-tables"></div>
+            
+            <div id="productsList" class="products-grid"></div>
+            
+            <div id="productGuidelines" class="product-guidelines"></div>
+            
+            <div id="productYoutubeVideos" class="product-youtube-videos"></div>
+            
+            <div id="productFeedback" class="product-feedback-section"></div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div id="bottomNav" class="bottom-nav">
+        <button class="nav-item active" data-page="home">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </button>
+        
+        <button class="nav-item" data-page="orderHistory">
+            <i class="fas fa-history"></i>
+            <span>Orders</span>
+        </button>
+        
+        <button class="nav-item" data-page="news">
+            <i class="fas fa-newspaper"></i>
+            <span>News</span>
+        </button>
+        
+        <button class="nav-item" data-page="contacts">
+            <i class="fas fa-address-book"></i>
+            <span>Contacts</span>
+        </button>
+        
+        <button class="nav-item" data-page="profile">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </button>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div id="productDetailModal" class="product-detail-modal">
+        <div class="modal-overlay" onclick="closeProductDetail()"></div>
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeProductDetail()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="productDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Order Confirmation Modal -->
+    <div id="orderConfirmModal" class="order-confirm-modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div id="orderConfirmContent"></div>
+        </div>
+    </div>
+
+    <!-- Music Player -->
+    <div id="musicPlayer" class="music-player">
+        <div class="music-player-content">
+            <div class="music-info">
+                <i class="fas fa-music"></i>
+                <span id="currentSongName">No song playing</span>
+            </div>
+            <div class="music-controls">
+                <button id="prevSongBtn"><i class="fas fa-backward"></i></button>
+                <button id="playPauseBtn"><i class="fas fa-play"></i></button>
+                <button id="nextSongBtn"><i class="fas fa-forward"></i></button>
+            </div>
+            <div class="music-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volumeSlider" min="0" max="100" value="50">
+            </div>
+        </div>
+        <audio id="audioPlayer"></audio>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- JS Files -->
     <script src="index.js"></script>
+    <script src="index1.js"></script>
+    <script src="index2.js"></script>
+    <script src="index3.js"></script>
+
 </body>
-    </html>
+</html>
