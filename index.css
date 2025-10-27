@@ -2852,3 +2852,75 @@ body.no-scroll {
 .p-3 { padding: var(--spacing-md) !important; }
 .p-4 { padding: var(--spacing-lg) !important; }
 .p-5 { padding: var(--spacing-xl) !important; }
+
+/* Payment Methods Modal */
+.payment-methods-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: var(--z-modal);
+    display: none;
+    opacity: 0;
+    transition: var(--transition-normal);
+}
+
+.payment-methods-modal.active {
+    display: block;
+    opacity: 1;
+}
+
+.payment-methods-modal .modal-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.payment-methods-modal .modal-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.payment-methods-modal .modal-header p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.payment-methods-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.payment-method-item {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.payment-method-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-purple);
+    transform: translateY(-2px);
+}
+
+.payment-method-item img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.payment-method-item span {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
