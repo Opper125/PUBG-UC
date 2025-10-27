@@ -1,481 +1,214 @@
-// ==================== SUPABASE CONFIGURATION ====================
-const SUPABASE_URL = 'https://tyhnhbmiduuaomtkkpik.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5aG5oYm1pZHV1YW9tdGtrcGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0MjUxMDIsImV4cCI6MjA3NzAwMTEwMn0.oOiNrR6devWKlNlyb4H8mcvUfVYCgDR4st_LxagzQ0s';
+/* ========================================
+   SUPABASE CONFIGURATION
+======================================== */
+
+const SUPABASE_URL = 'https://vqumonhyeekgltvercbw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxdW1vbmh5ZWVrZ2x0dmVyY2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NTgzMzAsImV4cCI6MjA3NzEzNDMzMH0._C5EiMWyNs65ymDuwle_8UEytEqhn2bwniNvC9G9j1I';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ==================== GLOBAL STATE ====================
-let currentUser = null;
-let websiteSettings = null;
-let currentPage = 'home';
-let categories = [];
-let products = [];
-let orders = [];
-let notifications = [];
-let banners = [];
-let linkBanners = [];
-let musicPlayer = null;
-let loadingAnimations = {};
+/* ========================================
+   GLOBAL STATE MANAGEMENT
+======================================== */
 
-// ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', async () => {
-    showLoading();
-    
-    // Check if user is logged in
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        await initializeApp();
-    } else {
-        hideLoading();
-        showAuthModal();
-    }
-    
-    // Setup event listeners
-    setupEventListeners();
-    
-    // Prevent auto-refresh on file upload
-    preventAutoRefresh();
-});
+const AppState = {
+    currentUser: null,
+    currentPage: 'home',
+    websiteConfig: null,
+    categories: [],
+    products: [],
+    orders: [],
+    notifications: [],
+    cart: [],
+    selectedProduct: null,
+    currentCategory: null,
+    currentCategoryCard: null,
+    musicPlaylist: [],
+    currentSongIndex: 0,
+    isPlaying: false,
+    sessionActive: false
+};
 
-// ==================== LOADING MANAGEMENT ====================
-function showLoading() {
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) {
-        loadingScreen.classList.remove('hidden');
+/* ========================================
+   PROFANITY & VALIDATION FILTERS
+======================================== */
+
+const PROFANITY_LIST = [
+    'fuck', 'shit', 'ass', 'bitch', 'damn', 'hell',
+    'အမေ', 'အဖေ', 'မိဘ', 'ကောင်', 'ခွေး', 'ဘဲ',
+    'လိုးတော', 'လိုး', 'မိုက်', 'အရူး', 'မျက်စိ'
+];
+
+const SPECIAL_CHARS = ['@', '#', '%', '*', '&', '®', '©'];
+
+/* ========================================
+   UTILITY FUNCTIONS
+======================================== */
+
+function showLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
+        loader.classList.add('active');
+        document.body.classList.add('no-scroll');
     }
 }
 
-function hideLoading() {
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) {
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
         setTimeout(() => {
-            loadingScreen.classList.add('hidden');
-        }, 500);
+            loader.classList.remove('active');
+            document.body.classList.remove('no-scroll');
+        }, 300);
     }
 }
 
-async function loadCustomLoadingAnimation(type = 'default') {
-    try {
-        const { data, error } = await supabase
-            .from('loading_animations')
-            .select('*')
-            .eq('type', type)
-            .single();
-        
-        if (data && data.animation_url) {
-            const loadingContent = document.querySelector('.loading-animation');
-            if (loadingContent) {
-                if (data.format === 'gif' || data.format === 'png') {
-                    loadingContent.innerHTML = `<img src="${data.animation_url}" alt="Loading" style="width: 80px; height: 80px;">`;
-                } else if (data.format === 'json') {
-                    // Lottie animation support
-                    loadingContent.innerHTML = `<div id="lottie-loading"></div>`;
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Error loading custom animation:', error);
-    }
-}
-
-// ==================== APP INITIALIZATION ====================
-async function initializeApp() {
-    try {
-        // Load website settings
-        await loadWebsiteSettings();
-        
-        // Apply custom backgrounds
-        await applyCustomBackgrounds();
-        
-        // Load data
-        await Promise.all([
-            loadBanners(),
-            loadLinkBanners(),
-            loadCategories(),
-            loadNotifications(),
-            loadUserOrders()
-        ]);
-        
-        // Setup UI
-        updateUserProfile();
-        setupMusicPlayer();
-        
-        // Show app
-        document.getElementById('app').style.display = 'block';
-        
-        hideLoading();
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showToast('Failed to load application', 'error');
-        hideLoading();
-    }
-}
-
-// ==================== WEBSITE SETTINGS ====================
-async function loadWebsiteSettings() {
-    try {
-        const { data, error } = await supabase
-            .from('website_settings')
-            .select('*')
-            .single();
-        
-        if (error) throw error;
-        
-        websiteSettings = data;
-        
-        // Apply logo
-        const logoImg = document.getElementById('websiteLogo');
-        if (logoImg && data.logo_url) {
-            logoImg.src = data.logo_url;
-        }
-        
-        // Apply website name
-        const nameSpan = document.getElementById('websiteName');
-        if (nameSpan && data.website_name) {
-            nameSpan.textContent = data.website_name;
-        }
-        
-        // Apply version
-        const versionSpan = document.getElementById('websiteVersion');
-        if (versionSpan && data.version) {
-            versionSpan.textContent = data.version;
-        }
-        
-        // Apply custom button styles
-        if (data.button_background) {
-            applyButtonStyles(data.button_background);
-        }
-        
-        // Apply custom loading animations
-        if (data.loading_animation) {
-            loadingAnimations = data.loading_animation;
-        }
-        
-    } catch (error) {
-        console.error('Error loading settings:', error);
-    }
-}
-
-async function applyCustomBackgrounds() {
-    try {
-        const { data, error } = await supabase
-            .from('custom_backgrounds')
-            .select('*');
-        
-        if (error) throw error;
-        
-        // Apply main background
-        const mainBg = data.find(bg => bg.type === 'main');
-        if (mainBg && mainBg.background_url) {
-            if (mainBg.format === 'video' || mainBg.format === 'mp4') {
-                document.body.style.background = 'none';
-                const video = document.createElement('video');
-                video.src = mainBg.background_url;
-                video.autoplay = true;
-                video.loop = true;
-                video.muted = true;
-                video.style.position = 'fixed';
-                video.style.top = '0';
-                video.style.left = '0';
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.objectFit = 'cover';
-                video.style.zIndex = '-1';
-                video.style.opacity = '0.3';
-                document.body.insertBefore(video, document.body.firstChild);
-            } else {
-                document.body.style.backgroundImage = `url(${mainBg.background_url})`;
-                document.body.style.backgroundSize = 'cover';
-                document.body.style.backgroundPosition = 'center';
-                document.body.style.backgroundAttachment = 'fixed';
-            }
-        }
-    } catch (error) {
-        console.error('Error applying backgrounds:', error);
-    }
-}
-
-function applyButtonStyles(backgroundUrl) {
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .auth-btn,
-        .buy-now-btn,
-        .submit-order-btn,
-        .top-up-btn,
-        .contact-link-btn {
-            background-image: url(${backgroundUrl}) !important;
-            background-size: cover !important;
-            background-position: center !important;
-        }
+function showToast(title, message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const iconMap = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
+    toast.innerHTML = `
+        <i class="fas ${iconMap[type]} toast-icon"></i>
+        <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
     `;
-    document.head.appendChild(style);
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
 }
 
-// ==================== AUTHENTICATION ====================
-async function handleSignup() {
-    const username = document.getElementById('signupUsername').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
+function sanitizeInput(input) {
+    return input.replace(/[<>\"\']/g, '').trim();
+}
+
+function isEnglishOnly(text) {
+    return /^[a-zA-Z0-9@#%*&®©._-]+$/.test(text);
+}
+
+function containsProfanity(text) {
+    const lowerText = text.toLowerCase();
+    return PROFANITY_LIST.some(word => lowerText.includes(word));
+}
+
+function isValidGmail(email) {
+    return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
+}
+
+function isValidPassword(password) {
+    // At least 8 characters
+    if (password.length < 8) return { valid: false, message: 'Password must be at least 8 characters' };
     
-    // Validation
-    if (!username || !email || !password) {
-        showToast('Please fill all fields', 'error');
-        return;
-    }
+    // Must start with uppercase
+    if (!/^[A-Z]/.test(password)) return { valid: false, message: 'Password must start with uppercase letter' };
     
-    // English only validation
-    const englishOnlyRegex = /^[a-zA-Z0-9@#%*&®©._-]+$/;
-    if (!englishOnlyRegex.test(username)) {
-        showToast('Username must contain only English characters', 'error');
-        return;
-    }
+    // Must contain special character
+    const hasSpecial = SPECIAL_CHARS.some(char => password.includes(char));
+    if (!hasSpecial) return { valid: false, message: 'Password must contain special character (@#%*&®©)' };
     
-    if (!englishOnlyRegex.test(email)) {
-        showToast('Email must contain only English characters', 'error');
-        return;
-    }
+    return { valid: true, message: 'Valid password' };
+}
+
+function generateAIAvatar() {
+    const colors = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+    ];
     
-    // Email validation (Gmail only)
-    if (!email.endsWith('@gmail.com')) {
-        showToast('Only @gmail.com emails are allowed', 'error');
-        return;
-    }
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
     
-    // Profanity check
-    const profanityWords = ['fuck', 'shit', 'ass', 'bitch', 'damn', 'hell'];
-    const hasProfanity = profanityWords.some(word => 
-        username.toLowerCase().includes(word) || 
-        email.toLowerCase().includes(word)
-    );
+    // Create SVG avatar with AI style
+    const svg = `
+        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="grad${Date.now()}" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:rgb(102,126,234);stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:rgb(118,75,162);stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <circle cx="100" cy="100" r="90" fill="url(#grad${Date.now()})" />
+            <circle cx="75" cy="85" r="8" fill="white" opacity="0.9"/>
+            <circle cx="125" cy="85" r="8" fill="white" opacity="0.9"/>
+            <path d="M 70 120 Q 100 140 130 120" stroke="white" stroke-width="4" fill="none" opacity="0.9"/>
+        </svg>
+    `;
     
-    if (hasProfanity) {
-        showToast('Inappropriate language detected', 'error');
-        return;
-    }
+    return 'data:image/svg+xml;base64,' + btoa(svg);
+}
+
+function generateOrderId() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
     
-    // Password validation
-    if (password.length < 8) {
-        showToast('Password must be at least 8 characters', 'error');
-        return;
-    }
-    
-    if (!/[A-Z]/.test(password[0])) {
-        showToast('Password must start with uppercase letter', 'error');
-        return;
-    }
-    
-    if (!/[@#%*&®©]/.test(password)) {
-        showToast('Password must contain special character (@#%*&®©)', 'error');
-        return;
-    }
-    
-    // Password cannot be same as email
-    if (password === email) {
-        showToast('Password cannot be same as email', 'error');
-        return;
-    }
-    
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
+}
+
+function formatPrice(price) {
+    return new Intl.NumberFormat('en-US').format(price) + ' Ks';
+}
+
+function calculateDiscount(price, discountPercent) {
+    if (!discountPercent || discountPercent === 0) return price;
+    return price - (price * (discountPercent / 100));
+}
+
+async function uploadImage(file) {
     try {
-        showLoading();
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
         
-        // Check if username or email exists
-        const { data: existingUsers, error: checkError } = await supabase
-            .from('users')
-            .select('username, email')
-            .or(`username.eq.${username},email.eq.${email}`);
+        const { data, error } = await supabase.storage
+            .from('images')
+            .upload(filePath, file);
         
-        if (checkError) throw checkError;
+        if (error) throw error;
         
-        if (existingUsers && existingUsers.length > 0) {
-            const errors = [];
-            if (existingUsers.find(u => u.username === username)) {
-                errors.push('Username already exists');
-            }
-            if (existingUsers.find(u => u.email === email)) {
-                errors.push('Email already exists');
-            }
-            showToast(errors.join(', '), 'error');
-            hideLoading();
-            return;
-        }
+        const { data: publicURL } = supabase.storage
+            .from('images')
+            .getPublicUrl(filePath);
         
-        // Check blocked/deleted accounts
-        const { data: blockedAccounts, error: blockedError } = await supabase
-            .from('blocked_accounts')
-            .select('*')
-            .or(`username.eq.${username},email.eq.${email}`);
-        
-        if (blockedError) throw blockedError;
-        
-        if (blockedAccounts && blockedAccounts.length > 0) {
-            showToast('This account has been blocked or deleted', 'error');
-            hideLoading();
-            return;
-        }
-        
-        // Generate AI avatar
-        const avatarUrl = await generateAIAvatar(username);
-        
-        // Create user
-        const { data: newUser, error: insertError } = await supabase
-            .from('users')
-            .insert([{
-                username: username,
-                email: email,
-                password: password, // Plain text as requested
-                avatar_url: avatarUrl,
-                created_at: new Date().toISOString(),
-                total_orders: 0,
-                settings: {
-                    music_enabled: true,
-                    sms_notifications: true,
-                    auto_download: false
-                }
-            }])
-            .select()
-            .single();
-        
-        if (insertError) throw insertError;
-        
-        currentUser = newUser;
-        localStorage.setItem('currentUser', JSON.stringify(newUser));
-        
-        hideLoading();
-        closeAuthModal();
-        await initializeApp();
-        
-        showToast('Account created successfully!', 'success');
-        
+        return publicURL.publicUrl;
     } catch (error) {
-        console.error('Signup error:', error);
-        showToast('Failed to create account', 'error');
-        hideLoading();
+        console.error('Upload error:', error);
+        throw error;
     }
 }
 
-async function handleLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    
-    if (!email || !password) {
-        showToast('Please fill all fields', 'error');
-        return;
-    }
-    
-    try {
-        showLoading();
-        
-        // Check if account is blocked
-        const { data: blockedAccount, error: blockedError } = await supabase
-            .from('blocked_accounts')
-            .select('*')
-            .eq('email', email)
-            .single();
-        
-        if (blockedAccount) {
-            showToast('This account has been blocked or deleted', 'error');
-            hideLoading();
-            return;
-        }
-        
-        // Find user
-        const { data: user, error: loginError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', email)
-            .eq('password', password)
-            .single();
-        
-        if (loginError || !user) {
-            showToast('Invalid email or password', 'error');
-            hideLoading();
-            return;
-        }
-        
-        currentUser = user;
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        
-        hideLoading();
-        closeAuthModal();
-        await initializeApp();
-        
-        showToast('Welcome back!', 'success');
-        
-    } catch (error) {
-        console.error('Login error:', error);
-        showToast('Login failed', 'error');
-        hideLoading();
-    }
-}
+/* ========================================
+   AUTHENTICATION SYSTEM
+======================================== */
 
-function handleLogout() {
-    if (confirm('Are you sure you want to logout?')) {
-        currentUser = null;
-        localStorage.removeItem('currentUser');
-        location.reload();
-    }
-}
-
-async function generateAIAvatar(username) {
-    // Generate unique avatar using DiceBear API
-    const styles = ['avataaars', 'bottts', 'identicon', 'initials'];
-    const randomStyle = styles[Math.floor(Math.random() * styles.length)];
-    return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${encodeURIComponent(username)}&backgroundColor=6366f1`;
-}
-
-// ==================== PASSWORD VALIDATION UI ====================
-document.addEventListener('input', (e) => {
-    if (e.target.id === 'signupPassword') {
-        const password = e.target.value;
-        
-        // Length check
-        const lengthReq = document.getElementById('req-length');
-        if (password.length >= 8) {
-            lengthReq.classList.add('valid');
-        } else {
-            lengthReq.classList.remove('valid');
-        }
-        
-        // Capital letter check
-        const capitalReq = document.getElementById('req-capital');
-        if (/[A-Z]/.test(password[0])) {
-            capitalReq.classList.add('valid');
-        } else {
-            capitalReq.classList.remove('valid');
-        }
-        
-        // Special character check
-        const specialReq = document.getElementById('req-special');
-        if (/[@#%*&®©]/.test(password)) {
-            specialReq.classList.add('valid');
-        } else {
-            specialReq.classList.remove('valid');
-        }
-    }
-});
-
-// ==================== PASSWORD TOGGLE ====================
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('toggle-password')) {
-        const input = e.target.previousElementSibling;
-        if (input.type === 'password') {
-            input.type = 'text';
-            e.target.classList.remove('fa-eye');
-            e.target.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            e.target.classList.remove('fa-eye-slash');
-            e.target.classList.add('fa-eye');
-        }
-    }
-});
-
-// ==================== AUTH MODAL MANAGEMENT ====================
-function showAuthModal() {
+function openAuthModal() {
     const modal = document.getElementById('authModal');
     if (modal) {
         modal.classList.add('active');
+        document.body.classList.add('no-scroll');
     }
 }
 
@@ -483,3089 +216,2950 @@ function closeAuthModal() {
     const modal = document.getElementById('authModal');
     if (modal) {
         modal.classList.remove('active');
+        document.body.classList.remove('no-scroll');
     }
 }
 
 function switchToSignup() {
     document.getElementById('loginForm').classList.remove('active');
     document.getElementById('signupForm').classList.add('active');
-    document.getElementById('authTitle').textContent = 'Create Account';
-    document.getElementById('authSubtitle').textContent = 'Join us today';
 }
 
 function switchToLogin() {
     document.getElementById('signupForm').classList.remove('active');
     document.getElementById('loginForm').classList.add('active');
-    document.getElementById('authTitle').textContent = 'Welcome Back';
-    document.getElementById('authSubtitle').textContent = 'Sign in to continue';
 }
 
-// Close modal on background click
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        if (currentUser) {
-            e.target.classList.remove('active');
-        }
+// Password visibility toggle
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleButtons = document.querySelectorAll('.toggle-password');
+    
+    toggleButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                this.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        });
+    });
+});
+
+// Password requirements checker
+document.getElementById('signupPassword')?.addEventListener('input', function(e) {
+    const password = e.target.value;
+    
+    // Requirement 1: At least 8 characters
+    const req1 = document.getElementById('req1');
+    if (password.length >= 8) {
+        req1.classList.add('valid');
+    } else {
+        req1.classList.remove('valid');
     }
     
-    if (e.target.classList.contains('close-modal')) {
-        e.target.closest('.modal').classList.remove('active');
+    // Requirement 2: Start with uppercase
+    const req2 = document.getElementById('req2');
+    if (/^[A-Z]/.test(password)) {
+        req2.classList.add('valid');
+    } else {
+        req2.classList.remove('valid');
+    }
+    
+    // Requirement 3: Special character
+    const req3 = document.getElementById('req3');
+    const hasSpecial = SPECIAL_CHARS.some(char => password.includes(char));
+    if (hasSpecial) {
+        req3.classList.add('valid');
+    } else {
+        req3.classList.remove('valid');
     }
 });
 
-// ==================== USER PROFILE ====================
-function updateUserProfile() {
-    if (!currentUser) return;
+// Login Form Handler
+document.getElementById('loginFormElement')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-    // Update avatar
-    const avatars = document.querySelectorAll('.user-avatar, .profile-avatar');
-    avatars.forEach(avatar => {
-        avatar.src = currentUser.avatar_url;
-    });
+    const email = sanitizeInput(document.getElementById('loginEmail').value);
+    const password = document.getElementById('loginPassword').value;
     
-    // Update username
-    const usernameElements = document.querySelectorAll('#profileUsername');
-    usernameElements.forEach(el => {
-        el.textContent = currentUser.username;
-    });
-    
-    // Update email
-    const emailElements = document.querySelectorAll('#profileEmail');
-    emailElements.forEach(el => {
-        el.textContent = currentUser.email;
-    });
-    
-    // Update join date
-    const joinDateEl = document.getElementById('joinDate');
-    if (joinDateEl && currentUser.created_at) {
-        joinDateEl.textContent = new Date(currentUser.created_at).toLocaleDateString();
-    }
-    
-    // Update total orders
-    const totalOrdersEl = document.getElementById('totalOrders');
-    if (totalOrdersEl) {
-        totalOrdersEl.textContent = currentUser.total_orders || 0;
-    }
-    
-    // Update settings
-    if (currentUser.settings) {
-        document.getElementById('musicToggle').checked = currentUser.settings.music_enabled !== false;
-        document.getElementById('smsToggle').checked = currentUser.settings.sms_notifications !== false;
-        document.getElementById('autoDownloadToggle').checked = currentUser.settings.auto_download === true;
-    }
-}
-
-// ==================== BANNERS ====================
-async function loadBanners() {
-    try {
-        const { data, error } = await supabase
-            .from('banners')
-            .select('*')
-            .eq('type', 'main')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        banners = data || [];
-        renderBanners();
-        
-    } catch (error) {
-        console.error('Error loading banners:', error);
-    }
-}
-
-function renderBanners() {
-    const container = document.getElementById('mainBanner');
-    const dotsContainer = document.getElementById('bannerDots');
-    
-    if (!container || !dotsContainer) return;
-    
-    container.innerHTML = '';
-    dotsContainer.innerHTML = '';
-    
-    if (banners.length === 0) {
-        container.innerHTML = '<div style="height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">No banners available</div>';
+    if (!isValidGmail(email)) {
+        showToast('Invalid Email', 'Please use a valid Gmail address', 'error');
         return;
     }
     
-    banners.forEach((banner, index) => {
-        const slide = document.createElement('div');
-        slide.className = 'banner-slide';
-        if (index === 0) slide.classList.add('active');
-        
-        const img = document.createElement('img');
-        img.src = banner.image_url;
-        img.alt = banner.title || 'Banner';
-        
-        slide.appendChild(img);
-        container.appendChild(slide);
-        
-        const dot = document.createElement('div');
-        dot.className = 'banner-dot';
-        if (index === 0) dot.classList.add('active');
-        dot.addEventListener('click', () => goToSlide(index));
-        dotsContainer.appendChild(dot);
-    });
+    showLoader();
     
-    if (banners.length > 1) {
-        startBannerAutoPlay();
+    try {
+        // Check if user exists in database
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .eq('password', password)
+            .single();
+        
+        if (error || !users) {
+            showToast('Login Failed', 'Invalid email or password', 'error');
+            hideLoader();
+            return;
+        }
+        
+        // Check if account is blocked or deleted
+        if (users.status === 'blocked') {
+            showToast('Account Blocked', 'Your account has been blocked by admin', 'error');
+            hideLoader();
+            return;
+        }
+        
+        if (users.status === 'deleted') {
+            showToast('Account Deleted', 'This account has been deleted', 'error');
+            hideLoader();
+            return;
+        }
+        
+        // Save session
+        AppState.currentUser = users;
+        AppState.sessionActive = true;
+        localStorage.setItem('userSession', JSON.stringify(users));
+        
+        closeAuthModal();
+        hideLoader();
+        showToast('Welcome Back!', `Hello ${users.username}`, 'success');
+        
+        // Initialize user dashboard
+        await initializeUserDashboard();
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        showToast('Error', 'An error occurred during login', 'error');
+        hideLoader();
+    }
+});
+
+// Signup Form Handler
+document.getElementById('signupFormElement')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const username = sanitizeInput(document.getElementById('signupUsername').value);
+    const email = sanitizeInput(document.getElementById('signupEmail').value);
+    const password = document.getElementById('signupPassword').value;
+    
+    // Validation checks
+    if (!isEnglishOnly(username)) {
+        showToast('Invalid Username', 'Username must contain only English characters', 'error');
+        return;
+    }
+    
+    if (containsProfanity(username)) {
+        showToast('Invalid Username', 'Username contains inappropriate language', 'error');
+        return;
+    }
+    
+    if (!isValidGmail(email)) {
+        showToast('Invalid Email', 'Please use a valid Gmail address (@gmail.com)', 'error');
+        return;
+    }
+    
+    if (containsProfanity(email)) {
+        showToast('Invalid Email', 'Email contains inappropriate language', 'error');
+        return;
+    }
+    
+    const passwordCheck = isValidPassword(password);
+    if (!passwordCheck.valid) {
+        showToast('Invalid Password', passwordCheck.message, 'error');
+        return;
+    }
+    
+    // Check if email is same as password
+    if (email.split('@')[0] === password) {
+        showToast('Invalid Password', 'Password cannot be the same as email', 'error');
+        return;
+    }
+    
+    showLoader();
+    
+    try {
+        // Check if username already exists
+        const { data: existingUsername } = await supabase
+            .from('users')
+            .select('username')
+            .eq('username', username)
+            .single();
+        
+        // Check if email already exists
+        const { data: existingEmail } = await supabase
+            .from('users')
+            .select('email')
+            .eq('email', email)
+            .single();
+        
+        if (existingUsername && existingEmail) {
+            showToast('Account Exists', 'Username and email already registered', 'error');
+            hideLoader();
+            return;
+        }
+        
+        if (existingUsername) {
+            showToast('Username Taken', 'This username is already in use', 'error');
+            hideLoader();
+            return;
+        }
+        
+        if (existingEmail) {
+            showToast('Email Registered', 'This email is already registered', 'error');
+            hideLoader();
+            return;
+        }
+        
+        // Generate AI avatar
+        const avatarUrl = generateAIAvatar();
+        
+        // Create new user
+        const { data: newUser, error } = await supabase
+            .from('users')
+            .insert([
+                {
+                    username: username,
+                    email: email,
+                    password: password,
+                    avatar: avatarUrl,
+                    status: 'active',
+                    created_at: new Date().toISOString()
+                }
+            ])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        // Auto login after signup
+        AppState.currentUser = newUser;
+        AppState.sessionActive = true;
+        localStorage.setItem('userSession', JSON.stringify(newUser));
+        
+        closeAuthModal();
+        hideLoader();
+        showToast('Account Created!', `Welcome ${newUser.username}!`, 'success');
+        
+        // Initialize user dashboard
+        await initializeUserDashboard();
+        
+    } catch (error) {
+        console.error('Signup error:', error);
+        showToast('Error', 'An error occurred during signup', 'error');
+        hideLoader();
+    }
+});
+
+/* ========================================
+   SESSION MANAGEMENT
+======================================== */
+
+function checkSession() {
+    const savedSession = localStorage.getItem('userSession');
+    
+    if (savedSession) {
+        try {
+            const user = JSON.parse(savedSession);
+            AppState.currentUser = user;
+            AppState.sessionActive = true;
+            return true;
+        } catch (error) {
+            console.error('Session error:', error);
+            localStorage.removeItem('userSession');
+            return false;
+        }
+    }
+    
+    return false;
+}
+
+async function validateSession() {
+    if (!AppState.currentUser) return false;
+    
+    try {
+        // Check if user still exists and is active
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', AppState.currentUser.id)
+            .single();
+        
+        if (error || !user) {
+            logout();
+            return false;
+        }
+        
+        if (user.status === 'blocked' || user.status === 'deleted') {
+            showToast('Session Ended', 'Your account has been ' + user.status, 'warning');
+            logout();
+            return false;
+        }
+        
+        // Update session
+        AppState.currentUser = user;
+        localStorage.setItem('userSession', JSON.stringify(user));
+        
+        return true;
+    } catch (error) {
+        console.error('Session validation error:', error);
+        return false;
     }
 }
 
-let currentBannerIndex = 0;
-let bannerInterval;
-
-function startBannerAutoPlay() {
-    if (bannerInterval) clearInterval(bannerInterval);
+function logout() {
+    AppState.currentUser = null;
+    AppState.sessionActive = false;
+    localStorage.removeItem('userSession');
     
-    bannerInterval = setInterval(() => {
-        currentBannerIndex = (currentBannerIndex + 1) % banners.length;
-        goToSlide(currentBannerIndex);
+    showToast('Logged Out', 'You have been logged out', 'info');
+    
+    // Redirect to home and show auth modal
+    switchPage('home');
+    setTimeout(() => openAuthModal(), 500);
+}
+
+// Auto validate session every 30 seconds
+setInterval(async () => {
+    if (AppState.sessionActive) {
+        await validateSession();
+    }
+}, 30000);
+
+/* ========================================
+   NAVIGATION SYSTEM
+======================================== */
+
+function switchPage(pageName) {
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    // Show selected page
+    const targetPage = document.getElementById(pageName + 'Page');
+    if (targetPage) {
+        targetPage.classList.add('active');
+    }
+    
+    // Update nav items
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.page === pageName) {
+            item.classList.add('active');
+        }
+    });
+    
+    // Update app state
+    AppState.currentPage = pageName;
+    
+    // Load page data
+    loadPageData(pageName);
+}
+
+async function loadPageData(pageName) {
+    showLoader();
+    
+    try {
+        switch(pageName) {
+            case 'home':
+                await loadHomePageData();
+                break;
+            case 'orderHistory':
+                await loadOrderHistory();
+                break;
+            case 'news':
+                await loadNews();
+                break;
+            case 'contacts':
+                await loadContacts();
+                break;
+            case 'profile':
+                await loadProfile();
+                break;
+        }
+    } catch (error) {
+        console.error('Page load error:', error);
+        showToast('Error', 'Failed to load page data', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// Setup navigation listeners
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const page = this.dataset.page;
+            
+            // Check if user needs to login
+            if (!AppState.sessionActive && page !== 'home') {
+                openAuthModal();
+                return;
+            }
+            
+            switchPage(page);
+        });
+    });
+});
+
+function goBack() {
+    switchPage('home');
+}
+
+/* ========================================
+   BANNER SLIDER SYSTEM
+======================================== */
+
+let mainBannerInterval;
+let secondaryBannerInterval;
+
+async function loadMainBanners() {
+    try {
+        const { data: banners, error } = await supabase
+            .from('banners')
+            .select('*')
+            .eq('type', 'main')
+            .eq('status', 'active')
+            .order('order', { ascending: true });
+        
+        if (error) throw error;
+        
+        if (!banners || banners.length === 0) return;
+        
+        const slidesContainer = document.querySelector('.banner-slides');
+        const indicatorsContainer = document.querySelector('.banner-indicators');
+        
+        slidesContainer.innerHTML = '';
+        indicatorsContainer.innerHTML = '';
+        
+        banners.forEach((banner, index) => {
+            // Create slide
+            const slide = document.createElement('div');
+            slide.className = `banner-slide ${index === 0 ? 'active' : ''}`;
+            slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.title || 'Banner'}">`;
+            slidesContainer.appendChild(slide);
+            
+            // Create indicator
+            const indicator = document.createElement('div');
+            indicator.className = `banner-indicator ${index === 0 ? 'active' : ''}`;
+            indicator.addEventListener('click', () => goToSlide(index));
+            indicatorsContainer.appendChild(indicator);
+        });
+        
+        if (banners.length > 1) {
+            startMainBannerSlider();
+        }
+        
+    } catch (error) {
+        console.error('Banner load error:', error);
+    }
+}
+
+function startMainBannerSlider() {
+    const slides = document.querySelectorAll('.banner-slide');
+    const indicators = document.querySelectorAll('.banner-indicator');
+    let currentSlide = 0;
+    
+    if (mainBannerInterval) clearInterval(mainBannerInterval);
+    
+    mainBannerInterval = setInterval(() => {
+        slides[currentSlide].classList.remove('active');
+        indicators[currentSlide].classList.remove('active');
+        
+        currentSlide = (currentSlide + 1) % slides.length;
+        
+        slides[currentSlide].classList.add('active');
+        indicators[currentSlide].classList.add('active');
     }, 5000);
 }
 
 function goToSlide(index) {
     const slides = document.querySelectorAll('.banner-slide');
-    const dots = document.querySelectorAll('.banner-dot');
+    const indicators = document.querySelectorAll('.banner-indicator');
     
-    slides.forEach((slide, i) => {
-        slide.classList.remove('active');
-        if (i === index) slide.classList.add('active');
-    });
+    slides.forEach(slide => slide.classList.remove('active'));
+    indicators.forEach(ind => ind.classList.remove('active'));
     
-    dots.forEach((dot, i) => {
-        dot.classList.remove('active');
-        if (i === index) dot.classList.add('active');
-    });
-    
-    currentBannerIndex = index;
+    slides[index].classList.add('active');
+    indicators[index].classList.add('active');
 }
 
-// ==================== LINK BANNERS ====================
-async function loadLinkBanners() {
+async function loadSecondaryBanners() {
     try {
-        const { data, error } = await supabase
+        const { data: banners, error } = await supabase
             .from('banners')
             .select('*')
-            .eq('type', 'link')
-            .order('created_at', { ascending: false });
+            .eq('type', 'secondary')
+            .eq('status', 'active')
+            .order('order', { ascending: true });
         
         if (error) throw error;
         
-        linkBanners = data || [];
-        renderLinkBanners();
+        if (!banners || banners.length === 0) return;
         
-    } catch (error) {
-        console.error('Error loading link banners:', error);
-    }
-}
-
-let currentLinkBannerIndex = 0;
-let linkBannerInterval;
-
-function renderLinkBanners() {
-    const container = document.getElementById('subBanner');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (linkBanners.length === 0) return;
-    
-    linkBanners.forEach((banner, index) => {
-        const slide = document.createElement('div');
-        slide.className = 'sub-banner-slide';
-        if (index === 0) slide.classList.add('active');
+        const container = document.getElementById('secondaryBanner');
+        container.innerHTML = '<div class="secondary-banner-slider"></div>';
         
-        const img = document.createElement('img');
-        img.src = banner.image_url;
-        img.alt = banner.title || 'Banner';
+        const slider = container.querySelector('.secondary-banner-slider');
         
-        slide.appendChild(img);
-        slide.addEventListener('click', () => {
-            if (banner.link_url) {
-                window.open(banner.link_url, '_blank');
+        banners.forEach((banner, index) => {
+            const item = document.createElement('div');
+            item.className = 'secondary-banner-item';
+            item.innerHTML = `<img src="${banner.image_url}" alt="${banner.title || 'Banner'}">`;
+            
+            if (banner.link) {
+                item.style.cursor = 'pointer';
+                item.addEventListener('click', () => {
+                    window.open(banner.link, '_blank');
+                });
             }
+            
+            slider.appendChild(item);
         });
         
-        container.appendChild(slide);
-    });
-    
-    if (linkBanners.length > 1) {
-        startLinkBannerAutoPlay();
+        if (banners.length > 1) {
+            startSecondaryBannerSlider();
+        }
+        
+    } catch (error) {
+        console.error('Secondary banner error:', error);
     }
 }
 
-function startLinkBannerAutoPlay() {
-    if (linkBannerInterval) clearInterval(linkBannerInterval);
+function startSecondaryBannerSlider() {
+    const items = document.querySelectorAll('.secondary-banner-item');
+    if (items.length < 3) return;
     
-    linkBannerInterval = setInterval(() => {
-        const slides = document.querySelectorAll('.sub-banner-slide');
-        const current = slides[currentLinkBannerIndex];
-        
-        currentLinkBannerIndex = (currentLinkBannerIndex + 1) % linkBanners.length;
-        const next = slides[currentLinkBannerIndex];
-        
-        current.classList.add('exiting');
-        next.classList.add('entering');
-        
-        setTimeout(() => {
-            current.classList.remove('active', 'exiting');
-            next.classList.add('active');
-            next.classList.remove('entering');
-        }, 600);
-        
+    let currentIndex = 0;
+    
+    function updateBannerPositions() {
+        items.forEach((item, index) => {
+            item.classList.remove('center', 'left', 'right');
+            
+            if (index === currentIndex) {
+                item.classList.add('center');
+            } else if (index === (currentIndex - 1 + items.length) % items.length) {
+                item.classList.add('left');
+            } else if (index === (currentIndex + 1) % items.length) {
+                item.classList.add('right');
+            }
+        });
+    }
+    
+    updateBannerPositions();
+    
+    if (secondaryBannerInterval) clearInterval(secondaryBannerInterval);
+    
+    secondaryBannerInterval = setInterval(() => {
+        currentIndex = (currentIndex + 1) % items.length;
+        updateBannerPositions();
     }, 10000);
 }
 
-// ==================== CATEGORIES ====================
-async function loadCategories() {
+/* ========================================
+   INITIALIZATION
+======================================== */
+
+async function initApp() {
+    showLoader();
+    
     try {
-        const { data: categoriesData, error: catError } = await supabase
-            .from('categories')
-            .select('*')
-            .order('created_at', { ascending: true });
+        // Check session
+        const hasSession = checkSession();
         
-        if (catError) throw catError;
+        if (hasSession) {
+            await validateSession();
+            await initializeUserDashboard();
+        } else {
+            // Load public data
+            await loadWebsiteConfig();
+            await loadMainBanners();
+            await loadSecondaryBanners();
+        }
         
-        const { data: cardsData, error: cardsError } = await supabase
-            .from('category_cards')
-            .select('*')
-            .order('created_at', { ascending: true });
-        
-        if (cardsError) throw cardsError;
-        
-        categories = categoriesData || [];
-        const categoryCards = cardsData || [];
-        
-        renderCategories(categoryCards);
+        hideLoader();
         
     } catch (error) {
-        console.error('Error loading categories:', error);
+        console.error('App initialization error:', error);
+        hideLoader();
+        showToast('Error', 'Failed to initialize app', 'error');
     }
 }
 
-function renderCategories(categoryCards) {
-    const container = document.getElementById('categoriesContainer');
+async function initializeUserDashboard() {
+    try {
+        await loadWebsiteConfig();
+        await loadMainBanners();
+        await loadSecondaryBanners();
+        await loadCategories();
+        await loadMusicPlaylist();
+        
+        // Update UI with user info
+        updateUserUI();
+        
+    } catch (error) {
+        console.error('Dashboard init error:', error);
+    }
+}
+
+async function loadWebsiteConfig() {
+    try {
+        const { data: config, error } = await supabase
+            .from('website_config')
+            .select('*')
+            .single();
+        
+        if (error) throw error;
+        
+        AppState.websiteConfig = config;
+        
+        // Apply config
+        if (config.logo_url) {
+            document.getElementById('websiteLogo').src = config.logo_url;
+        }
+        
+        if (config.background_image) {
+            document.body.style.backgroundImage = `url(${config.background_image})`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundAttachment = 'fixed';
+        }
+        
+        if (config.background_video) {
+            // Add video background
+            const videoElement = document.createElement('video');
+            videoElement.src = config.background_video;
+            videoElement.autoplay = true;
+            videoElement.loop = true;
+            videoElement.muted = true;
+            videoElement.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                z-index: -1;
+            `;
+            document.body.prepend(videoElement);
+        }
+        
+    } catch (error) {
+        console.error('Config load error:', error);
+    }
+}
+
+function updateUserUI() {
+    if (!AppState.currentUser) return;
+    
+    const userAvatar = document.getElementById('userProfileImg');
+    const userMenuAvatar = document.getElementById('userMenuAvatar');
+    const userMenuName = document.getElementById('userMenuName');
+    const userMenuEmail = document.getElementById('userMenuEmail');
+    
+    if (userAvatar) userAvatar.src = AppState.currentUser.avatar;
+    if (userMenuAvatar) userMenuAvatar.src = AppState.currentUser.avatar;
+    if (userMenuName) userMenuName.textContent = AppState.currentUser.username;
+    if (userMenuEmail) userMenuEmail.textContent = AppState.currentUser.email;
+}
+
+// Start app when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+});
+
+// Prevent auto-refresh during file operations
+let preventRefresh = false;
+
+window.addEventListener('beforeunload', (e) => {
+    if (preventRefresh) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+/* ========================================
+   CATEGORIES LOADING
+======================================== */
+
+async function loadCategories() {
+    try {
+        const { data: categories, error } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        AppState.categories = categories || [];
+        
+        await renderCategories();
+        
+    } catch (error) {
+        console.error('Categories load error:', error);
+    }
+}
+
+async function renderCategories() {
+    const container = document.getElementById('categoriesList');
     if (!container) return;
     
     container.innerHTML = '';
     
-    categories.forEach(category => {
-        const cards = categoryCards.filter(card => card.category_id === category.id);
+    for (const category of AppState.categories) {
+        // Get category cards for this category
+        const { data: cards, error } = await supabase
+            .from('category_cards')
+            .select('*')
+            .eq('category_id', category.id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
         
-        if (cards.length === 0) return;
+        if (error || !cards || cards.length === 0) continue;
         
         const categoryGroup = document.createElement('div');
         categoryGroup.className = 'category-group';
         
-        const title = document.createElement('h2');
-        title.className = 'category-title';
-        title.textContent = category.name;
+        categoryGroup.innerHTML = `
+            <h3 class="category-title">
+                <i class="fas fa-layer-group"></i>
+                ${category.name}
+            </h3>
+            <div class="category-cards-grid" id="cards-${category.id}"></div>
+        `;
         
-        const cardsGrid = document.createElement('div');
-        cardsGrid.className = 'category-cards';
-        
-        cards.forEach(card => {
-            const cardEl = createCategoryCard(card);
-            cardsGrid.appendChild(cardEl);
-        });
-        
-        categoryGroup.appendChild(title);
-        categoryGroup.appendChild(cardsGrid);
         container.appendChild(categoryGroup);
-    });
+        
+        const cardsGrid = document.getElementById(`cards-${category.id}`);
+        
+        for (const card of cards) {
+            await renderCategoryCard(cardsGrid, card, category);
+        }
+    }
 }
 
-function createCategoryCard(card) {
-    const cardEl = document.createElement('div');
-    cardEl.className = 'category-card';
+async function renderCategoryCard(container, card, category) {
+    const cardElement = document.createElement('div');
+    cardElement.className = 'category-card';
     
-    const content = document.createElement('div');
-    content.className = 'category-card-content';
+    // Get stats for this category card
+    const { data: stats } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('category_card_id', card.id)
+        .eq('status', 'approved');
     
-    const iconWrapper = document.createElement('div');
-    iconWrapper.className = 'category-icon-wrapper';
+    const salesCount = stats ? stats.length : 0;
     
-    const icon = document.createElement('img');
-    icon.className = 'category-icon';
-    icon.src = card.icon_url;
-    icon.alt = card.name;
+    // Get average rating
+    const { data: feedbacks } = await supabase
+        .from('feedback')
+        .select('rating')
+        .eq('category_card_id', card.id);
     
-    iconWrapper.appendChild(icon);
-    
-    // Country flag
-    if (card.country_flag_url) {
-        const flag = document.createElement('img');
-        flag.className = 'category-flag';
-        flag.src = card.country_flag_url;
-        iconWrapper.appendChild(flag);
+    let avgRating = 0;
+    if (feedbacks && feedbacks.length > 0) {
+        const sum = feedbacks.reduce((acc, f) => acc + f.rating, 0);
+        avgRating = (sum / feedbacks.length).toFixed(1);
     }
     
-    // Discount badge
-    if (card.discount_percentage && card.discount_percentage > 0) {
-        const discount = document.createElement('div');
-        discount.className = 'category-discount';
-        discount.textContent = `-${card.discount_percentage}%`;
-        iconWrapper.appendChild(discount);
-    }
+    cardElement.innerHTML = `
+        <div class="category-card-content">
+            <div class="category-icon-wrapper">
+                <img src="${card.icon_url}" alt="${card.name}" class="category-icon">
+                ${card.flag_url ? `<img src="${card.flag_url}" alt="Flag" class="category-flag">` : ''}
+                ${card.discount_percent ? `
+                    <div class="category-discount-badge">-${card.discount_percent}%</div>
+                ` : ''}
+            </div>
+            <div class="category-name">${card.name}</div>
+            <div class="category-stats">
+                <div class="category-rating">
+                    <i class="fas fa-star"></i>
+                    <span>${avgRating}</span>
+                </div>
+                <div class="category-sales">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>${salesCount}</span>
+                </div>
+            </div>
+            <button class="category-topup-btn">Top Up</button>
+        </div>
+    `;
     
-    const name = document.createElement('div');
-    name.className = 'category-name';
-    name.textContent = card.name;
-    
-    const stats = document.createElement('div');
-    stats.className = 'category-stats';
-    
-    const rating = document.createElement('div');
-    rating.className = 'category-rating';
-    rating.innerHTML = `<i class="fas fa-star"></i><span>${card.rating || '4.5'}</span>`;
-    
-    const sales = document.createElement('div');
-    sales.className = 'category-sales';
-    sales.innerHTML = `<i class="fas fa-shopping-cart"></i><span>${card.total_sales || 0}</span>`;
-    
-    stats.appendChild(rating);
-    stats.appendChild(sales);
-    
-    const topUpBtn = document.createElement('button');
-    topUpBtn.className = 'top-up-btn';
-    topUpBtn.textContent = 'Top Up';
-    topUpBtn.addEventListener('click', () => openProductPage(card));
-    
-    content.appendChild(iconWrapper);
-    content.appendChild(name);
-    content.appendChild(stats);
-    content.appendChild(topUpBtn);
-    
-    cardEl.appendChild(content);
-    
-    cardEl.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('top-up-btn')) {
-            openProductPage(card);
+    cardElement.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('category-topup-btn')) {
+            openCategoryProducts(category, card);
         }
     });
     
-    return cardEl;
-}
-
-// ==================== NAVIGATION ====================
-function navigateTo(page) {
-    const pages = document.querySelectorAll('.page');
-    pages.forEach(p => p.classList.remove('active'));
-    
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => item.classList.remove('active'));
-    
-    let pageId = '';
-    switch(page) {
-        case 'home':
-            pageId = 'homePage';
-            break;
-        case 'orderHistory':
-            pageId = 'orderHistoryPage';
-            loadUserOrders();
-            break;
-        case 'news':
-            pageId = 'newsPage';
-            loadNews();
-            break;
-        case 'contacts':
-            pageId = 'contactsPage';
-            loadContacts();
-            break;
-        case 'profile':
-            pageId = 'profilePage';
-            updateUserProfile();
-            break;
-    }
-    
-    const targetPage = document.getElementById(pageId);
-    if (targetPage) {
-        targetPage.classList.add('active');
-    }
-    
-    const activeNav = Array.from(navItems).find(item => {
-        const itemText = item.querySelector('span').textContent.toLowerCase();
-        return itemText === page.toLowerCase() || 
-               (page === 'orderHistory' && itemText === 'orders') ||
-               (page === 'home' && itemText === 'home');
+    const topupBtn = cardElement.querySelector('.category-topup-btn');
+    topupBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleTopUp(card);
     });
     
-    if (activeNav) {
-        activeNav.classList.add('active');
-    }
-    
-    currentPage = page;
+    container.appendChild(cardElement);
 }
 
-// ==================== TOAST NOTIFICATIONS ====================
-function showToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
-    
-    toast.textContent = message;
-    toast.className = 'toast';
-    
-    if (type) {
-        toast.classList.add(type);
-    }
-    
-    toast.classList.add('show');
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
-}
-
-// ==================== MUSIC PLAYER ====================
-async function setupMusicPlayer() {
-    try {
-        const { data, error } = await supabase
-            .from('music_files')
-            .select('*')
-            .order('created_at', { ascending: true });
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-            musicPlayer = {
-                playlist: data,
-                currentIndex: 0,
-                audio: document.getElementById('bgMusicPlayer')
-            };
-            
-            if (currentUser.settings && currentUser.settings.music_enabled !== false) {
-                playMusic();
-            }
-            
-            musicPlayer.audio.addEventListener('ended', () => {
-                musicPlayer.currentIndex = (musicPlayer.currentIndex + 1) % musicPlayer.playlist.length;
-                playMusic();
-            });
-        }
-    } catch (error) {
-        console.error('Error setting up music:', error);
-    }
-}
-
-function playMusic() {
-    if (!musicPlayer || !musicPlayer.playlist.length) return;
-    
-    const track = musicPlayer.playlist[musicPlayer.currentIndex];
-    musicPlayer.audio.src = track.file_url;
-    musicPlayer.audio.volume = 0.3;
-    musicPlayer.audio.play().catch(e => console.log('Autoplay prevented'));
-}
-
-// ==================== SETTINGS ====================
-document.getElementById('musicToggle')?.addEventListener('change', async (e) => {
-    const enabled = e.target.checked;
-    
-    if (enabled) {
-        playMusic();
-    } else {
-        musicPlayer?.audio.pause();
-    }
-    
-    await updateUserSettings({ music_enabled: enabled });
-});
-
-document.getElementById('smsToggle')?.addEventListener('change', async (e) => {
-    await updateUserSettings({ sms_notifications: e.target.checked });
-});
-
-document.getElementById('autoDownloadToggle')?.addEventListener('change', async (e) => {
-    await updateUserSettings({ auto_download: e.target.checked });
-});
-
-async function updateUserSettings(newSettings) {
-    try {
-        const updatedSettings = { ...currentUser.settings, ...newSettings };
-        
-        const { error } = await supabase
-            .from('users')
-            .update({ settings: updatedSettings })
-            .eq('id', currentUser.id);
-        
-        if (error) throw error;
-        
-        currentUser.settings = updatedSettings;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        
-    } catch (error) {
-        console.error('Error updating settings:', error);
-    }
-}
-
-// ==================== NOTIFICATIONS ====================
-async function loadNotifications() {
-    try {
-        const { data, error } = await supabase
-            .from('notifications')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        notifications = data || [];
-        updateNotificationBadge();
-        renderNotifications();
-        
-    } catch (error) {
-        console.error('Error loading notifications:', error);
-    }
-}
-
-function updateNotificationBadge() {
-    const badge = document.getElementById('notifCount');
-    if (badge) {
-        const unreadCount = notifications.filter(n => !n.read).length;
-        badge.textContent = unreadCount;
-        badge.style.display = unreadCount > 0 ? 'block' : 'none';
-    }
-}
-
-function renderNotifications() {
-    const container = document.getElementById('notificationList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (notifications.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No notifications</div>';
+function handleTopUp(card) {
+    if (!AppState.sessionActive) {
+        openAuthModal();
         return;
     }
     
-    notifications.forEach(notif => {
-        const notifEl = document.createElement('div');
-        notifEl.className = 'notification-item';
-        notifEl.innerHTML = `
-            <div class="notification-content">
-                <h4>${notif.title}</h4>
-                <p>${notif.message}</p>
-                ${notif.coupon_code ? `<div class="coupon-code">${notif.coupon_code}</div>` : ''}
-                <span class="notification-time">${formatTimestamp(notif.created_at)}</span>
-            </div>
-        `;
-        
-        container.appendChild(notifEl);
-    });
+    showToast('Top Up', 'Opening top up for ' + card.name, 'info');
+    openCategoryProducts(AppState.categories.find(c => c.id === card.category_id), card);
 }
 
-function toggleNotifications() {
-    const panel = document.getElementById('notificationPanel');
-    if (panel) {
-        panel.classList.toggle('active');
-    }
-}
+/* ========================================
+   PRODUCTS PAGE
+======================================== */
 
-// ==================== EVENT LISTENERS ====================
-function setupEventListeners() {
-    // Prevent form submission
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-        });
-    });
-}
-
-function preventAutoRefresh() {
-    let uploadingFiles = false;
-    
-    document.addEventListener('change', (e) => {
-        if (e.target.type === 'file') {
-            uploadingFiles = true;
-            setTimeout(() => {
-                uploadingFiles = false;
-            }, 60000);
-        }
-    });
-    
-    window.addEventListener('beforeunload', (e) => {
-        if (uploadingFiles) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
-    });
-}
-
-// ==================== UTILITIES ====================
-function formatTimestamp(timestamp) {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now - date;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    
-    return date.toLocaleDateString();
-}
-
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
-}
-
-function calculateDiscountedPrice(originalPrice, discountPercentage) {
-    if (!discountPercentage || discountPercentage === 0) {
-        return originalPrice;
+async function openCategoryProducts(category, card) {
+    if (!AppState.sessionActive) {
+        openAuthModal();
+        return;
     }
     
-    const discount = (originalPrice * discountPercentage) / 100;
-    return originalPrice - discount;
-}
-
-// Copy to clipboard
-function copyToClipboard(text) {
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Copied to clipboard!', 'success');
-        });
-    } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast('Copied to clipboard!', 'success');
-    }
-}
-
-// ==================== PRODUCTS PAGE ====================
-let currentCategoryCard = null;
-let selectedProduct = null;
-let productBanners = [];
-let currentProductBannerIndex = 0;
-let productBannerInterval;
-
-async function openProductPage(categoryCard) {
-    currentCategoryCard = categoryCard;
+    AppState.currentCategory = category;
+    AppState.currentCategoryCard = card;
     
-    showLoading();
+    showLoader();
     
     try {
-        // Load products for this category card
-        const { data: productsData, error: productsError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('category_card_id', categoryCard.id)
-            .order('created_at', { ascending: false });
+        // Update header
+        document.getElementById('categoryIcon').src = card.icon_url;
+        document.getElementById('categoryName').textContent = card.name;
         
-        if (productsError) throw productsError;
+        // Load products page data
+        await loadProductsPageBanner(card.id);
+        await loadInputTables(card.id);
+        await loadProducts(card.id);
+        await loadProductGuidelines(card.id);
+        await loadProductYoutubeVideos(card.id);
+        await loadProductFeedback(card.id);
         
-        products = productsData || [];
+        // Switch to products page
+        document.getElementById('categoryProductsPage').classList.add('active');
+        document.getElementById('homePage').classList.remove('active');
         
-        // Load input tables
-        const { data: inputTables, error: tablesError } = await supabase
-            .from('input_tables')
-            .select('*')
-            .eq('category_card_id', categoryCard.id)
-            .order('created_at', { ascending: true });
-        
-        if (tablesError) throw tablesError;
-        
-        // Load product page banners
-        const { data: bannersData, error: bannersError } = await supabase
-            .from('product_page_banners')
-            .select('*')
-            .eq('category_card_id', categoryCard.id)
-            .order('created_at', { ascending: false });
-        
-        if (bannersError) throw bannersError;
-        
-        productBanners = bannersData || [];
-        
-        // Load background
-        const { data: bgData, error: bgError } = await supabase
-            .from('product_page_backgrounds')
-            .select('*')
-            .eq('category_card_id', categoryCard.id)
-            .single();
-        
-        // Load guidelines
-        const { data: guidelines, error: guidelinesError } = await supabase
-            .from('product_guidelines')
-            .select('*')
-            .eq('category_card_id', categoryCard.id)
-            .order('created_at', { ascending: true });
-        
-        // Load YouTube videos
-        const { data: videos, error: videosError } = await supabase
-            .from('product_youtube_videos')
-            .select('*')
-            .eq('category_card_id', categoryCard.id)
-            .order('created_at', { ascending: true });
-        
-        // Load feedback settings
-        const { data: feedbackSettings, error: feedbackError } = await supabase
-            .from('feedback_settings')
-            .select('*')
-            .eq('category_card_id', categoryCard.id)
-            .single();
-        
-        renderProductPage(categoryCard, inputTables || [], bgData, guidelines || [], videos || [], feedbackSettings);
-        
-        // Navigate to product detail page
-        navigateTo('productDetail');
-        
-        hideLoading();
+        hideLoader();
         
     } catch (error) {
-        console.error('Error loading product page:', error);
-        showToast('Failed to load products', 'error');
-        hideLoading();
+        console.error('Products page error:', error);
+        hideLoader();
+        showToast('Error', 'Failed to load products', 'error');
     }
 }
 
-function renderProductPage(categoryCard, inputTables, background, guidelines, videos, feedbackSettings) {
-    const container = document.getElementById('productDetailPage');
-    if (!container) return;
-    
-    const detailContainer = container.querySelector('.product-detail-container');
-    detailContainer.innerHTML = '';
-    
-    // Apply custom background
-    if (background && background.background_url) {
-        detailContainer.style.backgroundImage = `url(${background.background_url})`;
-        detailContainer.style.backgroundSize = 'cover';
-        detailContainer.style.backgroundPosition = 'center';
-        detailContainer.style.backgroundAttachment = 'fixed';
-    }
-    
-    // Header
-    const header = document.createElement('div');
-    header.className = 'product-header';
-    header.innerHTML = `
-        <img src="${categoryCard.icon_url}" alt="${categoryCard.name}" class="product-header-icon">
-        <div class="product-header-info">
-            <h2>${categoryCard.name}</h2>
-            <p>Choose your product</p>
-        </div>
-    `;
-    detailContainer.appendChild(header);
-    
-    // Product page banners
-    if (productBanners.length > 0) {
-        renderProductBanners(detailContainer);
-    }
-    
-    // Input tables
-    if (inputTables.length > 0) {
-        const tablesSection = document.createElement('div');
-        tablesSection.className = 'input-tables-section';
+async function loadProductsPageBanner(cardId) {
+    try {
+        const { data: banners, error } = await supabase
+            .from('product_banners')
+            .select('*')
+            .eq('category_card_id', cardId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
         
-        inputTables.forEach(table => {
-            const tableEl = document.createElement('div');
-            tableEl.className = 'input-table';
-            
-            const title = document.createElement('h3');
-            title.textContent = table.title;
-            tableEl.appendChild(title);
-            
-            table.fields.forEach(field => {
-                const fieldDiv = document.createElement('div');
-                fieldDiv.className = 'input-field';
-                
-                const label = document.createElement('label');
-                label.textContent = field.label;
-                
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.placeholder = field.placeholder;
-                input.dataset.fieldName = field.label;
-                
-                fieldDiv.appendChild(label);
-                fieldDiv.appendChild(input);
-                tableEl.appendChild(fieldDiv);
-            });
-            
-            tablesSection.appendChild(tableEl);
+        if (error) throw error;
+        
+        const container = document.getElementById('productsPageBanner');
+        
+        if (!banners || banners.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        container.innerHTML = '<div class="products-banner-slider"></div>';
+        const slider = container.querySelector('.products-banner-slider');
+        
+        banners.forEach((banner, index) => {
+            const item = document.createElement('div');
+            item.className = 'products-banner-item';
+            item.innerHTML = `<img src="${banner.image_url}" alt="Banner">`;
+            slider.appendChild(item);
         });
         
-        detailContainer.appendChild(tablesSection);
-    }
-    
-    // Products grid
-    if (products.length > 0) {
-        const productsGrid = document.createElement('div');
-        productsGrid.className = 'products-grid';
+        if (banners.length >= 3) {
+            startProductsBannerSlider();
+        }
         
-        products.forEach(product => {
-            const productEl = createProductItem(product);
-            productsGrid.appendChild(productEl);
+    } catch (error) {
+        console.error('Products banner error:', error);
+    }
+}
+
+function startProductsBannerSlider() {
+    const items = document.querySelectorAll('.products-banner-item');
+    if (items.length < 3) return;
+    
+    let currentIndex = 1;
+    
+    function updatePositions() {
+        items.forEach((item, index) => {
+            item.classList.remove('center', 'left', 'right');
+            
+            if (index === currentIndex) {
+                item.classList.add('center');
+            } else if (index === (currentIndex - 1 + items.length) % items.length) {
+                item.classList.add('left');
+            } else if (index === (currentIndex + 1) % items.length) {
+                item.classList.add('right');
+            }
         });
-        
-        detailContainer.appendChild(productsGrid);
-    } else {
-        const noProducts = document.createElement('div');
-        noProducts.style.textAlign = 'center';
-        noProducts.style.padding = '40px 20px';
-        noProducts.style.color = 'var(--text-muted)';
-        noProducts.textContent = 'No products available';
-        detailContainer.appendChild(noProducts);
     }
     
-    // Buy Now Button
-    const buyBtn = document.createElement('button');
-    buyBtn.className = 'buy-now-btn';
-    buyBtn.innerHTML = '<span>Buy Now</span><i class="fas fa-arrow-right"></i>';
-    buyBtn.addEventListener('click', handleBuyNow);
-    detailContainer.appendChild(buyBtn);
+    updatePositions();
     
-    // Guidelines
-    if (guidelines.length > 0) {
-        renderGuidelines(detailContainer, guidelines);
-    }
-    
-    // YouTube Videos
-    if (videos.length > 0) {
-        renderYouTubeVideos(detailContainer, videos);
-    }
-    
-    // Feedback section
-    if (feedbackSettings) {
-        renderFeedbackSection(detailContainer, feedbackSettings);
-    }
-}
-
-function renderProductBanners(container) {
-    const bannerSection = document.createElement('div');
-    bannerSection.className = 'product-page-banner';
-    
-    const slider = document.createElement('div');
-    slider.className = 'product-banner-slider';
-    
-    productBanners.forEach((banner, index) => {
-        const slide = document.createElement('div');
-        slide.className = 'product-banner-slide';
-        
-        if (index === 0) slide.classList.add('center');
-        else if (index === 1) slide.classList.add('right');
-        else if (index === productBanners.length - 1 && productBanners.length > 2) slide.classList.add('left');
-        
-        const img = document.createElement('img');
-        img.src = banner.image_url;
-        img.alt = 'Banner';
-        
-        slide.appendChild(img);
-        slider.appendChild(slide);
-    });
-    
-    const dots = document.createElement('div');
-    dots.className = 'product-banner-dots';
-    
-    productBanners.forEach((_, index) => {
-        const dot = document.createElement('div');
-        dot.className = 'product-banner-dot';
-        if (index === 0) dot.classList.add('active');
-        dot.addEventListener('click', () => goToProductBanner(index));
-        dots.appendChild(dot);
-    });
-    
-    slider.appendChild(dots);
-    bannerSection.appendChild(slider);
-    container.appendChild(bannerSection);
-    
-    if (productBanners.length > 1) {
-        startProductBannerAutoPlay();
-    }
-}
-
-function startProductBannerAutoPlay() {
-    if (productBannerInterval) clearInterval(productBannerInterval);
-    
-    productBannerInterval = setInterval(() => {
-        currentProductBannerIndex = (currentProductBannerIndex + 1) % productBanners.length;
-        goToProductBanner(currentProductBannerIndex);
+    setInterval(() => {
+        currentIndex = (currentIndex + 1) % items.length;
+        updatePositions();
     }, 5000);
 }
 
-function goToProductBanner(index) {
-    const slides = document.querySelectorAll('.product-banner-slide');
-    const dots = document.querySelectorAll('.product-banner-dot');
-    
-    slides.forEach((slide, i) => {
-        slide.classList.remove('center', 'left', 'right', 'exit-left', 'exit-right');
+async function loadInputTables(cardId) {
+    try {
+        const { data: tables, error } = await supabase
+            .from('input_tables')
+            .select('*')
+            .eq('category_card_id', cardId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
         
-        if (i === index) {
-            slide.classList.add('center');
-        } else if (i === (index + 1) % productBanners.length) {
-            slide.classList.add('right');
-        } else if (i === (index - 1 + productBanners.length) % productBanners.length) {
-            slide.classList.add('left');
+        if (error) throw error;
+        
+        const container = document.getElementById('productInputTables');
+        
+        if (!tables || tables.length === 0) {
+            container.innerHTML = '';
+            return;
         }
-    });
-    
-    dots.forEach((dot, i) => {
-        dot.classList.toggle('active', i === index);
-    });
-    
-    currentProductBannerIndex = index;
+        
+        const group = document.createElement('div');
+        group.className = 'input-table-group';
+        
+        let fieldsHTML = '';
+        tables.forEach(table => {
+            fieldsHTML += `
+                <div class="input-table-field">
+                    <label class="input-table-label">${table.title}</label>
+                    <input 
+                        type="text" 
+                        class="input-table-input" 
+                        placeholder="${table.placeholder}"
+                        data-table-id="${table.id}"
+                        required
+                    >
+                </div>
+            `;
+        });
+        
+        group.innerHTML = `
+            <h3 class="input-table-title">Account Information</h3>
+            ${fieldsHTML}
+        `;
+        
+        container.innerHTML = '';
+        container.appendChild(group);
+        
+    } catch (error) {
+        console.error('Input tables error:', error);
+    }
 }
 
-function createProductItem(product) {
-    const item = document.createElement('div');
-    item.className = 'product-item';
-    item.dataset.productId = product.id;
-    
-    const icon = document.createElement('img');
-    icon.className = 'product-item-icon';
-    icon.src = product.icon_url || 'https://via.placeholder.com/150';
-    icon.alt = product.name;
-    
-    if (product.product_type && product.type_color) {
-        const typeBadge = document.createElement('div');
-        typeBadge.className = 'product-type-badge';
-        typeBadge.textContent = product.product_type;
-        typeBadge.style.background = product.type_color;
-        item.appendChild(typeBadge);
-    }
-    
-    const name = document.createElement('div');
-    name.className = 'product-name';
-    name.textContent = product.name;
-    
-    const amount = document.createElement('div');
-    amount.className = 'product-amount';
-    amount.textContent = product.amount || '';
-    
-    const priceContainer = document.createElement('div');
-    priceContainer.className = 'product-price-container';
-    
-    if (product.discount_percentage && product.discount_percentage > 0) {
-        const originalPrice = document.createElement('span');
-        originalPrice.className = 'product-original-price';
-        originalPrice.textContent = `${formatCurrency(product.price)} Ks`;
-        priceContainer.appendChild(originalPrice);
+async function loadProducts(cardId) {
+    try {
+        const { data: products, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('category_card_id', cardId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
         
-        const discountedPrice = calculateDiscountedPrice(product.price, product.discount_percentage);
-        const price = document.createElement('span');
-        price.className = 'product-price';
-        price.textContent = `${formatCurrency(discountedPrice)} Ks`;
-        priceContainer.appendChild(price);
+        if (error) throw error;
         
-        const discount = document.createElement('span');
-        discount.className = 'product-discount';
-        discount.textContent = `-${product.discount_percentage}%`;
-        priceContainer.appendChild(discount);
-    } else {
-        const price = document.createElement('span');
-        price.className = 'product-price';
-        price.textContent = `${formatCurrency(product.price)} Ks`;
-        priceContainer.appendChild(price);
+        AppState.products = products || [];
+        
+        const container = document.getElementById('productsList');
+        container.innerHTML = '';
+        
+        if (products.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:2rem;">No products available</p>';
+            return;
+        }
+        
+        products.forEach(product => {
+            renderProduct(container, product);
+        });
+        
+    } catch (error) {
+        console.error('Products load error:', error);
     }
-    
-    const expandBtn = document.createElement('button');
-    expandBtn.className = 'product-expand-btn';
-    expandBtn.innerHTML = '<i class="fas fa-info-circle"></i> View Details';
-    expandBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showProductDetails(product);
-    });
-    
-    item.appendChild(icon);
-    item.appendChild(name);
-    item.appendChild(amount);
-    item.appendChild(priceContainer);
-    item.appendChild(expandBtn);
-    
-    item.addEventListener('click', () => {
-        document.querySelectorAll('.product-item').forEach(p => p.classList.remove('selected'));
-        item.classList.add('selected');
-        selectedProduct = product;
-    });
-    
-    return item;
 }
 
-function showProductDetails(product) {
-    const modal = document.createElement('div');
-    modal.className = 'modal product-detail-modal active';
+function renderProduct(container, product) {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.dataset.productId = product.id;
     
-    const finalPrice = product.discount_percentage && product.discount_percentage > 0
-        ? calculateDiscountedPrice(product.price, product.discount_percentage)
-        : product.price;
+    const finalPrice = calculateDiscount(product.price, product.discount_percent);
+    const hasDiscount = product.discount_percent && product.discount_percent > 0;
     
-    modal.innerHTML = `
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <div class="product-full-details">
-                <img src="${product.icon_url}" style="width: 100%; max-width: 300px; margin: 0 auto 20px; display: block; border-radius: 12px;">
-                <h3>${product.name}</h3>
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Product Type</span>
-                    <span class="product-detail-value">${product.product_type || 'N/A'}</span>
+    // Parse product type color (stored as JSON)
+    let typeBadgeStyle = '';
+    if (product.type_badge_color) {
+        try {
+            const colors = JSON.parse(product.type_badge_color);
+            if (Array.isArray(colors) && colors.length > 0) {
+                typeBadgeStyle = `background: linear-gradient(135deg, ${colors.join(', ')});`;
+            }
+        } catch (e) {
+            typeBadgeStyle = 'background: var(--primary-gradient);';
+        }
+    }
+    
+    card.innerHTML = `
+        <div class="product-image-wrapper">
+            <img src="${product.icon_url}" alt="${product.name}" class="product-image">
+            ${product.type_name ? `
+                <div class="product-type-badge" style="${typeBadgeStyle}">
+                    ${product.type_name}
                 </div>
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Amount</span>
-                    <span class="product-detail-value">${product.amount || 'N/A'}</span>
-                </div>
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Original Price</span>
-                    <span class="product-detail-value">${formatCurrency(product.price)} Ks</span>
-                </div>
-                ${product.discount_percentage ? `
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Discount</span>
-                    <span class="product-detail-value" style="color: var(--danger);">-${product.discount_percentage}%</span>
-                </div>
-                ` : ''}
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Final Price</span>
-                    <span class="product-detail-value" style="color: var(--success); font-size: 18px;">${formatCurrency(finalPrice)} Ks</span>
-                </div>
-                ${product.description ? `
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Description</span>
-                    <span class="product-detail-value">${product.description}</span>
-                </div>
+            ` : ''}
+            ${hasDiscount ? `
+                <div class="product-discount-badge">-${product.discount_percent}%</div>
+            ` : ''}
+        </div>
+        <div class="product-info">
+            <div class="product-name">${product.name}</div>
+            ${product.amount ? `
+                <div class="product-amount">Amount: ${product.amount}</div>
+            ` : ''}
+            <div class="product-pricing">
+                <span class="product-price">${formatPrice(finalPrice)}</span>
+                ${hasDiscount ? `
+                    <span class="product-original-price">${formatPrice(product.price)}</span>
                 ` : ''}
             </div>
         </div>
     `;
     
-    document.body.appendChild(modal);
-    
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        modal.remove();
+    card.addEventListener('click', () => {
+        toggleProductSelection(card, product);
     });
     
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
+    container.appendChild(card);
 }
 
-function renderGuidelines(container, guidelines) {
-    const section = document.createElement('div');
-    section.className = 'guidelines-section';
-    section.style.padding = '20px';
-    section.style.marginTop = '32px';
-    
-    const title = document.createElement('h2');
-    title.textContent = 'Guidelines & Information';
-    title.style.fontSize = '22px';
-    title.style.fontWeight = '700';
-    title.style.marginBottom = '24px';
-    section.appendChild(title);
-    
-    guidelines.forEach(guide => {
-        const guideEl = document.createElement('div');
-        guideEl.style.background = 'var(--bg-secondary)';
-        guideEl.style.borderRadius = 'var(--radius-lg)';
-        guideEl.style.padding = '20px';
-        guideEl.style.marginBottom = '16px';
-        guideEl.style.border = '1px solid var(--border-color)';
-        
-        const guideTitle = document.createElement('h3');
-        guideTitle.textContent = guide.title;
-        guideTitle.style.fontSize = '18px';
-        guideTitle.style.fontWeight = '700';
-        guideTitle.style.marginBottom = '12px';
-        guideEl.appendChild(guideTitle);
-        
-        if (guide.icon_url) {
-            const icon = document.createElement('img');
-            icon.src = guide.icon_url;
-            icon.style.width = '100%';
-            icon.style.maxWidth = '600px';
-            icon.style.borderRadius = 'var(--radius-md)';
-            icon.style.marginBottom = '16px';
-            guideEl.appendChild(icon);
-        }
-        
-        const content = document.createElement('div');
-        content.style.lineHeight = '1.8';
-        content.style.color = 'var(--text-secondary)';
-        
-        // Parse content with image support
-        const parsedContent = parseContentWithImages(guide.content);
-        content.innerHTML = parsedContent;
-        guideEl.appendChild(content);
-        
-        if (guide.social_links && guide.social_links.length > 0) {
-            const socialDiv = document.createElement('div');
-            socialDiv.style.display = 'flex';
-            socialDiv.style.gap = '12px';
-            socialDiv.style.marginTop = '16px';
-            socialDiv.style.paddingTop = '16px';
-            socialDiv.style.borderTop = '1px solid var(--border-color)';
-            
-            guide.social_links.forEach(social => {
-                const link = document.createElement('a');
-                link.href = social.url;
-                link.target = '_blank';
-                link.style.display = 'flex';
-                link.style.alignItems = 'center';
-                link.style.gap = '8px';
-                link.style.padding = '8px 16px';
-                link.style.background = 'var(--bg-tertiary)';
-                link.style.borderRadius = 'var(--radius-md)';
-                link.style.transition = 'var(--transition-fast)';
-                
-                const icon = document.createElement('img');
-                icon.src = social.icon_url;
-                icon.style.width = '20px';
-                icon.style.height = '20px';
-                icon.style.objectFit = 'contain';
-                
-                link.appendChild(icon);
-                link.innerHTML += social.name || 'Link';
-                
-                link.addEventListener('mouseenter', () => {
-                    link.style.background = 'var(--primary)';
-                });
-                link.addEventListener('mouseleave', () => {
-                    link.style.background = 'var(--bg-tertiary)';
-                });
-                
-                socialDiv.appendChild(link);
-            });
-            
-            guideEl.appendChild(socialDiv);
-        }
-        
-        section.appendChild(guideEl);
+function toggleProductSelection(cardElement, product) {
+    // Deselect all other products
+    document.querySelectorAll('.product-card').forEach(card => {
+        card.classList.remove('selected');
     });
     
-    container.appendChild(section);
+    // Select this product
+    cardElement.classList.add('selected');
+    AppState.selectedProduct = product;
+    
+    // Show product detail
+    showProductDetail(product);
 }
 
-function parseContentWithImages(content) {
-    if (!content) return '';
+function showProductDetail(product) {
+    const modal = document.getElementById('productDetailModal');
+    const content = document.getElementById('productDetailContent');
     
-    // Replace image URLs with img tags
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
-    let parsed = content.replace(urlRegex, '<img src="$1" style="width: 32px; height: 32px; vertical-align: middle; margin: 0 4px; border-radius: 6px;">');
+    const finalPrice = calculateDiscount(product.price, product.discount_percent);
+    const hasDiscount = product.discount_percent && product.discount_percent > 0;
     
-    // Preserve line breaks
-    parsed = parsed.replace(/\n/g, '<br>');
+    content.innerHTML = `
+        <img src="${product.icon_url}" alt="${product.name}" class="product-detail-image">
+        
+        <h2 class="product-detail-title">${product.name}</h2>
+        
+        <div class="product-detail-meta">
+            <div class="product-detail-row">
+                <span class="product-detail-label">Type:</span>
+                <span class="product-detail-value">${product.type_name || 'N/A'}</span>
+            </div>
+            ${product.amount ? `
+                <div class="product-detail-row">
+                    <span class="product-detail-label">Amount:</span>
+                    <span class="product-detail-value">${product.amount}</span>
+                </div>
+            ` : ''}
+            <div class="product-detail-row">
+                <span class="product-detail-label">Price:</span>
+                <span class="product-detail-value">${formatPrice(finalPrice)}</span>
+            </div>
+            ${hasDiscount ? `
+                <div class="product-detail-row">
+                    <span class="product-detail-label">Original Price:</span>
+                    <span class="product-detail-value" style="text-decoration: line-through;">${formatPrice(product.price)}</span>
+                </div>
+                <div class="product-detail-row">
+                    <span class="product-detail-label">Discount:</span>
+                    <span class="product-detail-value" style="color: #4ade80;">${product.discount_percent}% OFF</span>
+                </div>
+            ` : ''}
+        </div>
+        
+        ${product.description ? `
+            <div class="product-detail-description">
+                ${product.description}
+            </div>
+        ` : ''}
+        
+        <div class="coupon-section">
+            <h3 class="coupon-title">Have a coupon code?</h3>
+            <div class="coupon-input-group">
+                <input type="text" class="coupon-input" id="couponInput" placeholder="Enter coupon code">
+                <button class="coupon-apply-btn" onclick="applyCoupon()">Apply</button>
+            </div>
+            <div id="couponApplied" class="coupon-applied" style="display:none;">
+                <span class="coupon-applied-text">Coupon applied!</span>
+                <button class="coupon-remove-btn" onclick="removeCoupon()">Remove</button>
+            </div>
+        </div>
+        
+        <button class="buy-now-btn" onclick="proceedToCheckout()">
+            <i class="fas fa-shopping-cart"></i>
+            Buy Now
+        </button>
+    `;
     
-    return parsed;
+    modal.classList.add('active');
+    document.body.classList.add('no-scroll');
 }
 
-function renderYouTubeVideos(container, videos) {
-    const section = document.createElement('div');
-    section.className = 'youtube-videos-section';
-    section.style.padding = '20px';
-    section.style.marginTop = '32px';
-    
-    const title = document.createElement('h2');
-    title.textContent = 'Video Tutorials';
-    title.style.fontSize = '22px';
-    title.style.fontWeight = '700';
-    title.style.marginBottom = '24px';
-    section.appendChild(title);
-    
-    videos.forEach(video => {
-        const videoEl = document.createElement('div');
-        videoEl.style.background = 'var(--bg-secondary)';
-        videoEl.style.borderRadius = 'var(--radius-lg)';
-        videoEl.style.padding = '20px';
-        videoEl.style.marginBottom = '16px';
-        
-        if (video.description) {
-            const desc = document.createElement('p');
-            desc.textContent = video.description;
-            desc.style.marginBottom = '16px';
-            desc.style.color = 'var(--text-secondary)';
-            videoEl.appendChild(desc);
-        }
-        
-        const iframe = document.createElement('iframe');
-        iframe.style.width = '100%';
-        iframe.style.height = '250px';
-        iframe.style.borderRadius = 'var(--radius-md)';
-        iframe.style.border = 'none';
-        iframe.setAttribute('allowfullscreen', '');
-        
-        let videoId = '';
-        if (video.video_url.includes('youtube.com/shorts/')) {
-            videoId = video.video_url.split('shorts/')[1].split('?')[0];
-            iframe.src = `https://www.youtube.com/embed/${videoId}`;
-        } else if (video.video_url.includes('youtube.com/watch?v=')) {
-            videoId = video.video_url.split('v=')[1].split('&')[0];
-            iframe.src = `https://www.youtube.com/embed/${videoId}`;
-        } else if (video.video_url.includes('youtu.be/')) {
-            videoId = video.video_url.split('youtu.be/')[1].split('?')[0];
-            iframe.src = `https://www.youtube.com/embed/${videoId}`;
-        }
-        
-        videoEl.appendChild(iframe);
-        section.appendChild(videoEl);
-    });
-    
-    container.appendChild(section);
+function closeProductDetail() {
+    const modal = document.getElementById('productDetailModal');
+    modal.classList.remove('active');
+    document.body.classList.remove('no-scroll');
 }
 
-function renderFeedbackSection(container, settings) {
-    const section = document.createElement('div');
-    section.className = 'feedback-section';
-    section.style.padding = '20px';
-    section.style.marginTop = '32px';
-    section.style.background = 'var(--bg-secondary)';
-    section.style.borderRadius = 'var(--radius-lg)';
+/* ========================================
+   COUPON SYSTEM
+======================================== */
+
+let appliedCoupon = null;
+
+async function applyCoupon() {
+    const input = document.getElementById('couponInput');
+    const code = input.value.trim().toUpperCase();
     
-    const title = document.createElement('h3');
-    title.textContent = settings.title || 'Customer Feedback';
-    title.style.fontSize = '20px';
-    title.style.fontWeight = '700';
-    title.style.marginBottom = '16px';
-    section.appendChild(title);
-    
-    if (settings.description) {
-        const desc = document.createElement('p');
-        desc.textContent = settings.description;
-        desc.style.color = 'var(--text-muted)';
-        desc.style.marginBottom = '16px';
-        section.appendChild(desc);
+    if (!code) {
+        showToast('Invalid Coupon', 'Please enter a coupon code', 'warning');
+        return;
     }
     
-    loadAndDisplayFeedback(section, currentCategoryCard.id, settings.max_stars);
+    if (!AppState.selectedProduct) {
+        showToast('Error', 'Please select a product first', 'error');
+        return;
+    }
     
-    container.appendChild(section);
-}
-
-async function loadAndDisplayFeedback(container, categoryCardId, maxStars) {
+    showLoader();
+    
     try {
-        const { data, error } = await supabase
-            .from('product_feedback')
-            .select('*, users(username, avatar_url)')
-            .eq('category_card_id', categoryCardId)
-            .order('created_at', { ascending: false })
-            .limit(20);
-        
-        if (error) throw error;
-        
-        if (!data || data.length === 0) {
-            container.innerHTML += '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No feedback yet</p>';
-            return;
-        }
-        
-        // Calculate statistics
-        const stats = calculateFeedbackStats(data, maxStars);
-        renderFeedbackStats(container, stats, maxStars);
-        
-        // Render individual feedback
-        const feedbackList = document.createElement('div');
-        feedbackList.style.marginTop = '24px';
-        
-        data.forEach(feedback => {
-            const feedbackEl = createFeedbackItem(feedback, maxStars);
-            feedbackList.appendChild(feedbackEl);
-        });
-        
-        container.appendChild(feedbackList);
-        
-    } catch (error) {
-        console.error('Error loading feedback:', error);
-    }
-}
-
-function calculateFeedbackStats(feedbacks, maxStars) {
-    const stats = {
-        total: feedbacks.length,
-        average: 0,
-        distribution: {}
-    };
-    
-    for (let i = 1; i <= maxStars; i++) {
-        stats.distribution[i] = 0;
-    }
-    
-    let totalStars = 0;
-    feedbacks.forEach(f => {
-        totalStars += f.rating;
-        stats.distribution[f.rating]++;
-    });
-    
-    stats.average = (totalStars / feedbacks.length).toFixed(1);
-    
-    return stats;
-}
-
-function renderFeedbackStats(container, stats, maxStars) {
-    const statsDiv = document.createElement('div');
-    statsDiv.style.background = 'var(--bg-tertiary)';
-    statsDiv.style.borderRadius = 'var(--radius-md)';
-    statsDiv.style.padding = '20px';
-    statsDiv.style.marginBottom = '24px';
-    
-    const avgDiv = document.createElement('div');
-    avgDiv.style.textAlign = 'center';
-    avgDiv.style.marginBottom = '20px';
-    
-    const avgRating = document.createElement('div');
-    avgRating.style.fontSize = '48px';
-    avgRating.style.fontWeight = '700';
-    avgRating.style.color = 'var(--warning)';
-    avgRating.textContent = stats.average;
-    
-    const starsDiv = document.createElement('div');
-    starsDiv.style.fontSize = '24px';
-    starsDiv.style.marginTop = '8px';
-    for (let i = 1; i <= maxStars; i++) {
-        const star = document.createElement('i');
-        star.className = i <= Math.round(stats.average) ? 'fas fa-star' : 'far fa-star';
-        star.style.color = 'var(--warning)';
-        star.style.marginRight = '4px';
-        starsDiv.appendChild(star);
-    }
-    
-    const totalText = document.createElement('div');
-    totalText.style.marginTop = '8px';
-    totalText.style.color = 'var(--text-muted)';
-    totalText.textContent = `${stats.total} reviews`;
-    
-    avgDiv.appendChild(avgRating);
-    avgDiv.appendChild(starsDiv);
-    avgDiv.appendChild(totalText);
-    statsDiv.appendChild(avgDiv);
-    
-    // Distribution bars
-    for (let i = maxStars; i >= 1; i--) {
-        const barDiv = document.createElement('div');
-        barDiv.style.display = 'flex';
-        barDiv.style.alignItems = 'center';
-        barDiv.style.gap = '12px';
-        barDiv.style.marginBottom = '8px';
-        
-        const label = document.createElement('span');
-        label.style.minWidth = '60px';
-        label.style.fontSize = '14px';
-        label.textContent = `${i} Star${i > 1 ? 's' : ''}`;
-        
-        const barBg = document.createElement('div');
-        barBg.style.flex = '1';
-        barBg.style.height = '8px';
-        barBg.style.background = 'var(--bg-primary)';
-        barBg.style.borderRadius = '4px';
-        barBg.style.overflow = 'hidden';
-        
-        const percentage = stats.total > 0 ? (stats.distribution[i] / stats.total) * 100 : 0;
-        const barFill = document.createElement('div');
-        barFill.style.width = `${percentage}%`;
-        barFill.style.height = '100%';
-        barFill.style.background = 'var(--warning)';
-        barFill.style.transition = 'width 0.3s ease';
-        
-        barBg.appendChild(barFill);
-        
-        const count = document.createElement('span');
-        count.style.minWidth = '40px';
-        count.style.fontSize = '14px';
-        count.style.textAlign = 'right';
-        count.style.color = 'var(--text-muted)';
-        count.textContent = stats.distribution[i];
-        
-        barDiv.appendChild(label);
-        barDiv.appendChild(barBg);
-        barDiv.appendChild(count);
-        statsDiv.appendChild(barDiv);
-    }
-    
-    container.appendChild(statsDiv);
-}
-
-function createFeedbackItem(feedback, maxStars) {
-    const item = document.createElement('div');
-    item.style.background = 'var(--bg-tertiary)';
-    item.style.borderRadius = 'var(--radius-md)';
-    item.style.padding = '16px';
-    item.style.marginBottom = '12px';
-    
-    const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.alignItems = 'center';
-    header.style.gap = '12px';
-    header.style.marginBottom = '12px';
-    
-    const avatar = document.createElement('img');
-    avatar.src = feedback.users?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
-    avatar.style.width = '40px';
-    avatar.style.height = '40px';
-    avatar.style.borderRadius = '50%';
-    avatar.style.objectFit = 'cover';
-    
-    const userInfo = document.createElement('div');
-    userInfo.style.flex = '1';
-    
-    const username = document.createElement('div');
-    username.style.fontWeight = '600';
-    username.textContent = feedback.users?.username || 'Anonymous';
-    
-    const stars = document.createElement('div');
-    stars.style.marginTop = '4px';
-    for (let i = 1; i <= maxStars; i++) {
-        const star = document.createElement('i');
-        star.className = i <= feedback.rating ? 'fas fa-star' : 'far fa-star';
-        star.style.color = i <= feedback.rating ? 'var(--warning)' : 'var(--text-muted)';
-        star.style.fontSize = '14px';
-        star.style.marginRight = '2px';
-        stars.appendChild(star);
-    }
-    
-    userInfo.appendChild(username);
-    userInfo.appendChild(stars);
-    
-    header.appendChild(avatar);
-    header.appendChild(userInfo);
-    
-    if (feedback.message) {
-        const message = document.createElement('p');
-        message.style.color = 'var(--text-secondary)';
-        message.style.fontSize = '14px';
-        message.style.lineHeight = '1.6';
-        message.textContent = feedback.message;
-        item.appendChild(message);
-    }
-    
-    const footer = document.createElement('div');
-    footer.style.display = 'flex';
-    footer.style.alignItems = 'center';
-    footer.style.gap = '16px';
-    footer.style.marginTop = '12px';
-    footer.style.paddingTop = '12px';
-    footer.style.borderTop = '1px solid var(--border-color)';
-    footer.style.fontSize = '12px';
-    footer.style.color = 'var(--text-muted)';
-    
-    const date = document.createElement('span');
-    date.textContent = formatTimestamp(feedback.created_at);
-    
-    const likeBtn = document.createElement('button');
-    likeBtn.innerHTML = `<i class="far fa-heart"></i> ${feedback.likes || 0}`;
-    likeBtn.style.background = 'none';
-    likeBtn.style.border = 'none';
-    likeBtn.style.color = 'var(--text-muted)';
-    likeBtn.style.cursor = 'pointer';
-    likeBtn.style.fontSize = '12px';
-    likeBtn.addEventListener('click', () => handleLikeFeedback(feedback.id));
-    
-    footer.appendChild(date);
-    footer.appendChild(likeBtn);
-    
-    item.insertBefore(header, item.firstChild);
-    item.appendChild(footer);
-    
-    return item;
-}
-
-async function handleLikeFeedback(feedbackId) {
-    try {
-        const { data, error } = await supabase
-            .from('product_feedback')
-            .select('likes, liked_by')
-            .eq('id', feedbackId)
+        // Check if coupon exists and is valid
+        const { data: coupon, error } = await supabase
+            .from('coupons')
+            .select('*')
+            .eq('code', code)
+            .eq('status', 'active')
             .single();
         
-        if (error) throw error;
-        
-        const likedBy = data.liked_by || [];
-        
-        if (likedBy.includes(currentUser.id)) {
-            showToast('You already liked this feedback', 'info');
+        if (error || !coupon) {
+            showToast('Invalid Coupon', 'This coupon code is not valid', 'error');
+            hideLoader();
             return;
         }
         
-        const { error: updateError } = await supabase
-            .from('product_feedback')
-            .update({
-                likes: (data.likes || 0) + 1,
-                liked_by: [...likedBy, currentUser.id]
-            })
-            .eq('id', feedbackId);
+        // Check if coupon is for specific product
+        if (coupon.product_id && coupon.product_id !== AppState.selectedProduct.id) {
+            showToast('Invalid Coupon', 'This coupon is not valid for this product', 'error');
+            hideLoader();
+            return;
+        }
         
-        if (updateError) throw updateError;
+        // Check if user-specific
+        if (coupon.user_id && coupon.user_id !== AppState.currentUser.id) {
+            showToast('Invalid Coupon', 'This coupon is not available for you', 'error');
+            hideLoader();
+            return;
+        }
         
-        showToast('Thank you for your feedback!', 'success');
+        // Check if already used by this user
+        const { data: usage } = await supabase
+            .from('coupon_usage')
+            .select('*')
+            .eq('coupon_id', coupon.id)
+            .eq('user_id', AppState.currentUser.id)
+            .single();
+        
+        if (usage && coupon.single_use) {
+            showToast('Coupon Used', 'You have already used this coupon', 'warning');
+            hideLoader();
+            return;
+        }
+        
+        // Apply coupon
+        appliedCoupon = coupon;
+        
+        document.getElementById('couponApplied').style.display = 'flex';
+        input.disabled = true;
+        
+        showToast('Coupon Applied!', `${coupon.discount_percent}% discount applied`, 'success');
+        hideLoader();
+        
+        // Update price display
+        updatePriceWithCoupon();
         
     } catch (error) {
-        console.error('Error liking feedback:', error);
+        console.error('Coupon error:', error);
+        showToast('Error', 'Failed to apply coupon', 'error');
+        hideLoader();
     }
 }
 
-// ==================== BUY NOW PROCESS ====================
-async function handleBuyNow() {
-    if (!selectedProduct) {
-        showToast('Please select a product', 'warning');
+function removeCoupon() {
+    appliedCoupon = null;
+    document.getElementById('couponApplied').style.display = 'none';
+    document.getElementById('couponInput').disabled = false;
+    document.getElementById('couponInput').value = '';
+    
+    updatePriceWithCoupon();
+    showToast('Coupon Removed', 'Coupon has been removed', 'info');
+}
+
+function updatePriceWithCoupon() {
+    if (!AppState.selectedProduct) return;
+    
+    let finalPrice = calculateDiscount(AppState.selectedProduct.price, AppState.selectedProduct.discount_percent);
+    
+    if (appliedCoupon) {
+        finalPrice = calculateDiscount(finalPrice, appliedCoupon.discount_percent);
+    }
+    
+    // Update price in modal
+    const priceElements = document.querySelectorAll('.product-detail-value');
+    if (priceElements.length > 0) {
+        // Find price element and update it
+        // This is simplified - in real implementation, target specific element
+    }
+}
+
+/* ========================================
+   CHECKOUT PROCESS
+======================================== */
+
+async function proceedToCheckout() {
+    if (!AppState.selectedProduct) {
+        showToast('Error', 'Please select a product', 'error');
         return;
     }
     
-    // Collect input table data
-    const inputData = {};
-    const inputs = document.querySelectorAll('.input-field input, .input-field textarea');
-    let hasEmptyRequired = false;
+    // Validate input tables
+    const inputs = document.querySelectorAll('.input-table-input');
+    const tableData = {};
+    let hasError = false;
     
     inputs.forEach(input => {
-        const fieldName = input.dataset.fieldName;
-        if (input.hasAttribute('required') && !input.value.trim()) {
-            hasEmptyRequired = true;
+        if (!input.value.trim()) {
+            hasError = true;
+            input.style.borderColor = '#ef4444';
+        } else {
+            input.style.borderColor = '';
+            tableData[input.dataset.tableId] = input.value.trim();
         }
-        inputData[fieldName] = input.value.trim();
     });
     
-    if (hasEmptyRequired) {
-        showToast('Please fill all required fields', 'warning');
+    if (hasError) {
+        showToast('Missing Information', 'Please fill in all required fields', 'warning');
         return;
     }
     
+    closeProductDetail();
+    
     // Show payment modal
-    await showPaymentModal(selectedProduct, inputData);
+    await showPaymentModal(tableData);
 }
 
-async function showPaymentModal(product, inputData) {
+async function showPaymentModal(tableData) {
+    showLoader();
+    
     try {
-        // Load payment methods
-        const { data: paymentMethods, error } = await supabase
+        // Get payment methods for this product
+        const { data: productPayments } = await supabase
+            .from('product_payment_methods')
+            .select('payment_method_id')
+            .eq('product_id', AppState.selectedProduct.id);
+        
+        if (!productPayments || productPayments.length === 0) {
+            showToast('Error', 'No payment methods available', 'error');
+            hideLoader();
+            return;
+        }
+        
+        const paymentIds = productPayments.map(p => p.payment_method_id);
+        
+        const { data: payments, error } = await supabase
             .from('payment_methods')
             .select('*')
-            .in('id', product.payment_method_ids || []);
+            .in('id', paymentIds)
+            .eq('status', 'active');
         
-        if (error) throw error;
+        if (error || !payments || payments.length === 0) {
+            showToast('Error', 'No payment methods available', 'error');
+            hideLoader();
+            return;
+        }
         
-        const finalPrice = product.discount_percentage && product.discount_percentage > 0
-            ? calculateDiscountedPrice(product.price, product.discount_percentage)
-            : product.price;
+        const modal = document.getElementById('orderConfirmModal');
+        const content = document.getElementById('orderConfirmContent');
         
-        const modal = document.createElement('div');
-        modal.className = 'modal payment-modal active';
-        modal.id = 'paymentModal';
+        let finalPrice = calculateDiscount(AppState.selectedProduct.price, AppState.selectedProduct.discount_percent);
         
-        modal.innerHTML = `
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <div class="payment-header">
-                    <h2>Complete Payment</h2>
-                    <p>Choose your payment method</p>
+        if (appliedCoupon) {
+            finalPrice = calculateDiscount(finalPrice, appliedCoupon.discount_percent);
+        }
+        
+        let paymentsHTML = '';
+        payments.forEach(payment => {
+            paymentsHTML += `
+                <div class="payment-method-item" data-payment-id="${payment.id}">
+                    <img src="${payment.icon_url}" alt="${payment.name}">
+                    <span>${payment.name}</span>
+                </div>
+            `;
+        });
+        
+        content.innerHTML = `
+            <div style="padding: 2rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">Complete Order</h2>
+                
+                <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Product</h3>
+                    <p style="font-size: 1.1rem; font-weight: 600;">${AppState.selectedProduct.name}</p>
+                    <p style="font-size: 1.3rem; font-weight: 700; color: var(--accent-purple); margin-top: 0.5rem;">
+                        ${formatPrice(finalPrice)}
+                    </p>
                 </div>
                 
-                <div class="payment-summary">
-                    <h3>Order Summary</h3>
-                    <div class="summary-row">
-                        <span>Product:</span>
-                        <span>${product.name}</span>
-                    </div>
-                    ${product.discount_percentage ? `
-                    <div class="summary-row">
-                        <span>Original Price:</span>
-                        <span>${formatCurrency(product.price)} Ks</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Discount:</span>
-                        <span style="color: var(--danger);">-${product.discount_percentage}%</span>
-                    </div>
-                    ` : ''}
-                    <div class="summary-row total">
-                        <span>Total:</span>
-                        <span id="totalAmount">${formatCurrency(finalPrice)} Ks</span>
-                    </div>
-                </div>
-                
-                <div class="coupon-section">
-                    <h3>Have a coupon?</h3>
-                    <div class="coupon-input-wrapper">
-                        <input type="text" class="coupon-input" id="couponInput" placeholder="Enter coupon code">
-                        <button class="apply-coupon-btn" onclick="applyCoupon()">Apply</button>
-                    </div>
-                    <div id="couponSuccess"></div>
-                </div>
-                
-                <div class="payment-methods">
-                    <h3>Select Payment Method</h3>
-                    <div class="payment-methods-grid" id="paymentMethodsGrid"></div>
-                </div>
-                
-                <div id="paymentDetailsContainer"></div>
-                
-                <div class="proof-upload" id="proofUploadSection" style="display: none;">
-                    <h4>Upload Payment Proof</h4>
-                    <div class="file-upload-wrapper" id="fileUploadWrapper">
-                        <input type="file" id="proofFile" accept="image/*">
-                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                        <p class="upload-text">Click to upload screenshot</p>
-                        <img class="preview-image" id="previewImage">
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Select Payment Method</h3>
+                    <div id="paymentMethodsList" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                        ${paymentsHTML}
                     </div>
                 </div>
                 
-                <button class="submit-order-btn" id="submitOrderBtn" onclick="submitOrder()" disabled>
+                <div id="paymentDetails" style="display: none; background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                    <!-- Payment details will be inserted here -->
+                </div>
+                
+                <div id="proofUpload" style="display: none; margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Upload Payment Proof</h3>
+                    <input type="file" id="paymentProofInput" accept="image/*" style="width: 100%; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-md); color: var(--text-primary);">
+                </div>
+                
+                <button id="submitOrderBtn" class="buy-now-btn" style="display: none;" onclick="submitOrder('${JSON.stringify(tableData).replace(/'/g, "\\'")}')">
                     Submit Order
+                </button>
+                
+                <button class="buy-now-btn" style="background: var(--bg-hover); margin-top: 0.5rem;" onclick="closeOrderModal()">
+                    Cancel
                 </button>
             </div>
         `;
         
-        document.body.appendChild(modal);
+        modal.classList.add('active');
         
-        // Render payment methods
-        renderPaymentMethods(paymentMethods);
-        
-        // Setup file upload
-        setupFileUpload();
-        
-        // Close modal handlers
-        modal.querySelector('.close-modal').addEventListener('click', () => {
-            modal.remove();
+        // Add payment method listeners
+        document.querySelectorAll('.payment-method-item').forEach(item => {
+            item.addEventListener('click', async function() {
+                document.querySelectorAll('.payment-method-item').forEach(i => {
+                    i.style.border = '2px solid transparent';
+                });
+                this.style.border = '2px solid var(--accent-purple)';
+                
+                const paymentId = this.dataset.paymentId;
+                await showPaymentDetails(paymentId);
+            });
         });
         
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-        
-        // Store data for order submission
-        window.currentOrderData = {
-            product: product,
-            inputData: inputData,
-            finalPrice: finalPrice,
-            selectedPayment: null,
-            proofFile: null,
-            appliedCoupon: null
-        };
+        hideLoader();
         
     } catch (error) {
-        console.error('Error showing payment modal:', error);
-        showToast('Failed to load payment methods', 'error');
+        console.error('Payment modal error:', error);
+        hideLoader();
+        showToast('Error', 'Failed to load payment methods', 'error');
     }
 }
 
-function renderPaymentMethods(methods) {
-    const container = document.getElementById('paymentMethodsGrid');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    methods.forEach(method => {
-        const item = document.createElement('div');
-        item.className = 'payment-method-item';
-        item.dataset.methodId = method.id;
-        
-        const icon = document.createElement('img');
-        icon.className = 'payment-method-icon';
-        icon.src = method.icon_url;
-        icon.alt = method.name;
-        
-        const name = document.createElement('div');
-        name.className = 'payment-method-name';
-        name.textContent = method.name;
-        
-        item.appendChild(icon);
-        item.appendChild(name);
-        
-        item.addEventListener('click', () => {
-            document.querySelectorAll('.payment-method-item').forEach(p => p.classList.remove('selected'));
-            item.classList.add('selected');
-            showPaymentDetails(method);
-            window.currentOrderData.selectedPayment = method;
-            checkSubmitButton();
-        });
-        
-        container.appendChild(item);
-    });
-}
-
-function showPaymentDetails(method) {
-    const container = document.getElementById('paymentDetailsContainer');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="payment-details active">
-            <h4>${method.name} Payment Details</h4>
-            <div class="payment-info-row">
-                <span class="payment-info-label">Account Name:</span>
-                <span class="payment-info-value">
-                    ${method.account_name}
-                    <button class="copy-btn" onclick="copyToClipboard('${method.account_name}')">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </span>
-            </div>
-            <div class="payment-info-row">
-                <span class="payment-info-label">Account Number:</span>
-                <span class="payment-info-value">
-                    ${method.account_number}
-                    <button class="copy-btn" onclick="copyToClipboard('${method.account_number}')">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </span>
-            </div>
-            ${method.instructions ? `
-            <div class="payment-instructions">
-                <p>${method.instructions}</p>
-            </div>
-            ` : ''}
-        </div>
-    `;
-    
-    document.getElementById('proofUploadSection').style.display = 'block';
-}
-
-function setupFileUpload() {
-    const fileInput = document.getElementById('proofFile');
-    const wrapper = document.getElementById('fileUploadWrapper');
-    const preview = document.getElementById('previewImage');
-    
-    fileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        if (!file.type.startsWith('image/')) {
-            showToast('Please select an image file', 'error');
-            return;
-        }
-        
-        // Show preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            preview.src = e.target.result;
-            wrapper.classList.add('has-file');
-        };
-        reader.readAsDataURL(file);
-        
-        window.currentOrderData.proofFile = file;
-        checkSubmitButton();
-    });
-}
-
-function checkSubmitButton() {
-    const btn = document.getElementById('submitOrderBtn');
-    if (!btn) return;
-    
-    const hasPayment = window.currentOrderData.selectedPayment !== null;
-    const hasProof = window.currentOrderData.proofFile !== null;
-    
-    btn.disabled = !(hasPayment && hasProof);
-}
-
-async function applyCoupon() {
-    const code = document.getElementById('couponInput').value.trim();
-    if (!code) {
-        showToast('Please enter coupon code', 'warning');
-        return;
-    }
-    
+async function showPaymentDetails(paymentId) {
     try {
-        const { data, error } = await supabase
-            .from('coupons')
+        const { data: payment, error } = await supabase
+            .from('payment_methods')
             .select('*')
-            .eq('code', code)
+            .eq('id', paymentId)
             .single();
         
-        if (error || !data) {
-            showToast('Invalid coupon code', 'error');
-            return;
-        }
+        if (error) throw error;
         
-        // Check if coupon is valid for this user
-        if (data.user_ids && data.user_ids.length > 0) {
-            if (!data.user_ids.includes(currentUser.id)) {
-                showToast('This coupon is not valid for your account', 'error');
-                return;
-            }
-        }
-        
-        // Check if coupon is valid for this product
-        if (data.product_ids && data.product_ids.length > 0) {
-            if (!data.product_ids.includes(selectedProduct.id)) {
-                showToast('This coupon is not valid for this product', 'error');
-                return;
-            }
-        }
-        
-        // Check if already used
-        if (data.used_by && data.used_by.includes(currentUser.id)) {
-            showToast('You have already used this coupon', 'error');
-            return;
-        }
-        
-        // Apply discount
-        const currentPrice = window.currentOrderData.finalPrice;
-        const discountAmount = (currentPrice * data.discount_percentage) / 100;
-        const newPrice = currentPrice - discountAmount;
-        
-        window.currentOrderData.finalPrice = newPrice;
-        window.currentOrderData.appliedCoupon = data;
-        
-        document.getElementById('totalAmount').textContent = `${formatCurrency(newPrice)} Ks`;
-        
-        document.getElementById('couponSuccess').innerHTML = `
-            <div class="coupon-success">
-                <i class="fas fa-check-circle"></i>
-                <div class="coupon-success-text">
-                    <h5>Coupon Applied!</h5>
-                    <p>You saved ${formatCurrency(discountAmount)} Ks (${data.discount_percentage}%)</p>
-                </div>
+        const detailsDiv = document.getElementById('paymentDetails');
+        detailsDiv.innerHTML = `
+            <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem;">Payment Instructions</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">${payment.instructions || 'Transfer to the account below'}</p>
+            <div style="background: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 0.5rem;">
+                <strong>Account Name:</strong> ${payment.account_name}
+            </div>
+            <div style="background: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-sm);">
+                <strong>Account Number:</strong> ${payment.account_number}
             </div>
         `;
+        detailsDiv.style.display = 'block';
         
-        showToast('Coupon applied successfully!', 'success');
+        document.getElementById('proofUpload').style.display = 'block';
+        document.getElementById('submitOrderBtn').style.display = 'block';
+        document.getElementById('submitOrderBtn').dataset.paymentId = paymentId;
         
     } catch (error) {
-        console.error('Error applying coupon:', error);
-        showToast('Failed to apply coupon', 'error');
+        console.error('Payment details error:', error);
     }
 }
 
-// ==================== ORDER SUBMISSION ====================
-async function submitOrder() {
-    if (!window.currentOrderData || !window.currentOrderData.selectedPayment || !window.currentOrderData.proofFile) {
-        showToast('Please complete all required fields', 'warning');
+function closeOrderModal() {
+    const modal = document.getElementById('orderConfirmModal');
+    modal.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+}
+
+/* ========================================
+   ORDER SUBMISSION
+======================================== */
+
+async function submitOrder(tableDataStr) {
+    const tableData = JSON.parse(tableDataStr);
+    
+    // Validate payment proof
+    const proofInput = document.getElementById('paymentProofInput');
+    if (!proofInput.files || proofInput.files.length === 0) {
+        showToast('Missing Proof', 'Please upload payment proof screenshot', 'warning');
         return;
     }
     
-    const btn = document.getElementById('submitOrderBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    const submitBtn = document.getElementById('submitOrderBtn');
+    const paymentId = submitBtn.dataset.paymentId;
     
-    showLoading();
+    if (!paymentId) {
+        showToast('Error', 'Please select a payment method', 'error');
+        return;
+    }
+    
+    showLoader();
+    preventRefresh = true;
     
     try {
-        // Upload proof image
-        const proofFile = window.currentOrderData.proofFile;
-        const fileExt = proofFile.name.split('.').pop();
-        const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
+        // Upload payment proof
+        const proofFile = proofInput.files[0];
+        const proofUrl = await uploadImage(proofFile);
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('payment-proofs')
-            .upload(fileName, proofFile);
+        // Calculate final price
+        let finalPrice = calculateDiscount(AppState.selectedProduct.price, AppState.selectedProduct.discount_percent);
+        let couponDiscount = 0;
         
-        if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage
-            .from('payment-proofs')
-            .getPublicUrl(fileName);
+        if (appliedCoupon) {
+            const discountedPrice = calculateDiscount(finalPrice, appliedCoupon.discount_percent);
+            couponDiscount = finalPrice - discountedPrice;
+            finalPrice = discountedPrice;
+        }
         
         // Generate order ID
-        const now = new Date();
-        const orderId = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+        const orderId = generateOrderId();
         
         // Create order
-        const orderData = {
-            order_id: orderId,
-            user_id: currentUser.id,
-            product_id: window.currentOrderData.product.id,
-            category_card_id: currentCategoryCard.id,
-            product_name: window.currentOrderData.product.name,
-            product_icon: window.currentOrderData.product.icon_url,
-            amount: window.currentOrderData.product.amount,
-            original_price: window.currentOrderData.product.price,
-            discount_percentage: window.currentOrderData.product.discount_percentage || 0,
-            final_price: window.currentOrderData.finalPrice,
-            payment_method_id: window.currentOrderData.selectedPayment.id,
-            payment_method_name: window.currentOrderData.selectedPayment.name,
-            payment_method_icon: window.currentOrderData.selectedPayment.icon_url,
-            payment_proof_url: publicUrl,
-            input_data: window.currentOrderData.inputData,
-            coupon_code: window.currentOrderData.appliedCoupon?.code || null,
-            coupon_discount: window.currentOrderData.appliedCoupon?.discount_percentage || 0,
-            status: 'pending',
-            created_at: now.toISOString()
-        };
-        
-        const { data: order, error: orderError } = await supabase
+        const { data: order, error } = await supabase
             .from('orders')
-            .insert([orderData])
+            .insert([{
+                order_id: orderId,
+                user_id: AppState.currentUser.id,
+                product_id: AppState.selectedProduct.id,
+                category_card_id: AppState.currentCategoryCard.id,
+                payment_method_id: paymentId,
+                input_data: JSON.stringify(tableData),
+                payment_proof_url: proofUrl,
+                price: AppState.selectedProduct.price,
+                discount_percent: AppState.selectedProduct.discount_percent || 0,
+                coupon_id: appliedCoupon ? appliedCoupon.id : null,
+                coupon_discount: couponDiscount,
+                final_price: finalPrice,
+                status: 'pending',
+                created_at: new Date().toISOString()
+            }])
             .select()
             .single();
         
-        if (orderError) throw orderError;
+        if (error) throw error;
         
-        // Update coupon if used
-        if (window.currentOrderData.appliedCoupon) {
-            const usedBy = window.currentOrderData.appliedCoupon.used_by || [];
+        // Record coupon usage if applied
+        if (appliedCoupon) {
             await supabase
-                .from('coupons')
-                .update({
-                    used_by: [...usedBy, currentUser.id],
-                    usage_count: (window.currentOrderData.appliedCoupon.usage_count || 0) + 1
-                })
-                .eq('id', window.currentOrderData.appliedCoupon.id);
+                .from('coupon_usage')
+                .insert([{
+                    coupon_id: appliedCoupon.id,
+                    user_id: AppState.currentUser.id,
+                    order_id: order.id,
+                    used_at: new Date().toISOString()
+                }]);
         }
         
-        // Update user total orders
-        await supabase
-            .from('users')
-            .update({ total_orders: (currentUser.total_orders || 0) + 1 })
-            .eq('id', currentUser.id);
+        preventRefresh = false;
+        hideLoader();
+        closeOrderModal();
         
-        currentUser.total_orders = (currentUser.total_orders || 0) + 1;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        showToast('Order Submitted!', 'Your order has been submitted successfully', 'success');
         
-        hideLoading();
+        // Reset state
+        AppState.selectedProduct = null;
+        appliedCoupon = null;
         
-        // Close modal
-        document.getElementById('paymentModal')?.remove();
-        
-        showToast('Order submitted successfully!', 'success');
-        
-        // Navigate to order history
+        // Switch to order history
         setTimeout(() => {
-            navigateTo('orderHistory');
+            switchPage('orderHistory');
         }, 1500);
         
     } catch (error) {
-        console.error('Error submitting order:', error);
-        showToast('Failed to submit order', 'error');
-        hideLoading();
-        
-        btn.disabled = false;
-        btn.innerHTML = 'Submit Order';
+        console.error('Order submission error:', error);
+        preventRefresh = false;
+        hideLoader();
+        showToast('Error', 'Failed to submit order. Please try again.', 'error');
     }
 }
 
-// ==================== LOAD USER ORDERS ====================
-async function loadUserOrders() {
+/* ========================================
+   ORDER HISTORY
+======================================== */
+
+async function loadOrderHistory() {
     try {
-        const { data, error } = await supabase
+        const { data: orders, error } = await supabase
             .from('orders')
-            .select('*')
-            .eq('user_id', currentUser.id)
+            .select(`
+                *,
+                products (name, icon_url),
+                payment_methods (name, icon_url)
+            `)
+            .eq('user_id', AppState.currentUser.id)
             .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        orders = data || [];
-        renderOrders();
+        AppState.orders = orders || [];
+        
+        const container = document.getElementById('orderHistoryList');
+        container.innerHTML = '';
+        
+        if (orders.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <i class="fas fa-shopping-bag" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p>No orders yet</p>
+                </div>
+            `;
+            return;
+        }
+        
+        orders.forEach(order => {
+            renderOrderCard(container, order);
+        });
         
     } catch (error) {
-        console.error('Error loading orders:', error);
+        console.error('Order history error:', error);
+        showToast('Error', 'Failed to load order history', 'error');
     }
 }
 
-function renderOrders() {
-    const container = document.getElementById('orderHistoryContainer');
-    if (!container) return;
+function renderOrderCard(container, order) {
+    const card = document.createElement('div');
+    card.className = 'order-card';
     
-    container.innerHTML = '';
+    const createdDate = new Date(order.created_at).toLocaleString();
+    const approvedDate = order.approved_at ? new Date(order.approved_at).toLocaleString() : null;
     
-    if (orders.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <i class="fas fa-shopping-bag" style="font-size: 64px; margin-bottom: 20px; opacity: 0.3;"></i>
-                <h3>No orders yet</h3>
-                <p>Start shopping to see your orders here</p>
+    let statusClass = 'pending';
+    let statusText = 'Pending';
+    if (order.status === 'approved') {
+        statusClass = 'approved';
+        statusText = 'Approved';
+    } else if (order.status === 'rejected') {
+        statusClass = 'rejected';
+        statusText = 'Rejected';
+    }
+    
+    card.innerHTML = `
+        <div class="order-header">
+            <span class="order-id">Order #${order.order_id}</span>
+            <span class="order-status ${statusClass}">${statusText}</span>
+        </div>
+        
+        <div class="order-content">
+            <img src="${order.products.icon_url}" alt="${order.products.name}" class="order-product-icon">
+            <div class="order-details">
+                <div class="order-product-name">${order.products.name}</div>
+                <div class="order-meta">
+                    <div><i class="fas fa-calendar"></i> ${createdDate}</div>
+                    <div><i class="fas fa-credit-card"></i> ${order.payment_methods.name}</div>
+                    ${order.coupon_discount > 0 ? `
+                        <div style="color: #4ade80;">
+                            <i class="fas fa-tag"></i> Coupon: -${formatPrice(order.coupon_discount)}
+                        </div>
+                    ` : ''}
+                </div>
             </div>
-        `;
+        </div>
+        
+        <div class="order-footer">
+            <span class="order-price">${formatPrice(order.final_price)}</span>
+            <span class="order-date">${createdDate}</span>
+        </div>
+        
+        ${order.status === 'approved' ? `
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    <i class="fas fa-check-circle" style="color: #4ade80;"></i> 
+                    Approved on ${approvedDate}
+                </div>
+                ${order.admin_message ? `
+                    <div style="background: var(--bg-secondary); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                        <strong>Message:</strong> ${order.admin_message}
+                    </div>
+                ` : ''}
+                <div class="order-actions">
+                    <button class="order-action-btn primary" onclick="downloadOrderPDF('${order.id}')">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button class="order-action-btn" onclick="viewOrderDetails('${order.id}')">
+                        <i class="fas fa-eye"></i> View Details
+                    </button>
+                </div>
+                
+                ${!order.feedback_given ? `
+                    <div id="feedback-${order.id}" style="margin-top: 1rem;">
+                        <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Rate this order:</div>
+                        <div class="order-rating" id="rating-${order.id}">
+                            ${[1,2,3,4,5].map(i => `
+                                <i class="fas fa-star star" data-rating="${i}" onclick="setRating('${order.id}', ${i})"></i>
+                            `).join('')}
+                        </div>
+                        <textarea 
+                            id="feedback-message-${order.id}" 
+                            placeholder="Share your experience..." 
+                            style="width: 100%; margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-md); color: var(--text-primary); font-family: inherit; min-height: 80px; resize: vertical;"
+                        ></textarea>
+                        <button class="order-action-btn primary" style="margin-top: 0.5rem;" onclick="submitFeedback('${order.id}')">
+                            Submit Feedback
+                        </button>
+                    </div>
+                ` : `
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(74, 222, 128, 0.1); border-radius: var(--radius-sm); font-size: 0.85rem; color: #4ade80;">
+                        <i class="fas fa-check"></i> Feedback submitted
+                        <div class="order-rating" style="margin-top: 0.5rem;">
+                            ${[1,2,3,4,5].map(i => `
+                                <i class="fas fa-star star ${i <= order.user_rating ? 'active' : ''}" style="cursor: default; font-size: 0.85rem;"></i>
+                            `).join('')}
+                        </div>
+                    </div>
+                `}
+            </div>
+        ` : ''}
+        
+        ${order.status === 'rejected' && order.admin_message ? `
+            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: var(--radius-sm);">
+                <div style="font-size: 0.85rem; color: #ef4444; margin-bottom: 0.5rem;">
+                    <i class="fas fa-times-circle"></i> Rejection Reason:
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    ${order.admin_message}
+                </div>
+            </div>
+        ` : ''}
+    `;
+    
+    container.appendChild(card);
+}
+
+let selectedRating = 0;
+
+function setRating(orderId, rating) {
+    selectedRating = rating;
+    const stars = document.querySelectorAll(`#rating-${orderId} .star`);
+    
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.add('active');
+        } else {
+            star.classList.remove('active');
+        }
+    });
+}
+
+async function submitFeedback(orderId) {
+    if (selectedRating === 0) {
+        showToast('Rating Required', 'Please select a rating', 'warning');
         return;
     }
     
-    orders.forEach(order => {
-        const orderEl = createOrderItem(order);
-        container.appendChild(orderEl);
-    });
-}
-
-function createOrderItem(order) {
-    const item = document.createElement('div');
-    item.className = 'order-item';
-    item.dataset.orderId = order.id;
+    const message = document.getElementById(`feedback-message-${orderId}`).value.trim();
     
-    const header = document.createElement('div');
-    header.className = 'order-header';
-    
-    const orderId = document.createElement('div');
-    orderId.className = 'order-id';
-    orderId.innerHTML = `<i class="fas fa-hashtag"></i> ${order.order_id}`;
-    
-    const status = document.createElement('div');
-    status.className = `order-status ${order.status}`;
-    status.textContent = order.status === 'pending' ? 'Pending' : 
-                         order.status === 'approved' ? 'Approved' : 'Rejected';
-    
-    header.appendChild(orderId);
-    header.appendChild(status);
-    
-    const info = document.createElement('div');
-    info.className = 'order-info';
-    
-    const icon = document.createElement('img');
-    icon.className = 'order-product-icon';
-    icon.src = order.product_icon;
-    icon.alt = order.product_name;
-    
-    const details = document.createElement('div');
-    details.className = 'order-details';
-    
-    const productName = document.createElement('div');
-    productName.className = 'order-product-name';
-    productName.textContent = order.product_name;
-    
-    const productInfo = document.createElement('div');
-    productInfo.className = 'order-product-info';
-    productInfo.textContent = order.amount || '';
-    
-    const payment = document.createElement('div');
-    payment.className = 'order-payment';
-    
-    const paymentIcon = document.createElement('img');
-    paymentIcon.className = 'order-payment-icon';
-    paymentIcon.src = order.payment_method_icon;
-    
-    const price = document.createElement('span');
-    price.className = 'order-price';
-    price.textContent = `${formatCurrency(order.final_price)} Ks`;
-    
-    payment.appendChild(paymentIcon);
-    payment.appendChild(price);
-    
-    details.appendChild(productName);
-    details.appendChild(productInfo);
-    details.appendChild(payment);
-    
-    info.appendChild(icon);
-    info.appendChild(details);
-    
-    const footer = document.createElement('div');
-    footer.className = 'order-footer';
-    
-    const date = document.createElement('div');
-    date.className = 'order-date';
-    date.innerHTML = `<i class="fas fa-clock"></i> ${formatTimestamp(order.created_at)}`;
-    
-    const actions = document.createElement('div');
-    actions.className = 'order-actions';
-    
-    const viewBtn = document.createElement('button');
-    viewBtn.className = 'order-action-btn';
-    viewBtn.innerHTML = '<i class="fas fa-eye"></i> View';
-    viewBtn.addEventListener('click', () => viewOrderDetails(order));
-    
-    actions.appendChild(viewBtn);
-    
-    if (order.status === 'approved') {
-        const downloadBtn = document.createElement('button');
-        downloadBtn.className = 'order-action-btn download';
-        downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download';
-        downloadBtn.addEventListener('click', () => downloadOrderPDF(order));
-        actions.appendChild(downloadBtn);
-        
-        // Feedback section
-        const feedbackDiv = document.createElement('div');
-        feedbackDiv.className = 'order-feedback';
-        
-        if (!order.feedback_rating) {
-            const feedbackStars = document.createElement('div');
-            feedbackStars.className = 'feedback-stars';
-            
-            for (let i = 1; i <= 5; i++) {
-                const star = document.createElement('i');
-                star.className = 'fas fa-star star-btn';
-                star.dataset.rating = i;
-                star.addEventListener('click', () => submitFeedback(order, i));
-                feedbackStars.appendChild(star);
-            }
-            
-            feedbackDiv.appendChild(feedbackStars);
-            
-            const feedbackLabel = document.createElement('p');
-            feedbackLabel.style.fontSize = '12px';
-            feedbackLabel.style.color = 'var(--text-muted)';
-            feedbackLabel.style.marginTop = '8px';
-            feedbackLabel.textContent = 'Rate your experience';
-            feedbackDiv.appendChild(feedbackLabel);
-        } else {
-            const ratingDisplay = document.createElement('div');
-            ratingDisplay.className = 'user-rating-display';
-            
-            for (let i = 1; i <= 5; i++) {
-                const star = document.createElement('i');
-                star.className = i <= order.feedback_rating ? 'fas fa-star filled' : 'far fa-star';
-                ratingDisplay.appendChild(star);
-            }
-            
-            feedbackDiv.appendChild(ratingDisplay);
-        }
-        
-        info.appendChild(feedbackDiv);
-        
-        // Admin message
-        if (order.admin_message) {
-            const adminMsg = document.createElement('div');
-            adminMsg.className = 'admin-message';
-            adminMsg.innerHTML = `
-                <h5><i class="fas fa-comment-dots"></i> Message from Admin</h5>
-                <p>${order.admin_message}</p>
-            `;
-            info.appendChild(adminMsg);
-        }
+    if (!message) {
+        showToast('Message Required', 'Please write a feedback message', 'warning');
+        return;
     }
     
-    footer.appendChild(date);
-    footer.appendChild(actions);
+    showLoader();
     
-    item.appendChild(header);
-    item.appendChild(info);
-    item.appendChild(footer);
-    
-    return item;
-}
-
-function viewOrderDetails(order) {
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    
-    modal.innerHTML = `
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <div style="padding: 20px;">
-                <h2 style="margin-bottom: 24px;">Order Details</h2>
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Order ID:</span>
-                    <span class="product-detail-value">${order.order_id}</span>
-                </div>
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Product:</span>
-                    <span class="product-detail-value">${order.product_name}</span>
-                </div>
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Amount:</span>
-                    <span class="product-detail-value">${order.amount || 'N/A'}</span>
-                </div>
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Original Price:</span>
-                    <span class="product-detail-value">${formatCurrency(order.original_price)} Ks</span>
-                </div>
-                
-                ${order.discount_percentage > 0 ? `
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Discount:</span>
-                    <span class="product-detail-value" style="color: var(--danger);">-${order.discount_percentage}%</span>
-                </div>
-                ` : ''}
-                
-                ${order.coupon_code ? `
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Coupon:</span>
-                    <span class="product-detail-value">${order.coupon_code} (-${order.coupon_discount}%)</span>
-                </div>
-                ` : ''}
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Final Price:</span>
-                    <span class="product-detail-value" style="color: var(--success); font-size: 18px;">${formatCurrency(order.final_price)} Ks</span>
-                </div>
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Payment Method:</span>
-                    <span class="product-detail-value">${order.payment_method_name}</span>
-                </div>
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Status:</span>
-                    <span class="product-detail-value">
-                        <span class="order-status ${order.status}">${order.status.toUpperCase()}</span>
-                    </span>
-                </div>
-                
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Order Date:</span>
-                    <span class="product-detail-value">${new Date(order.created_at).toLocaleString()}</span>
-                </div>
-                
-                ${order.approved_at ? `
-                <div class="product-detail-row">
-                    <span class="product-detail-label">Approved Date:</span>
-                    <span class="product-detail-value">${new Date(order.approved_at).toLocaleString()}</span>
-                </div>
-                ` : ''}
-                
-                ${order.payment_proof_url ? `
-                <div style="margin-top: 24px;">
-                    <h4 style="margin-bottom: 12px;">Payment Proof:</h4>
-                    <img src="${order.payment_proof_url}" style="width: 100%; max-width: 400px; border-radius: 12px;">
-                </div>
-                ` : ''}
-                
-                ${order.input_data && Object.keys(order.input_data).length > 0 ? `
-                <div style="margin-top: 24px;">
-                    <h4 style="margin-bottom: 12px;">Additional Information:</h4>
-                    ${Object.entries(order.input_data).map(([key, value]) => `
-                        <div class="product-detail-row">
-                            <span class="product-detail-label">${key}:</span>
-                            <span class="product-detail-value">${value}</span>
-                        </div>
-                    `).join('')}
-                </div>
-                ` : ''}
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        modal.remove();
-    });
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
-}
-
-async function submitFeedback(order, rating) {
     try {
-        // Prompt for message
-        const message = prompt('Share your experience (optional):');
+        // Get order details
+        const order = AppState.orders.find(o => o.id === orderId);
         
+        // Submit feedback
         const { error: feedbackError } = await supabase
-            .from('product_feedback')
+            .from('feedback')
             .insert([{
-                user_id: currentUser.id,
-                category_card_id: order.category_card_id,
+                user_id: AppState.currentUser.id,
+                order_id: orderId,
                 product_id: order.product_id,
-                order_id: order.id,
-                rating: rating,
-                message: message || null,
+                category_card_id: order.category_card_id,
+                rating: selectedRating,
+                message: message,
                 created_at: new Date().toISOString()
             }]);
         
         if (feedbackError) throw feedbackError;
         
         // Update order
-        const { error: updateError } = await supabase
+        const { error: orderError } = await supabase
             .from('orders')
-            .update({ feedback_rating: rating })
-            .eq('id', order.id);
+            .update({
+                feedback_given: true,
+                user_rating: selectedRating
+            })
+            .eq('id', orderId);
         
-        if (updateError) throw updateError;
+        if (orderError) throw orderError;
         
-        // Update category card rating
-        await updateCategoryRating(order.category_card_id);
+        hideLoader();
+        showToast('Feedback Submitted!', 'Thank you for your feedback', 'success');
         
-        showToast('Thank you for your feedback!', 'success');
-        loadUserOrders();
+        // Reload order history
+        await loadOrderHistory();
+        
+        selectedRating = 0;
         
     } catch (error) {
-        console.error('Error submitting feedback:', error);
-        showToast('Failed to submit feedback', 'error');
+        console.error('Feedback error:', error);
+        hideLoader();
+        showToast('Error', 'Failed to submit feedback', 'error');
     }
 }
 
-async function updateCategoryRating(categoryCardId) {
+async function downloadOrderPDF(orderId) {
+    showLoader();
+    
     try {
-        const { data, error } = await supabase
-            .from('product_feedback')
-            .select('rating')
-            .eq('category_card_id', categoryCardId);
+        const order = AppState.orders.find(o => o.id === orderId);
+        
+        if (!order) {
+            throw new Error('Order not found');
+        }
+        
+        // Generate PDF (simplified version - in production use jsPDF or similar)
+        const pdfContent = await generateOrderPDF(order);
+        
+        // Create download link
+        const blob = new Blob([pdfContent], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Order_${order.order_id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        hideLoader();
+        showToast('Downloaded', 'Order receipt downloaded successfully', 'success');
+        
+    } catch (error) {
+        console.error('PDF download error:', error);
+        hideLoader();
+        showToast('Error', 'Failed to download PDF', 'error');
+    }
+}
+
+async function generateOrderPDF(order) {
+    // This is a simplified version
+    // In production, use jsPDF library for proper PDF generation
+    
+    const config = AppState.websiteConfig;
+    const createdDate = new Date(order.created_at).toLocaleString();
+    const approvedDate = order.approved_at ? new Date(order.approved_at).toLocaleString() : 'N/A';
+    
+    const content = `
+        ORDER RECEIPT
+        
+        ${config?.name || 'Premium Store'}
+        
+        ========================================
+        
+        Order ID: ${order.order_id}
+        Status: ${order.status.toUpperCase()}
+        
+        Created: ${createdDate}
+        Approved: ${approvedDate}
+        
+        ========================================
+        
+        PRODUCT DETAILS
+        
+        Product: ${order.products.name}
+        Price: ${formatPrice(order.price)}
+        Discount: ${order.discount_percent}%
+        ${order.coupon_discount > 0 ? `Coupon Discount: ${formatPrice(order.coupon_discount)}` : ''}
+        
+        Final Price: ${formatPrice(order.final_price)}
+        
+        ========================================
+        
+        PAYMENT METHOD
+        
+        ${order.payment_methods.name}
+        
+        ========================================
+        
+        Thank you for your purchase!
+    `;
+    
+    return content;
+}
+
+function viewOrderDetails(orderId) {
+    const order = AppState.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    showToast('Order Details', `Order #${order.order_id}`, 'info');
+}
+
+/* ========================================
+   PRODUCT GUIDELINES
+======================================== */
+
+async function loadProductGuidelines(cardId) {
+    try {
+        const { data: guidelines, error } = await supabase
+            .from('product_guidelines')
+            .select('*')
+            .eq('category_card_id', cardId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
         
         if (error) throw error;
         
-        if (data && data.length > 0) {
-            const totalRating = data.reduce((sum, f) => sum + f.rating, 0);
-            const avgRating = (totalRating / data.length).toFixed(1);
+        const container = document.getElementById('productGuidelines');
+        
+        if (!guidelines || guidelines.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        guidelines.forEach(guideline => {
+            const card = document.createElement('div');
+            card.className = 'guideline-card';
             
-            await supabase
-                .from('category_cards')
-                .update({ rating: parseFloat(avgRating) })
-                .eq('id', categoryCardId);
-        }
-    } catch (error) {
-        console.error('Error updating rating:', error);
-    }
-}
-
-async function downloadOrderPDF(order) {
-    try {
-        showLoading();
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Load website settings for branding
-        const logoUrl = websiteSettings?.logo_url || '';
-        const websiteName = websiteSettings?.website_name || 'Store';
-        
-        let yPos = 20;
-        
-        // Header with logo
-        if (logoUrl) {
-            try {
-                const imgData = await loadImageAsBase64(logoUrl);
-                doc.addImage(imgData, 'PNG', 15, yPos, 30, 30);
-            } catch (e) {
-                console.log('Could not load logo');
-            }
-        }
-        
-        doc.setFontSize(20);
-        doc.setFont(undefined, 'bold');
-        doc.text(websiteName, 50, yPos + 15);
-        
-        yPos += 40;
-        
-        // Order title
-        doc.setFontSize(16);
-        doc.text('Order Receipt', 15, yPos);
-        
-        yPos += 15;
-        
-        // Order details
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        
-        const details = [
-            ['Order ID:', order.order_id],
-            ['Product:', order.product_name],
-            ['Amount:', order.amount || 'N/A'],
-            ['Original Price:', `${formatCurrency(order.original_price)} Ks`],
-        ];
-        
-        if (order.discount_percentage > 0) {
-            details.push(['Discount:', `-${order.discount_percentage}%`]);
-        }
-        
-        if (order.coupon_code) {
-            details.push(['Coupon:', `${order.coupon_code} (-${order.coupon_discount}%)`]);
-        }
-        
-        details.push(['Final Price:', `${formatCurrency(order.final_price)} Ks`]);
-        details.push(['Payment Method:', order.payment_method_name]);
-        details.push(['Status:', order.status.toUpperCase()]);
-        details.push(['Order Date:', new Date(order.created_at).toLocaleString()]);
-        
-        if (order.approved_at) {
-            details.push(['Approved Date:', new Date(order.approved_at).toLocaleString()]);
-        }
-        
-        details.forEach(([label, value]) => {
-            doc.setFont(undefined, 'bold');
-            doc.text(label, 15, yPos);
-            doc.setFont(undefined, 'normal');
-            doc.text(value, 70, yPos);
-            yPos += 8;
+            // Process content to convert image links to actual images
+            let processedContent = guideline.content;
+            
+            // Replace image URLs with img tags
+            const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+            processedContent = processedContent.replace(urlRegex, (url) => {
+                return `<img src="${url}" class="emoji-image" alt="Image">`;
+            });
+            
+            // Process text colors (assuming format: [color:#ff0000]text[/color])
+            const colorRegex = /\[color:(#[0-9a-fA-F]{6})\](.*?)\[\/color\]/gi;
+            processedContent = processedContent.replace(colorRegex, (match, color, text) => {
+                return `<span style="color: ${color};">${text}</span>`;
+            });
+            
+            card.innerHTML = `
+                <div class="guideline-header">
+                    ${guideline.icon_url ? `
+                        <img src="${guideline.icon_url}" alt="${guideline.title}" class="guideline-icon">
+                    ` : ''}
+                    <div>
+                        <h3 class="guideline-title">${guideline.title}</h3>
+                    </div>
+                </div>
+                <div class="guideline-content">${processedContent}</div>
+                ${guideline.social_links ? `
+                    <div class="guideline-socials">
+                        ${JSON.parse(guideline.social_links).map(social => `
+                            <a href="${social.url}" target="_blank" class="guideline-social-btn">
+                                <img src="${social.icon}" alt="${social.name}">
+                            </a>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+            
+            container.appendChild(card);
         });
         
-        // Footer
-        yPos += 10;
-        doc.setFontSize(8);
-        doc.setTextColor(128, 128, 128);
-        doc.text('Thank you for your order!', 15, yPos);
-        doc.text(`Generated on ${new Date().toLocaleString()}`, 15, yPos + 5);
-        
-        // Save with optimized settings
-        doc.save(`order_${order.order_id}.pdf`, { compress: true });
-        
-        hideLoading();
-        showToast('Order receipt downloaded!', 'success');
-        
-        // Auto download setting
-        if (currentUser.settings?.auto_download) {
-            // Already downloaded
-        }
-        
     } catch (error) {
-        console.error('Error generating PDF:', error);
-        showToast('Failed to generate PDF', 'error');
-        hideLoading();
+        console.error('Guidelines error:', error);
     }
 }
 
-async function loadImageAsBase64(url) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = reject;
-        img.src = url;
-    });
+/* ========================================
+   YOUTUBE VIDEOS
+======================================== */
+
+async function loadProductYoutubeVideos(cardId) {
+    try {
+        const { data: videos, error } = await supabase
+            .from('youtube_videos')
+            .select('*')
+            .eq('category_card_id', cardId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('productYoutubeVideos');
+        
+        if (!videos || videos.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        container.innerHTML = '<h2 class="youtube-section-title">Video Tutorials</h2>';
+        
+        videos.forEach(video => {
+            const card = document.createElement('div');
+            card.className = 'youtube-video-card';
+            
+            // Extract video ID from YouTube URL
+            let videoId = '';
+            let embedUrl = '';
+            
+            if (video.url.includes('youtube.com/shorts/')) {
+                videoId = video.url.split('shorts/')[1].split('?')[0];
+                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            } else if (video.url.includes('youtube.com/watch')) {
+                videoId = video.url.split('v=')[1].split('&')[0];
+                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            } else if (video.url.includes('youtu.be/')) {
+                videoId = video.url.split('youtu.be/')[1].split('?')[0];
+                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            }
+            
+            card.innerHTML = `
+                <div class="youtube-video-wrapper">
+                    <iframe 
+                        src="${embedUrl}" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen
+                    ></iframe>
+                </div>
+                ${video.description ? `
+                    <div class="youtube-video-description">${video.description}</div>
+                ` : ''}
+            `;
+            
+            container.appendChild(card);
+        });
+        
+    } catch (error) {
+        console.error('YouTube videos error:', error);
+    }
 }
 
-// ==================== NEWS ====================
+/* ========================================
+   PRODUCT FEEDBACK DISPLAY
+======================================== */
+
+async function loadProductFeedback(cardId) {
+    try {
+        const { data: feedbacks, error } = await supabase
+            .from('feedback')
+            .select(`
+                *,
+                users (username, avatar)
+            `)
+            .eq('category_card_id', cardId)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('productFeedback');
+        
+        if (!feedbacks || feedbacks.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        // Calculate statistics
+        const totalFeedbacks = feedbacks.length;
+        const ratingSum = feedbacks.reduce((sum, f) => sum + f.rating, 0);
+        const avgRating = (ratingSum / totalFeedbacks).toFixed(1);
+        
+        const ratingCounts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+        feedbacks.forEach(f => ratingCounts[f.rating]++);
+        
+        container.innerHTML = `
+            <div class="feedback-header">
+                <h2 class="feedback-title">Customer Reviews</h2>
+                <p class="feedback-description">See what our customers are saying</p>
+            </div>
+            
+            <div class="feedback-stats">
+                <div class="overall-rating">
+                    <div class="rating-number">${avgRating}</div>
+                    <div class="rating-stars">
+                        ${[1,2,3,4,5].map(i => `
+                            <i class="fas fa-star ${i <= Math.round(avgRating) ? 'active' : ''}"></i>
+                        `).join('')}
+                    </div>
+                    <div class="rating-count">${totalFeedbacks} reviews</div>
+                </div>
+                
+                <div class="rating-breakdown">
+                    ${[5,4,3,2,1].map(rating => {
+                        const count = ratingCounts[rating];
+                        const percentage = ((count / totalFeedbacks) * 100).toFixed(0);
+                        return `
+                            <div class="rating-row">
+                                <div class="rating-label">
+                                    ${rating} <i class="fas fa-star" style="font-size: 0.7rem; color: var(--accent-gold);"></i>
+                                </div>
+                                <div class="rating-bar">
+                                    <div class="rating-bar-fill" style="width: ${percentage}%;"></div>
+                                </div>
+                                <div class="rating-percentage">${percentage}%</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            
+            <div class="feedback-list"></div>
+        `;
+        
+        const feedbackList = container.querySelector('.feedback-list');
+        
+        feedbacks.forEach(feedback => {
+            const card = document.createElement('div');
+            card.className = 'feedback-card';
+            
+            const feedbackDate = new Date(feedback.created_at).toLocaleDateString();
+            
+            // Check if current user has liked this feedback
+            const isLiked = false; // TODO: Check from database
+            
+            card.innerHTML = `
+                <div class="feedback-user">
+                    <img src="${feedback.users.avatar}" alt="${feedback.users.username}" class="feedback-user-avatar">
+                    <div class="feedback-user-info">
+                        <div class="feedback-user-name">${feedback.users.username}</div>
+                        <div class="feedback-user-date">${feedbackDate}</div>
+                    </div>
+                    <div class="feedback-rating">
+                        ${[1,2,3,4,5].map(i => `
+                            <i class="fas fa-star ${i <= feedback.rating ? 'active' : ''}" style="color: ${i <= feedback.rating ? 'var(--accent-gold)' : 'var(--text-muted)'};"></i>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="feedback-message">${feedback.message}</div>
+                <div class="feedback-actions">
+                    <button class="feedback-like-btn ${isLiked ? 'liked' : ''}" onclick="likeFeedback('${feedback.id}')">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span>${feedback.likes || 0}</span>
+                    </button>
+                </div>
+            `;
+            
+            feedbackList.appendChild(card);
+        });
+        
+    } catch (error) {
+        console.error('Feedback load error:', error);
+    }
+}
+
+async function likeFeedback(feedbackId) {
+    if (!AppState.sessionActive) {
+        openAuthModal();
+        return;
+    }
+    
+    try {
+        // Check if already liked
+        const { data: existing } = await supabase
+            .from('feedback_likes')
+            .select('*')
+            .eq('feedback_id', feedbackId)
+            .eq('user_id', AppState.currentUser.id)
+            .single();
+        
+        if (existing) {
+            // Unlike
+            await supabase
+                .from('feedback_likes')
+                .delete()
+                .eq('id', existing.id);
+            
+            // Decrement likes count
+            await supabase.rpc('decrement_feedback_likes', { feedback_id: feedbackId });
+            
+            showToast('Unliked', 'Removed like from feedback', 'info');
+        } else {
+            // Like
+            await supabase
+                .from('feedback_likes')
+                .insert([{
+                    feedback_id: feedbackId,
+                    user_id: AppState.currentUser.id,
+                    created_at: new Date().toISOString()
+                }]);
+            
+            // Increment likes count
+            await supabase.rpc('increment_feedback_likes', { feedback_id: feedbackId });
+            
+            showToast('Liked', 'Thank you for your feedback', 'success');
+        }
+        
+        // Reload feedback
+        if (AppState.currentCategoryCard) {
+            await loadProductFeedback(AppState.currentCategoryCard.id);
+        }
+        
+    } catch (error) {
+        console.error('Like feedback error:', error);
+        showToast('Error', 'Failed to like feedback', 'error');
+    }
+}
+
+/* ========================================
+   HOME PAGE DATA
+======================================== */
+
+async function loadHomePageData() {
+    await loadWebsiteConfig();
+    await loadMainBanners();
+    await loadSecondaryBanners();
+    await loadCategories();
+}
+
+/* ========================================
+   NEWS PAGE
+======================================== */
+
 async function loadNews() {
     try {
-        const { data, error } = await supabase
+        const { data: news, error } = await supabase
             .from('news')
             .select('*')
+            .eq('status', 'active')
             .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        renderNews(data || []);
+        const container = document.getElementById('newsList');
+        container.innerHTML = '';
         
-    } catch (error) {
-        console.error('Error loading news:', error);
-    }
-}
-
-function renderNews(newsItems) {
-    const container = document.getElementById('newsContainer');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (newsItems.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">No news available</div>';
-        return;
-    }
-    
-    newsItems.forEach(news => {
-        const newsEl = createNewsItem(news);
-        container.appendChild(newsEl);
-    });
-}
-
-function createNewsItem(news) {
-    const item = document.createElement('div');
-    item.className = 'news-item';
-    
-    // Images section
-    if (news.images && news.images.length > 0) {
-        const imagesDiv = document.createElement('div');
-        imagesDiv.className = 'news-images';
+        if (!news || news.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <i class="fas fa-newspaper" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p>No news available</p>
+                </div>
+            `;
+            return;
+        }
         
-        news.images.forEach((imgUrl, index) => {
-            const img = document.createElement('img');
-            img.className = 'news-image-slide';
-            if (index === 0) img.classList.add('active');
-            img.src = imgUrl;
-            imagesDiv.appendChild(img);
+        news.forEach(item => {
+            renderNewsCard(container, item);
         });
         
-        item.appendChild(imagesDiv);
-        
-        if (news.images.length > 1) {
-            let currentIndex = 0;
-            setInterval(() => {
-                const images = imagesDiv.querySelectorAll('.news-image-slide');
-                images[currentIndex].classList.remove('active');
-                currentIndex = (currentIndex + 1) % images.length;
-                images[currentIndex].classList.add('active');
-            }, 3000);
+    } catch (error) {
+        console.error('News load error:', error);
+        showToast('Error', 'Failed to load news', 'error');
+    }
+}
+
+function renderNewsCard(container, news) {
+    const card = document.createElement('div');
+    card.className = 'news-card';
+    
+    const publishDate = new Date(news.created_at).toLocaleDateString();
+    
+    // Process mentions
+    let processedTitle = news.title;
+    let processedContent = news.content;
+    let mentions = [];
+    
+    if (news.mentions) {
+        try {
+            mentions = JSON.parse(news.mentions);
+            mentions.forEach(mention => {
+                const mentionTag = `@${mention.username}`;
+                processedTitle = processedTitle.replace(mentionTag, `<span class="news-mention">${mentionTag}</span>`);
+                processedContent = processedContent.replace(mentionTag, `<span class="news-mention">${mentionTag}</span>`);
+            });
+        } catch (e) {
+            console.error('Mentions parse error:', e);
         }
     }
     
-    const content = document.createElement('div');
-    content.className = 'news-content';
+    // Process product mentions
+    if (news.product_mentions) {
+        try {
+            const products = JSON.parse(news.product_mentions);
+            products.forEach(product => {
+                const productTag = `#${product.name}`;
+                processedContent = processedContent.replace(productTag, 
+                    `<span class="news-mention" style="cursor: pointer;" onclick="openProductFromNews('${product.id}')">${productTag}</span>`
+                );
+            });
+        } catch (e) {
+            console.error('Product mentions parse error:', e);
+        }
+    }
     
-    const title = document.createElement('h3');
-    title.className = 'news-title';
-    title.textContent = news.title;
-    
-    const description = document.createElement('div');
-    description.className = 'news-description';
-    description.innerHTML = parseContentWithImages(news.description);
-    
-    const meta = document.createElement('div');
-    meta.className = 'news-meta';
-    meta.innerHTML = `
-        <div class="news-date">
-            <i class="fas fa-calendar"></i>
-            <span>${formatTimestamp(news.created_at)}</span>
+    card.innerHTML = `
+        ${news.images && news.images.length > 0 ? `
+            <img src="${news.images[0]}" alt="${news.title}" class="news-image">
+        ` : ''}
+        
+        <div class="news-content">
+            <h3 class="news-title">${processedTitle}</h3>
+            
+            ${mentions.length > 0 ? `
+                <div class="news-mentions">
+                    ${mentions.map(m => `<span class="news-mention">@${m.username}</span>`).join('')}
+                </div>
+            ` : ''}
+            
+            <div class="news-description">${processedContent}</div>
+            
+            ${news.video_url ? `
+                <div class="news-media">
+                    ${renderNewsMedia(news.video_url)}
+                </div>
+            ` : ''}
+            
+            ${news.images && news.images.length > 1 ? `
+                <div class="news-media" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 1rem;">
+                    ${news.images.slice(1).map(img => `
+                        <img src="${img}" alt="News image" style="width: 100%; border-radius: var(--radius-md); cursor: pointer;" onclick="viewImage('${img}')">
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            <div class="news-footer">
+                <span class="news-date">
+                    <i class="fas fa-calendar"></i> ${publishDate}
+                </span>
+                ${news.contacts ? `
+                    <div class="news-contacts">
+                        ${JSON.parse(news.contacts).map(contact => `
+                            <a href="${contact.link}" target="_blank" class="news-contact-btn">
+                                <img src="${contact.icon}" alt="${contact.name}">
+                            </a>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
         </div>
     `;
     
-    content.appendChild(title);
-    content.appendChild(description);
-    content.appendChild(meta);
-    
-    // Contacts
-    if (news.contact_ids && news.contact_ids.length > 0) {
-        loadNewsContacts(content, news.contact_ids);
-    }
-    
-    // Payment methods
-    if (news.payment_method_ids && news.payment_method_ids.length > 0) {
-        loadNewsPayments(content, news.payment_method_ids);
-    }
-    
-    // YouTube video
-    if (news.youtube_url) {
-        const videoDiv = document.createElement('div');
-        videoDiv.className = 'news-video';
-        
+    container.appendChild(card);
+}
+
+function renderNewsMedia(url) {
+    // Detect if YouTube video
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
         let videoId = '';
-        if (news.youtube_url.includes('youtube.com/shorts/')) {
-            videoId = news.youtube_url.split('shorts/')[1].split('?')[0];
-        } else if (news.youtube_url.includes('youtube.com/watch?v=')) {
-            videoId = news.youtube_url.split('v=')[1].split('&')[0];
-        } else if (news.youtube_url.includes('youtu.be/')) {
-            videoId = news.youtube_url.split('youtu.be/')[1].split('?')[0];
+        
+        if (url.includes('youtube.com/shorts/')) {
+            videoId = url.split('shorts/')[1].split('?')[0];
+        } else if (url.includes('youtube.com/watch')) {
+            videoId = url.split('v=')[1].split('&')[0];
+        } else if (url.includes('youtu.be/')) {
+            videoId = url.split('youtu.be/')[1].split('?')[0];
         }
         
-        if (videoId) {
-            const iframe = document.createElement('iframe');
-            iframe.src = `https://www.youtube.com/embed/${videoId}`;
-            iframe.setAttribute('allowfullscreen', '');
-            videoDiv.appendChild(iframe);
-            content.appendChild(videoDiv);
-        }
+        return `
+            <iframe 
+                class="news-video"
+                src="https://www.youtube.com/embed/${videoId}" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen
+                style="width: 100%; height: 250px; border-radius: var(--radius-md);"
+            ></iframe>
+        `;
     }
     
-    item.appendChild(content);
-    
-    return item;
+    // Otherwise treat as direct video URL
+    return `
+        <video 
+            class="news-video" 
+            controls 
+            style="width: 100%; border-radius: var(--radius-md);"
+        >
+            <source src="${url}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    `;
 }
 
-async function loadNewsContacts(container, contactIds) {
+async function openProductFromNews(productId) {
     try {
-        const { data, error } = await supabase
-            .from('contacts')
-            .select('*')
-            .in('id', contactIds);
+        showLoader();
+        
+        const { data: product, error } = await supabase
+            .from('products')
+            .select('*, category_cards(*, categories(*))')
+            .eq('id', productId)
+            .single();
         
         if (error) throw error;
         
-        if (data && data.length > 0) {
-            const contactsDiv = document.createElement('div');
-            contactsDiv.className = 'news-contacts';
+        if (product) {
+            await openCategoryProducts(
+                product.category_cards.categories,
+                product.category_cards
+            );
             
-            data.forEach(contact => {
-                const btn = document.createElement('a');
-                btn.className = 'news-contact-btn';
-                btn.href = contact.link_url;
-                btn.target = '_blank';
-                
-                const icon = document.createElement('img');
-                icon.className = 'news-contact-icon';
-                icon.src = contact.icon_url;
-                
-                btn.appendChild(icon);
-                btn.innerHTML += contact.name;
-                
-                contactsDiv.appendChild(btn);
-            });
-            
-            container.appendChild(contactsDiv);
+            // Auto-select the product
+            setTimeout(() => {
+                const productCard = document.querySelector(`[data-product-id="${productId}"]`);
+                if (productCard) {
+                    productCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    productCard.click();
+                }
+            }, 500);
         }
+        
+        hideLoader();
+        
     } catch (error) {
-        console.error('Error loading news contacts:', error);
+        console.error('Product open error:', error);
+        hideLoader();
+        showToast('Error', 'Failed to open product', 'error');
     }
 }
 
-async function loadNewsPayments(container, paymentIds) {
-    try {
-        const { data, error } = await supabase
-            .from('payment_methods')
-            .select('*')
-            .in('id', paymentIds);
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-            const paymentsDiv = document.createElement('div');
-            paymentsDiv.className = 'news-payments';
-            
-            data.forEach(payment => {
-                const item = document.createElement('div');
-                item.className = 'news-payment-item';
-                
-                const icon = document.createElement('img');
-                icon.className = 'news-payment-icon';
-                icon.src = payment.icon_url;
-                
-                item.appendChild(icon);
-                item.innerHTML += payment.name;
-                
-                paymentsDiv.appendChild(item);
-            });
-            
-            container.appendChild(paymentsDiv);
+function viewImage(url) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.95);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    `;
+    
+    modal.innerHTML = `
+        <img src="${url}" style="max-width: 100%; max-height: 100%; border-radius: var(--radius-lg);">
+        <button onclick="this.parentElement.remove()" style="position: absolute; top: 1rem; right: 1rem; width: 40px; height: 40px; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; color: white; cursor: pointer; backdrop-filter: blur(10px);">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.remove();
         }
-    } catch (error) {
-        console.error('Error loading news payments:', error);
-    }
+    });
+    
+    document.body.appendChild(modal);
 }
 
-// ==================== CONTACTS ====================
+/* ========================================
+   CONTACTS PAGE
+======================================== */
+
 async function loadContacts() {
     try {
-        const { data, error } = await supabase
+        const { data: contacts, error } = await supabase
             .from('contacts')
             .select('*')
-            .order('created_at', { ascending: false });
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
         
         if (error) throw error;
         
-        renderContacts(data || []);
+        const container = document.getElementById('contactsList');
+        container.innerHTML = '';
+        
+        if (!contacts || contacts.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted); grid-column: 1 / -1;">
+                    <i class="fas fa-address-book" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p>No contacts available</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contacts.forEach(contact => {
+            renderContactCard(container, contact);
+        });
         
     } catch (error) {
-        console.error('Error loading contacts:', error);
+        console.error('Contacts load error:', error);
+        showToast('Error', 'Failed to load contacts', 'error');
     }
 }
 
-function renderContacts(contactsList) {
-    const container = document.getElementById('contactsContainer');
-    if (!container) return;
+function renderContactCard(container, contact) {
+    const card = document.createElement('div');
+    card.className = 'contact-card';
     
-    container.innerHTML = '';
+    card.innerHTML = `
+        <div class="contact-icon-wrapper">
+            <img src="${contact.icon_url}" alt="${contact.name}">
+        </div>
+        <div class="contact-name">${contact.name}</div>
+        ${contact.description ? `
+            <div class="contact-description">${contact.description}</div>
+        ` : ''}
+    `;
     
-    if (contactsList.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">No contacts available</div>';
+    card.addEventListener('click', () => {
+        if (contact.link) {
+            window.open(contact.link, '_blank');
+        }
+    });
+    
+    container.appendChild(card);
+}
+
+/* ========================================
+   PROFILE PAGE
+======================================== */
+
+async function loadProfile() {
+    if (!AppState.currentUser) {
+        openAuthModal();
         return;
     }
     
-    contactsList.forEach(contact => {
-        const contactEl = createContactItem(contact);
-        container.appendChild(contactEl);
-    });
-}
-
-function createContactItem(contact) {
-    const item = document.createElement('div');
-    item.className = 'contact-item';
+    const container = document.getElementById('profileContent');
     
-    const header = document.createElement('div');
-    header.className = 'contact-header';
+    // Get user statistics
+    const { data: orders } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', AppState.currentUser.id);
     
-    const icon = document.createElement('img');
-    icon.className = 'contact-icon';
-    icon.src = contact.icon_url;
+    const totalOrders = orders ? orders.length : 0;
+    const approvedOrders = orders ? orders.filter(o => o.status === 'approved').length : 0;
+    const totalSpent = orders ? orders.reduce((sum, o) => o.status === 'approved' ? sum + o.final_price : sum, 0) : 0;
     
-    const info = document.createElement('div');
-    info.className = 'contact-info';
+    const joinDate = new Date(AppState.currentUser.created_at).toLocaleDateString();
     
-    const name = document.createElement('h3');
-    name.textContent = contact.name;
-    
-    const desc = document.createElement('p');
-    desc.textContent = contact.description || '';
-    
-    info.appendChild(name);
-    info.appendChild(desc);
-    
-    header.appendChild(icon);
-    header.appendChild(info);
-    
-    item.appendChild(header);
-    
-    if (contact.address) {
-        const address = document.createElement('div');
-        address.className = 'contact-address';
-        address.textContent = contact.address;
-        item.appendChild(address);
-    }
-    
-    if (contact.link_url) {
-        const linkBtn = document.createElement('a');
-        linkBtn.className = 'contact-link-btn';
-        linkBtn.href = contact.link_url;
-        linkBtn.target = '_blank';
-        linkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Visit';
-        item.appendChild(linkBtn);
-    }
-    
-    return item;
-}
-
-// ==================== REALTIME SUBSCRIPTIONS ====================
-function setupRealtimeSubscriptions() {
-    // Subscribe to orders updates
-    supabase
-        .channel('orders-channel')
-        .on('postgres_changes', 
-            { 
-                event: '*', 
-                schema: 'public', 
-                table: 'orders',
-                filter: `user_id=eq.${currentUser.id}`
-            }, 
-            (payload) => {
-                handleOrderUpdate(payload);
-            }
-        )
-        .subscribe();
-    
-    // Subscribe to notifications
-    supabase
-        .channel('notifications-channel')
-        .on('postgres_changes', 
-            { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'notifications',
-                filter: `user_id=eq.${currentUser.id}`
-            }, 
-            (payload) => {
-                handleNewNotification(payload.new);
-            }
-        )
-        .subscribe();
-    
-    // Subscribe to website settings changes
-    supabase
-        .channel('settings-channel')
-        .on('postgres_changes', 
-            { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'website_settings'
-            }, 
-            (payload) => {
-                loadWebsiteSettings();
-            }
-        )
-        .subscribe();
-}
-
-function handleOrderUpdate(payload) {
-    const { eventType, new: newOrder, old: oldOrder } = payload;
-    
-    if (eventType === 'UPDATE') {
-        // Check if order was approved or rejected
-        if (newOrder.status !== oldOrder.status) {
-            if (newOrder.status === 'approved') {
-                showNotificationToast('Order Approved!', `Your order #${newOrder.order_id} has been approved`, 'success');
-                
-                // Auto download if enabled
-                if (currentUser.settings?.auto_download) {
-                    setTimeout(() => {
-                        downloadOrderPDF(newOrder);
-                    }, 2000);
-                }
-            } else if (newOrder.status === 'rejected') {
-                showNotificationToast('Order Rejected', `Your order #${newOrder.order_id} was rejected`, 'error');
-            }
-            
-            // Reload orders
-            loadUserOrders();
-        }
-    }
-}
-
-function handleNewNotification(notification) {
-    notifications.unshift(notification);
-    updateNotificationBadge();
-    renderNotifications();
-    
-    // Show SMS notification if enabled
-    if (currentUser.settings?.sms_notifications !== false) {
-        showSMSNotification(notification);
-    }
-}
-
-function showSMSNotification(notification) {
-    const smsDiv = document.createElement('div');
-    smsDiv.style.position = 'fixed';
-    smsDiv.style.top = '80px';
-    smsDiv.style.right = '20px';
-    smsDiv.style.background = 'var(--bg-secondary)';
-    smsDiv.style.padding = '16px 20px';
-    smsDiv.style.borderRadius = 'var(--radius-lg)';
-    smsDiv.style.boxShadow = 'var(--shadow-lg)';
-    smsDiv.style.zIndex = '9999';
-    smsDiv.style.maxWidth = '320px';
-    smsDiv.style.animation = 'slideInFromTop 0.4s ease-out';
-    smsDiv.style.border = '2px solid var(--primary)';
-    
-    smsDiv.innerHTML = `
-        <div style="display: flex; align-items: start; gap: 12px;">
-            <i class="fas fa-bell" style="color: var(--primary); font-size: 20px; margin-top: 2px;"></i>
-            <div style="flex: 1;">
-                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">${notification.title}</h4>
-                <p style="font-size: 13px; color: var(--text-secondary);">${notification.message}</p>
+    container.innerHTML = `
+        <div class="profile-header">
+            <div class="profile-avatar-wrapper">
+                <img src="${AppState.currentUser.avatar}" alt="${AppState.currentUser.username}" class="profile-avatar">
             </div>
-            <button style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px;">
-                <i class="fas fa-times"></i>
-            </button>
+            <h2 class="profile-username">${AppState.currentUser.username}</h2>
+            <p class="profile-email">${AppState.currentUser.email}</p>
         </div>
+        
+        <div class="profile-info-cards">
+            <div class="profile-info-card">
+                <div class="profile-info-label">Total Orders</div>
+                <div class="profile-info-value">${totalOrders}</div>
+            </div>
+            <div class="profile-info-card">
+                <div class="profile-info-label">Completed</div>
+                <div class="profile-info-value">${approvedOrders}</div>
+            </div>
+            <div class="profile-info-card">
+                <div class="profile-info-label">Total Spent</div>
+                <div class="profile-info-value">${formatPrice(totalSpent)}</div>
+            </div>
+            <div class="profile-info-card">
+                <div class="profile-info-label">Member Since</div>
+                <div class="profile-info-value" style="font-size: 0.85rem;">${joinDate}</div>
+            </div>
+        </div>
+        
+        <div class="profile-settings">
+            <h3 class="profile-settings-title">
+                <i class="fas fa-cog"></i>
+                Settings
+            </h3>
+            
+            <div class="profile-setting-item">
+                <div>
+                    <div class="profile-setting-label">Background Music</div>
+                    <div class="profile-setting-description">Play background music while browsing</div>
+                </div>
+                <div class="toggle-switch ${AppState.settings?.music ? 'active' : ''}" onclick="toggleSetting('music')"></div>
+            </div>
+            
+            <div class="profile-setting-item">
+                <div>
+                    <div class="profile-setting-label">Notifications</div>
+                    <div class="profile-setting-description">Show notification messages</div>
+                </div>
+                <div class="toggle-switch ${AppState.settings?.notifications !== false ? 'active' : ''}" onclick="toggleSetting('notifications')"></div>
+            </div>
+            
+            <div class="profile-setting-item">
+                <div>
+                    <div class="profile-setting-label">Auto Download Orders</div>
+                    <div class="profile-setting-description">Automatically download approved orders</div>
+                </div>
+                <div class="toggle-switch ${AppState.settings?.autoDownload ? 'active' : ''}" onclick="toggleSetting('autoDownload')"></div>
+            </div>
+            
+            <div class="profile-setting-item" style="border-bottom: none;">
+                <div>
+                    <div class="profile-setting-label">Website Version</div>
+                    <div class="profile-setting-description">v1.0.0</div>
+                </div>
+            </div>
+        </div>
+        
+        ${AppState.websiteConfig?.webapp_url ? `
+            <button class="buy-now-btn" onclick="downloadWebApp()" style="margin-top: 1rem;">
+                <i class="fas fa-download"></i>
+                Download Web App
+            </button>
+        ` : ''}
+        
+        <button class="buy-now-btn" onclick="logout()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); margin-top: 0.5rem;">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+        </button>
     `;
+}
+
+// Initialize settings
+if (!AppState.settings) {
+    AppState.settings = {
+        music: false,
+        notifications: true,
+        autoDownload: false
+    };
+}
+
+function toggleSetting(setting) {
+    AppState.settings[setting] = !AppState.settings[setting];
     
-    document.body.appendChild(smsDiv);
+    // Save to localStorage
+    localStorage.setItem('userSettings', JSON.stringify(AppState.settings));
     
-    smsDiv.querySelector('button').addEventListener('click', () => {
-        smsDiv.remove();
+    // Update toggle visual
+    const toggles = document.querySelectorAll('.toggle-switch');
+    toggles.forEach(toggle => {
+        const parent = toggle.parentElement;
+        const label = parent.querySelector('.profile-setting-label').textContent;
+        
+        if (
+            (label.includes('Music') && setting === 'music') ||
+            (label.includes('Notifications') && setting === 'notifications') ||
+            (label.includes('Auto Download') && setting === 'autoDownload')
+        ) {
+            if (AppState.settings[setting]) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
     });
     
-    setTimeout(() => {
-        smsDiv.style.animation = 'slideOutToTop 0.4s ease-out';
-        setTimeout(() => smsDiv.remove(), 400);
-    }, 5000);
+    // Apply setting
+    if (setting === 'music') {
+        if (AppState.settings.music) {
+            startMusicPlayer();
+        } else {
+            stopMusicPlayer();
+        }
+    }
+    
+    showToast('Setting Updated', `${setting} has been ${AppState.settings[setting] ? 'enabled' : 'disabled'}`, 'success');
 }
 
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInFromTop {
-        from {
-            transform: translateY(-100px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
+async function downloadWebApp() {
+    if (!AppState.websiteConfig?.webapp_url) return;
     
-    @keyframes slideOutToTop {
-        from {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateY(-100px);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
-
-function showNotificationToast(title, message, type = 'info') {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
+    showLoader();
     
-    toast.innerHTML = `
-        <strong>${title}</strong><br>
-        <span style="font-size: 13px; opacity: 0.9;">${message}</span>
-    `;
-    toast.className = 'toast';
-    
-    if (type) {
-        toast.classList.add(type);
-    }
-    
-    toast.classList.add('show');
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 4000);
-}
-
-// ==================== CATEGORY CARD SALES UPDATE ====================
-async function updateCategoryCardSales(categoryCardId) {
     try {
-        const { data, error } = await supabase
-            .from('orders')
-            .select('id')
-            .eq('category_card_id', categoryCardId)
-            .eq('status', 'approved');
+        const response = await fetch(AppState.websiteConfig.webapp_url);
+        const blob = await response.blob();
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'app.apk';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        hideLoader();
+        showToast('Download Started', 'Web app is downloading', 'success');
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        hideLoader();
+        showToast('Error', 'Failed to download app', 'error');
+    }
+}
+
+/* ========================================
+   NOTIFICATIONS SYSTEM
+======================================== */
+
+function toggleNotifications() {
+    const panel = document.getElementById('notificationPanel');
+    
+    if (panel.classList.contains('active')) {
+        panel.classList.remove('active');
+    } else {
+        panel.classList.add('active');
+        loadNotifications();
+    }
+}
+
+function closeNotifications() {
+    document.getElementById('notificationPanel').classList.remove('active');
+}
+
+async function loadNotifications() {
+    if (!AppState.sessionActive) return;
+    
+    try {
+        const { data: notifications, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', AppState.currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(20);
         
         if (error) throw error;
         
-        const totalSales = data?.length || 0;
+        const container = document.getElementById('notificationList');
+        container.innerHTML = '';
         
-        await supabase
-            .from('category_cards')
-            .update({ total_sales: totalSales })
-            .eq('id', categoryCardId);
+        if (!notifications || notifications.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <i class="fas fa-bell-slash" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
+                    <p>No notifications</p>
+                </div>
+            `;
+            
+            document.getElementById('notificationCount').textContent = '0';
+            document.getElementById('notificationCount').style.display = 'none';
+            return;
+        }
         
-    } catch (error) {
-        console.error('Error updating sales:', error);
-    }
-}
-
-// ==================== IMAGE COMPRESSION ====================
-async function compressImage(file, maxSizeMB = 0.1) {
-    const options = {
-        maxSizeMB: maxSizeMB,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        fileType: 'image/jpeg'
-    };
-    
-    try {
-        const compressedFile = await imageCompression(file, options);
-        return compressedFile;
-    } catch (error) {
-        console.error('Error compressing image:', error);
-        return file;
-    }
-}
-
-// ==================== PROFANITY FILTER ====================
-const profanityList = [
-    'fuck', 'shit', 'ass', 'bitch', 'damn', 'hell', 'bastard', 'dick',
-    'pussy', 'cock', 'cunt', 'whore', 'slut', 'fag', 'nigger', 'piss'
-];
-
-function containsProfanity(text) {
-    const lowerText = text.toLowerCase();
-    return profanityList.some(word => lowerText.includes(word));
-}
-
-// ==================== LOCAL STORAGE MANAGEMENT ====================
-function clearOldCache() {
-    const cacheKeys = ['categories', 'products', 'banners'];
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-    
-    cacheKeys.forEach(key => {
-        const cached = localStorage.getItem(key);
-        if (cached) {
-            try {
-                const { timestamp } = JSON.parse(cached);
-                if (Date.now() - timestamp > maxAge) {
-                    localStorage.removeItem(key);
-                }
-            } catch (e) {
-                localStorage.removeItem(key);
+        // Update badge count
+        const unreadCount = notifications.filter(n => !n.read).length;
+        const badge = document.getElementById('notificationCount');
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+        
+        notifications.forEach(notification => {
+            const item = document.createElement('div');
+            item.className = 'notification-item';
+            item.style.cssText = `
+                padding: 1rem;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+                cursor: pointer;
+                transition: var(--transition-fast);
+                background: ${notification.read ? 'transparent' : 'rgba(102, 126, 234, 0.1)'};
+            `;
+            
+            item.addEventListener('mouseover', function() {
+                this.style.background = 'var(--bg-hover)';
+            });
+            
+            item.addEventListener('mouseout', function() {
+                this.style.background = notification.read ? 'transparent' : 'rgba(102, 126, 234, 0.1)';
+            });
+            
+            const notifDate = new Date(notification.created_at).toLocaleString();
+            
+            let icon = 'fa-bell';
+            let iconColor = 'var(--accent-purple)';
+            
+            if (notification.type === 'order') {
+                icon = 'fa-shopping-cart';
+                iconColor = '#4ade80';
+            } else if (notification.type === 'coupon') {
+                icon = 'fa-tag';
+                iconColor = '#fbbf24';
+            } else if (notification.type === 'message') {
+                icon = 'fa-envelope';
+                iconColor = 'var(--accent-blue)';
             }
-        }
-    });
-}
-
-function cacheData(key, data) {
-    const cacheObject = {
-        data: data,
-        timestamp: Date.now()
-    };
-    localStorage.setItem(key, JSON.stringify(cacheObject));
-}
-
-function getCachedData(key) {
-    const cached = localStorage.getItem(key);
-    if (!cached) return null;
-    
-    try {
-        const { data, timestamp } = JSON.parse(cached);
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-        
-        if (Date.now() - timestamp > maxAge) {
-            localStorage.removeItem(key);
-            return null;
-        }
-        
-        return data;
-    } catch (e) {
-        localStorage.removeItem(key);
-        return null;
-    }
-}
-
-// ==================== ERROR HANDLING ====================
-window.addEventListener('error', (event) => {
-    console.error('Global error:', event.error);
-    // Don't show error to user for minor issues
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
-    // Handle promise rejections
-});
-
-// ==================== SECURITY ====================
-// Prevent XSS
-function sanitizeHTML(html) {
-    const div = document.createElement('div');
-    div.textContent = html;
-    return div.innerHTML;
-}
-
-// Prevent SQL injection (handled by Supabase)
-function sanitizeInput(input) {
-    return input.trim().replace(/[<>]/g, '');
-}
-
-// ==================== PERFORMANCE MONITORING ====================
-function measurePerformance() {
-    if (window.performance && window.performance.timing) {
-        const timing = window.performance.timing;
-        const loadTime = timing.loadEventEnd - timing.navigationStart;
-        console.log('Page load time:', loadTime + 'ms');
-    }
-}
-
-window.addEventListener('load', measurePerformance);
-
-// ==================== SERVICE WORKER (PWA Support) ====================
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        // Service worker can be added for offline support
-    });
-}
-
-// ==================== NETWORK STATUS ====================
-window.addEventListener('online', () => {
-    showToast('Connection restored', 'success');
-    // Sync pending data
-});
-
-window.addEventListener('offline', () => {
-    showToast('No internet connection', 'warning');
-});
-
-// ==================== COPY TO CLIPBOARD ====================
-function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Copied to clipboard!', 'success');
-        }).catch(err => {
-            fallbackCopyToClipboard(text);
+            
+            item.innerHTML = `
+                <div style="display: flex; gap: 1rem;">
+                    <div style="flex-shrink: 0;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">
+                            <i class="fas ${icon}" style="color: ${iconColor};"></i>
+                        </div>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--text-primary);">
+                            ${notification.title}
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            ${notification.message}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            <i class="fas fa-clock"></i> ${notifDate}
+                        </div>
+                    </div>
+                    ${!notification.read ? `
+                        <div style="flex-shrink: 0;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-purple);"></div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            item.addEventListener('click', () => handleNotificationClick(notification));
+            
+            container.appendChild(item);
         });
-    } else {
-        fallbackCopyToClipboard(text);
+        
+    } catch (error) {
+        console.error('Notifications load error:', error);
     }
 }
 
-function fallbackCopyToClipboard(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-        document.execCommand('copy');
-        showToast('Copied to clipboard!', 'success');
-    } catch (err) {
-        showToast('Failed to copy', 'error');
+async function handleNotificationClick(notification) {
+    // Mark as read
+    if (!notification.read) {
+        await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('id', notification.id);
+        
+        loadNotifications();
     }
     
-    document.body.removeChild(textArea);
-}
-
-// ==================== INITIALIZE REALTIME ====================
-if (currentUser) {
-    setupRealtimeSubscriptions();
-}
-
-// Clear old cache on load
-clearOldCache();
-
-// ==================== LAZY LOADING IMAGES ====================
-const imageObserver = new IntersectionObserver((entries, observer) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            const img = entry.target;
-            img.src = img.dataset.src;
-            img.classList.add('loaded');
-            observer.unobserve(img);
+    // Handle notification action
+    if (notification.type === 'order' && notification.data) {
+        try {
+            const data = JSON.parse(notification.data);
+            if (data.orderId) {
+                closeNotifications();
+                switchPage('orderHistory');
+            }
+        } catch (e) {
+            console.error('Notification data parse error:', e);
         }
-    });
-});
+    } else if (notification.type === 'coupon' && notification.data) {
+        try {
+            const data = JSON.parse(notification.data);
+            if (data.couponCode) {
+                showToast('Coupon Code', data.couponCode, 'info');
+            }
+        } catch (e) {
+            console.error('Notification data parse error:', e);
+        }
+    }
+}
 
-document.querySelectorAll('img[data-src]').forEach(img => {
-    imageObserver.observe(img);
-});
+// Auto-refresh notifications every 30 seconds
+setInterval(() => {
+    if (AppState.sessionActive && AppState.settings?.notifications !== false) {
+        loadNotifications();
+    }
+}, 30000);
 
-// ==================== BACK BUTTON NAVIGATION ====================
-window.addEventListener('popstate', (event) => {
-    if (currentPage === 'productDetail') {
-        navigateTo('home');
+/* ========================================
+   USER MENU
+======================================== */
+
+function toggleUserMenu() {
+    const menu = document.getElementById('userMenu');
+    
+    if (menu.classList.contains('active')) {
+        menu.classList.remove('active');
+    } else {
+        menu.classList.add('active');
+        updateUserUI();
+    }
+}
+
+// Close user menu when clicking outside
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('userMenu');
+    const btn = document.querySelector('.user-profile-btn');
+    
+    if (menu && !menu.contains(e.target) && !btn?.contains(e.target)) {
+        menu.classList.remove('active');
+    }
+    
+    const notifPanel = document.getElementById('notificationPanel');
+    const notifBtn = document.querySelector('.notification-btn');
+    
+    if (notifPanel && !notifPanel.contains(e.target) && !notifBtn?.contains(e.target)) {
+        notifPanel.classList.remove('active');
     }
 });
 
-// ==================== PREVENT SCREENSHOT (Optional Security) ====================
-// Uncomment if needed
-// document.addEventListener('keyup', (e) => {
-//     if (e.key == 'PrintScreen') {
-//         navigator.clipboard.writeText('');
-//         showToast('Screenshots are disabled', 'warning');
-//     }
-// });
+/* ========================================
+   MUSIC PLAYER
+======================================== */
 
-console.log('🚀 Application loaded successfully!');
-console.log('Version:', websiteSettings?.version || '1.0.0');
+async function loadMusicPlaylist() {
+    try {
+        const { data: songs, error } = await supabase
+            .from('music')
+            .select('*')
+            .eq('status', 'active')
+            .order('order', { ascending: true });
+        
+        if (error) throw error;
+        
+        AppState.musicPlaylist = songs || [];
+        
+        if (songs && songs.length > 0 && AppState.settings?.music) {
+            startMusicPlayer();
+        }
+        
+    } catch (error) {
+        console.error('Music load error:', error);
+    }
+}
+
+function startMusicPlayer() {
+    if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return;
+    
+    const player = document.getElementById('musicPlayer');
+    const audio = document.getElementById('audioPlayer');
+    
+    player.classList.add('active');
+    
+    playSong(AppState.currentSongIndex);
+}
+
+function stopMusicPlayer() {
+    const player = document.getElementById('musicPlayer');
+    const audio = document.getElementById('audioPlayer');
+    
+    player.classList.remove('active');
+    audio.pause();
+    AppState.isPlaying = false;
+}
+
+function playSong(index) {
+    if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return;
+    
+    AppState.currentSongIndex = index;
+    const song = AppState.musicPlaylist[index];
+    
+    const audio = document.getElementById('audioPlayer');
+    const songName = document.getElementById('currentSongName');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    
+    audio.src = song.file_url;
+    songName.textContent = song.name;
+    
+    audio.play();
+    AppState.isPlaying = true;
+    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    
+    // Auto-play next song when current ends
+    audio.onended = () => {
+        playNextSong();
+    };
+}
+
+function playNextSong() {
+    if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return;
+    
+    AppState.currentSongIndex = (AppState.currentSongIndex + 1) % AppState.musicPlaylist.length;
+    playSong(AppState.currentSongIndex);
+}
+
+function playPrevSong() {
+    if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return;
+    
+    AppState.currentSongIndex = (AppState.currentSongIndex - 1 + AppState.musicPlaylist.length) % AppState.musicPlaylist.length;
+    playSong(AppState.currentSongIndex);
+}
+
+function togglePlayPause() {
+    const audio = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    
+    if (AppState.isPlaying) {
+        audio.pause();
+        AppState.isPlaying = false;
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    } else {
+        audio.play();
+        AppState.isPlaying = true;
+        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    }
+}
+
+// Music player controls
+document.getElementById('playPauseBtn')?.addEventListener('click', togglePlayPause);
+document.getElementById('nextSongBtn')?.addEventListener('click', playNextSong);
+document.getElementById('prevSongBtn')?.addEventListener('click', playPrevSong);
+
+document.getElementById('volumeSlider')?.addEventListener('input', function() {
+    const audio = document.getElementById('audioPlayer');
+    audio.volume = this.value / 100;
+});
+
+/* ========================================
+   LOAD SAVED SETTINGS
+======================================== */
+
+function loadSavedSettings() {
+    const saved = localStorage.getItem('userSettings');
+    if (saved) {
+        try {
+            AppState.settings = JSON.parse(saved);
+        } catch (e) {
+            console.error('Settings parse error:', e);
+        }
+    }
+}
+
+// Load settings on init
+loadSavedSettings();
