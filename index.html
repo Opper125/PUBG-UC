@@ -138,6 +138,11 @@
                 <div class="user-profile-btn" onclick="toggleUserMenu()">
                     <img id="userProfileImg" src="/placeholder.svg" alt="Profile" class="user-avatar">
                 </div>
+                
+                <!-- Music Player Button -->
+                <button id="musicPlayerBtn" class="music-player-btn" onclick="toggleMusicPlayer()">
+                    <i class="fas fa-music"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -309,24 +314,31 @@
         </div>
     </div>
 
-    <!-- Music Player -->
-    <div id="musicPlayer" class="music-player">
-        <div class="music-player-content">
-            <div class="music-info">
-                <i class="fas fa-music"></i>
-                <span id="currentSongName">No song playing</span>
+    <!-- Music Player Modal -->
+    <div id="musicPlayerModal" class="music-player-modal">
+        <div class="modal-overlay" onclick="closeMusicPlayer()"></div>
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeMusicPlayer()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="music-player-content">
+                <div class="music-info">
+                    <i class="fas fa-music"></i>
+                    <span id="currentSongName">No song playing</span>
+                </div>
+                <div class="music-controls">
+                    <button id="prevSongBtn"><i class="fas fa-backward"></i></button>
+                    <button id="playPauseBtn"><i class="fas fa-play"></i></button>
+                    <button id="nextSongBtn"><i class="fas fa-forward"></i></button>
+                </div>
+                <div class="music-volume">
+                    <i class="fas fa-volume-up"></i>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                </div>
+                <div id="musicPlaylist" class="music-playlist"></div>
             </div>
-            <div class="music-controls">
-                <button id="prevSongBtn"><i class="fas fa-backward"></i></button>
-                <button id="playPauseBtn"><i class="fas fa-play"></i></button>
-                <button id="nextSongBtn"><i class="fas fa-forward"></i></button>
-            </div>
-            <div class="music-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volumeSlider" min="0" max="100" value="50">
-            </div>
+            <audio id="audioPlayer"></audio>
         </div>
-        <audio id="audioPlayer"></audio>
     </div>
 
     <!-- Toast Notifications -->
