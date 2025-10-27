@@ -1,1227 +1,979 @@
-// ==================== SUPABASE CONFIGURATION ====================
-const SUPABASE_URL = 'https://tyhnhbmiduuaomtkkpik.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5aG5oYm1pZHV1YW9tdGtrcGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0MjUxMDIsImV4cCI6MjA3NzAwMTEwMn0.oOiNrR6devWKlNlyb4H8mcvUfVYCgDR4st_LxagzQ0s';
+/* ========================================
+   ADMIN.JS - CORE FUNCTIONALITY
+======================================== */
+
+/* ========================================
+   SUPABASE CONFIGURATION
+======================================== */
+
+const SUPABASE_URL = 'https://vqumonhyeekgltvercbw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxdW1vbmh5ZWVrZ2x0dmVyY2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NTgzMzAsImV4cCI6MjA3NzEzNDMzMH0._C5EiMWyNs65ymDuwle_8UEytEqhn2bwniNvC9G9j1I';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ==================== GLOBAL VARIABLES ====================
-let adminAuthenticated = false;
-let currentSection = 'overview';
-let dashboardData = {
+/* ========================================
+   ADMIN STATE MANAGEMENT
+======================================== */
+
+const AdminState = {
+    isAuthenticated: false,
+    adminPassword: null,
+    adminIP: null,
+    currentPage: 'dashboard',
+    websiteConfig: null,
+    stats: {
+        totalUsers: 0,
+        totalOrders: 0,
+        approvedOrders: 0,
+        totalRevenue: 0
+    },
     categories: [],
-    categoryCards: [],
     products: [],
     orders: [],
     users: [],
-    paymentMethods: [],
+    banners: [],
     coupons: [],
+    payments: [],
     news: [],
-    contacts: []
+    contacts: [],
+    music: [],
+    charts: {}
 };
 
-// ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', async () => {
-    await getUserIP();
-    checkAdminAuth();
-});
+/* ========================================
+   UTILITY FUNCTIONS
+======================================== */
 
-// ==================== GET USER IP ====================
+function showAdminLoader() {
+    const loader = document.getElementById('adminLoader');
+    if (loader) {
+        loader.classList.add('active');
+    }
+}
+
+function hideAdminLoader() {
+    const loader = document.getElementById('adminLoader');
+    if (loader) {
+        setTimeout(() => {
+            loader.classList.remove('active');
+        }, 300);
+    }
+}
+
+function showAdminToast(title, message, type = 'info') {
+    const container = document.getElementById('adminToastContainer');
+    
+    const toast = document.createElement('div');
+    toast.className = `admin-toast ${type}`;
+    
+    const iconMap = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
+    toast.innerHTML = `
+        <i class="fas ${iconMap[type]}" style="font-size: 1.2rem;"></i>
+        <div style="flex: 1;">
+            <div style="font-weight: 600; margin-bottom: 2px;">${title}</div>
+            <div style="font-size: 0.85rem; color: var(--admin-text-secondary);">${message}</div>
+        </div>
+        <button onclick="this.parentElement.remove()" style="background: transparent; border: none; color: var(--admin-text-muted); cursor: pointer; padding: 4px;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+function formatPrice(price) {
+    return new Intl.NumberFormat('en-US').format(price) + ' Ks';
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 async function getUserIP() {
     try {
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
-        document.getElementById('userIP').textContent = data.ip;
-        localStorage.setItem('userIP', data.ip);
+        return data.ip;
     } catch (error) {
-        console.error('Error getting IP:', error);
-        document.getElementById('userIP').textContent = 'Unknown';
+        console.error('IP fetch error:', error);
+        return null;
     }
 }
 
-// ==================== ADMIN AUTHENTICATION ====================
-function checkAdminAuth() {
-    const adminSession = localStorage.getItem('adminSession');
-    const savedIP = localStorage.getItem('adminIP');
-    const currentIP = localStorage.getItem('userIP');
-    
-    if (adminSession && savedIP === currentIP) {
-        adminAuthenticated = true;
-        showDashboard();
-    }
-}
-
-async function handleAdminLogin() {
-    const password = document.getElementById('adminPassword').value;
-    const currentIP = localStorage.getItem('userIP');
-    
-    if (!password) {
-        showAdminToast('Please enter password', 'error');
-        return;
-    }
-    
-    showAdminLoading();
-    
-    try {
-        // Check admin credentials from database
-        const { data, error } = await supabase
-            .from('admin_credentials')
-            .select('*')
-            .eq('password', password)
-            .single();
+async function compressImage(file, maxSizeMB = 1) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
         
-        if (error || !data) {
-            hideAdminLoading();
-            showAdminToast('Invalid admin password', 'error');
-            return;
+        reader.onload = (e) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                const maxDim = 1920;
+                if (width > height && width > maxDim) {
+                    height = (height * maxDim) / width;
+                    width = maxDim;
+                } else if (height > maxDim) {
+                    width = (width * maxDim) / height;
+                    height = maxDim;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        }));
+                    } else {
+                        reject(new Error('Compression failed'));
+                    }
+                }, 'image/jpeg', 0.85);
+            };
+            
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+async function uploadFile(file, folder = 'admin') {
+    try {
+        // Compress if image
+        if (file.type.startsWith('image/')) {
+            file = await compressImage(file);
         }
         
-        // Check if IP is allowed
-        if (data.allowed_ips && data.allowed_ips.length > 0) {
-            if (!data.allowed_ips.includes(currentIP)) {
-                hideAdminLoading();
-                showAdminToast('Access denied from this IP address', 'error');
-                return;
-            }
-        }
-        
-        // Store admin session
-        localStorage.setItem('adminSession', 'true');
-        localStorage.setItem('adminIP', currentIP);
-        
-        // Update last login
-        await supabase
-            .from('admin_credentials')
-            .update({ 
-                last_login: new Date().toISOString(),
-                last_ip: currentIP
-            })
-            .eq('id', data.id);
-        
-        adminAuthenticated = true;
-        
-        hideAdminLoading();
-        document.getElementById('adminLoginScreen').style.display = 'none';
-        
-        await showDashboard();
-        
-    } catch (error) {
-        console.error('Login error:', error);
-        hideAdminLoading();
-        showAdminToast('Login failed', 'error');
-    }
-}
-
-async function showDashboard() {
-    showAdminLoading();
-    
-    document.getElementById('adminLoginScreen').style.display = 'none';
-    document.getElementById('adminDashboard').style.display = 'flex';
-    
-    await loadDashboardData();
-    await loadOverviewStats();
-    
-    hideAdminLoading();
-}
-
-function handleAdminLogout() {
-    if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('adminSession');
-        localStorage.removeItem('adminIP');
-        location.reload();
-    }
-}
-
-// ==================== LOADING ====================
-function showAdminLoading() {
-    document.getElementById('adminLoading').classList.remove('hidden');
-}
-
-function hideAdminLoading() {
-    document.getElementById('adminLoading').classList.add('hidden');
-}
-
-// ==================== TOAST NOTIFICATIONS ====================
-function showAdminToast(message, type = 'info') {
-    const toast = document.getElementById('adminToast');
-    toast.textContent = message;
-    toast.className = 'admin-toast show';
-    
-    if (type) {
-        toast.classList.add(type);
-    }
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
-}
-
-// ==================== SECTION NAVIGATION ====================
-function showSection(sectionName) {
-    // Update nav buttons
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.closest('.nav-btn').classList.add('active');
-    
-    // Update sections
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.remove('active');
-    });
-    
-    const sectionId = sectionName + 'Section';
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.classList.add('active');
-        currentSection = sectionName;
-        
-        // Load section specific data
-        loadSectionData(sectionName);
-    }
-}
-
-async function loadSectionData(sectionName) {
-    switch(sectionName) {
-        case 'overview':
-            await loadOverviewStats();
-            break;
-        case 'categories':
-            await loadCategories();
-            break;
-        case 'categoryCards':
-            await loadCategoryCards();
-            break;
-        case 'products':
-            await loadProducts();
-            break;
-        case 'orders':
-            await loadOrders();
-            break;
-        case 'users':
-            await loadUsers();
-            break;
-        case 'payments':
-            await loadPaymentMethods();
-            break;
-        case 'coupons':
-            await loadCoupons();
-            break;
-        case 'news':
-            await loadNewsItems();
-            break;
-        case 'contacts':
-            await loadContactsItems();
-            break;
-    }
-}
-
-// ==================== LOAD DASHBOARD DATA ====================
-async function loadDashboardData() {
-    try {
-        const [categories, categoryCards, products, orders, users, payments] = await Promise.all([
-            supabase.from('categories').select('*'),
-            supabase.from('category_cards').select('*'),
-            supabase.from('products').select('*'),
-            supabase.from('orders').select('*'),
-            supabase.from('users').select('*'),
-            supabase.from('payment_methods').select('*')
-        ]);
-        
-        dashboardData.categories = categories.data || [];
-        dashboardData.categoryCards = categoryCards.data || [];
-        dashboardData.products = products.data || [];
-        dashboardData.orders = orders.data || [];
-        dashboardData.users = users.data || [];
-        dashboardData.paymentMethods = payments.data || [];
-        
-    } catch (error) {
-        console.error('Error loading dashboard data:', error);
-    }
-}
-
-// ==================== OVERVIEW STATS ====================
-async function loadOverviewStats() {
-    try {
-        const orders = dashboardData.orders;
-        const users = dashboardData.users;
-        const products = dashboardData.products;
-        
-        // Calculate stats
-        const totalOrders = orders.length;
-        const approvedOrders = orders.filter(o => o.status === 'approved').length;
-        const pendingOrders = orders.filter(o => o.status === 'pending').length;
-        const rejectedOrders = orders.filter(o => o.status === 'rejected').length;
-        
-        const totalRevenue = orders
-            .filter(o => o.status === 'approved')
-            .reduce((sum, o) => sum + (o.final_price || 0), 0);
-        
-        const today = new Date().toISOString().split('T')[0];
-        const todayRevenue = orders
-            .filter(o => o.status === 'approved' && o.created_at.startsWith(today))
-            .reduce((sum, o) => sum + (o.final_price || 0), 0);
-        
-        // Update UI
-        document.getElementById('totalOrders').textContent = totalOrders;
-        document.getElementById('approvedOrders').textContent = approvedOrders;
-        document.getElementById('pendingOrders').textContent = pendingOrders;
-        document.getElementById('rejectedOrders').textContent = rejectedOrders;
-        document.getElementById('totalUsers').textContent = users.length;
-        document.getElementById('totalProducts').textContent = products.length;
-        document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue) + ' Ks';
-        document.getElementById('todayRevenue').textContent = formatCurrency(todayRevenue) + ' Ks';
-        document.getElementById('pendingOrdersBadge').textContent = pendingOrders;
-        
-        // Load recent orders
-        loadRecentOrders();
-        
-        // Load top products
-        loadTopProducts();
-        
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
-}
-
-function loadRecentOrders() {
-    const container = document.getElementById('recentOrdersList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    const recentOrders = dashboardData.orders
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 10);
-    
-    if (recentOrders.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No orders yet</p>';
-        return;
-    }
-    
-    recentOrders.forEach(order => {
-        const item = document.createElement('div');
-        item.className = 'order-item-mini';
-        item.innerHTML = `
-            <img src="${order.product_icon}" alt="${order.product_name}">
-            <div class="order-item-info">
-                <h4>#${order.order_id}</h4>
-                <p>${order.product_name}</p>
-            </div>
-            <span class="order-item-status ${order.status}">${order.status}</span>
-        `;
-        item.addEventListener('click', () => viewOrderDetail(order));
-        container.appendChild(item);
-    });
-}
-
-function loadTopProducts() {
-    const container = document.getElementById('topProductsList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    // Calculate product sales
-    const productSales = {};
-    dashboardData.orders
-        .filter(o => o.status === 'approved')
-        .forEach(order => {
-            if (!productSales[order.product_id]) {
-                productSales[order.product_id] = {
-                    count: 0,
-                    product: dashboardData.products.find(p => p.id === order.product_id)
-                };
-            }
-            productSales[order.product_id].count++;
-        });
-    
-    const topProducts = Object.values(productSales)
-        .filter(p => p.product)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-    
-    if (topProducts.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No sales data yet</p>';
-        return;
-    }
-    
-    topProducts.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = 'product-rank-item';
-        div.innerHTML = `
-            <div class="rank-number">${index + 1}</div>
-            <img src="${item.product.icon_url}" alt="${item.product.name}">
-            <div class="product-rank-info">
-                <h4>${item.product.name}</h4>
-                <p>${formatCurrency(item.product.price)} Ks</p>
-            </div>
-            <div class="product-sales-count">${item.count} sold</div>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// ==================== REFRESH DASHBOARD ====================
-async function refreshDashboard() {
-    showAdminLoading();
-    await loadDashboardData();
-    await loadSectionData(currentSection);
-    hideAdminLoading();
-    showAdminToast('Dashboard refreshed', 'success');
-}
-
-// ==================== UTILITIES ====================
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
-}
-
-function formatTimestamp(timestamp) {
-    return new Date(timestamp).toLocaleString();
-}
-
-// ==================== CONFIRM DIALOG ====================
-function showConfirmDialog(title, message, onConfirm) {
-    const dialog = document.getElementById('confirmDialog');
-    document.getElementById('confirmTitle').textContent = title;
-    document.getElementById('confirmMessage').textContent = message;
-    
-    const confirmBtn = document.getElementById('confirmBtn');
-    confirmBtn.onclick = () => {
-        onConfirm();
-        closeConfirmDialog();
-    };
-    
-    dialog.classList.add('active');
-}
-
-function closeConfirmDialog() {
-    document.getElementById('confirmDialog').classList.remove('active');
-}
-
-// ==================== FILE UPLOAD HELPERS ====================
-async function uploadFile(file, bucket, folder = '') {
-    try {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${folder}${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${folder}/${fileName}`;
         
         const { data, error } = await supabase.storage
-            .from(bucket)
-            .upload(fileName, file);
+            .from('images')
+            .upload(filePath, file);
         
         if (error) throw error;
         
-        const { data: { publicUrl } } = supabase.storage
-            .from(bucket)
-            .getPublicUrl(fileName);
+        const { data: publicURL } = supabase.storage
+            .from('images')
+            .getPublicUrl(filePath);
         
-        return publicUrl;
-        
+        return publicURL.publicUrl;
     } catch (error) {
         console.error('Upload error:', error);
         throw error;
     }
 }
 
-async function deleteFile(url, bucket) {
-    try {
-        const fileName = url.split('/').pop();
-        await supabase.storage.from(bucket).remove([fileName]);
-    } catch (error) {
-        console.error('Delete file error:', error);
+/* ========================================
+   ADMIN AUTHENTICATION
+======================================== */
+
+// Password toggle
+document.querySelector('.toggle-password')?.addEventListener('click', function() {
+    const input = document.getElementById('adminPassword');
+    if (input.type === 'password') {
+        input.type = 'text';
+        this.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        input.type = 'password';
+        this.classList.replace('fa-eye-slash', 'fa-eye');
     }
-}
+});
 
-console.log('🔐 Admin Dashboard Loaded');
-
-// ==================== CATEGORIES MANAGEMENT ====================
-async function loadCategories() {
+// Admin Login
+document.getElementById('adminLoginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const password = document.getElementById('adminPassword').value;
+    
+    showAdminLoader();
+    
     try {
-        const { data, error } = await supabase
-            .from('categories')
+        // Get user IP
+        const userIP = await getUserIP();
+        
+        // Check admin credentials from database
+        const { data: adminConfig, error } = await supabase
+            .from('admin_config')
             .select('*')
-            .order('created_at', { ascending: true });
-        
-        if (error) throw error;
-        
-        dashboardData.categories = data || [];
-        renderCategories();
-        populateCategorySelects();
-        
-    } catch (error) {
-        console.error('Error loading categories:', error);
-        showAdminToast('Failed to load categories', 'error');
-    }
-}
-
-function renderCategories() {
-    const container = document.getElementById('categoriesList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (dashboardData.categories.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><h3>No Categories</h3><p>Add your first category to get started</p></div>';
-        return;
-    }
-    
-    dashboardData.categories.forEach(category => {
-        const card = document.createElement('div');
-        card.className = 'item-card';
-        card.innerHTML = `
-            <h4>${category.name}</h4>
-            <p>Created: ${formatTimestamp(category.created_at)}</p>
-            <div class="item-actions">
-                <button class="edit-btn" onclick="editCategory(${category.id})">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="delete-btn" onclick="deleteCategory(${category.id})">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-async function addCategory() {
-    const name = document.getElementById('categoryName').value.trim();
-    
-    if (!name) {
-        showAdminToast('Please enter category name', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        const { data, error } = await supabase
-            .from('categories')
-            .insert([{ name, created_at: new Date().toISOString() }])
-            .select()
             .single();
         
-        if (error) throw error;
-        
-        dashboardData.categories.push(data);
-        renderCategories();
-        populateCategorySelects();
-        
-        document.getElementById('categoryName').value = '';
-        
-        hideAdminLoading();
-        showAdminToast('Category added successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error adding category:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add category', 'error');
-    }
-}
-
-async function editCategory(id) {
-    const category = dashboardData.categories.find(c => c.id === id);
-    if (!category) return;
-    
-    const newName = prompt('Enter new category name:', category.name);
-    if (!newName || newName === category.name) return;
-    
-    try {
-        showAdminLoading();
-        
-        const { error } = await supabase
-            .from('categories')
-            .update({ name: newName })
-            .eq('id', id);
-        
-        if (error) throw error;
-        
-        category.name = newName;
-        renderCategories();
-        
-        hideAdminLoading();
-        showAdminToast('Category updated successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error updating category:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to update category', 'error');
-    }
-}
-
-async function deleteCategory(id) {
-    showConfirmDialog(
-        'Delete Category',
-        'Are you sure you want to delete this category? All related cards and products will be affected.',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const { error } = await supabase
-                    .from('categories')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                dashboardData.categories = dashboardData.categories.filter(c => c.id !== id);
-                renderCategories();
-                populateCategorySelects();
-                
-                hideAdminLoading();
-                showAdminToast('Category deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting category:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete category', 'error');
-            }
+        if (error || !adminConfig) {
+            showAdminToast('Error', 'Admin configuration not found', 'error');
+            hideAdminLoader();
+            return;
         }
-    );
+        
+        // Verify password
+        if (password !== adminConfig.password) {
+            showAdminToast('Access Denied', 'Invalid password', 'error');
+            hideAdminLoader();
+            return;
+        }
+        
+        // Verify IP if set
+        if (adminConfig.allowed_ip && adminConfig.allowed_ip !== userIP) {
+            showAdminToast('Access Denied', 'Your IP is not authorized', 'error');
+            hideAdminLoader();
+            return;
+        }
+        
+        // Update IP if not set
+        if (!adminConfig.allowed_ip) {
+            await supabase
+                .from('admin_config')
+                .update({ allowed_ip: userIP })
+                .eq('id', adminConfig.id);
+        }
+        
+        // Save session
+        AdminState.isAuthenticated = true;
+        AdminState.adminPassword = password;
+        AdminState.adminIP = userIP;
+        sessionStorage.setItem('adminSession', JSON.stringify({
+            authenticated: true,
+            timestamp: Date.now()
+        }));
+        
+        // Show dashboard
+        document.getElementById('adminLogin').classList.remove('active');
+        document.getElementById('adminDashboard').classList.add('active');
+        
+        hideAdminLoader();
+        showAdminToast('Welcome', 'Admin access granted', 'success');
+        
+        // Initialize dashboard
+        await initAdminDashboard();
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        showAdminToast('Error', 'An error occurred during login', 'error');
+        hideAdminLoader();
+    }
+});
+
+// Check existing session
+function checkAdminSession() {
+    const session = sessionStorage.getItem('adminSession');
+    
+    if (session) {
+        try {
+            const data = JSON.parse(session);
+            const hoursPassed = (Date.now() - data.timestamp) / (1000 * 60 * 60);
+            
+            // Session valid for 8 hours
+            if (hoursPassed < 8 && data.authenticated) {
+                AdminState.isAuthenticated = true;
+                document.getElementById('adminLogin').classList.remove('active');
+                document.getElementById('adminDashboard').classList.add('active');
+                initAdminDashboard();
+                return true;
+            }
+        } catch (e) {
+            console.error('Session parse error:', e);
+        }
+    }
+    
+    return false;
 }
 
-function populateCategorySelects() {
-    const selects = document.querySelectorAll('#cardCategory, #productCategory, #productPageBgCategory');
+// Logout
+function adminLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+        AdminState.isAuthenticated = false;
+        sessionStorage.removeItem('adminSession');
+        
+        document.getElementById('adminDashboard').classList.remove('active');
+        document.getElementById('adminLogin').classList.add('active');
+        document.getElementById('adminPassword').value = '';
+        
+        showAdminToast('Logged Out', 'You have been logged out successfully', 'info');
+    }
+}
+
+/* ========================================
+   NAVIGATION
+======================================== */
+
+function switchAdminPage(pageName) {
+    // Hide all pages
+    document.querySelectorAll('.admin-page').forEach(page => {
+        page.classList.remove('active');
+    });
     
-    selects.forEach(select => {
-        if (!select) return;
-        
-        select.innerHTML = '<option value="">Select Category</option>';
-        
-        dashboardData.categories.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category.id;
-            option.textContent = category.name;
-            select.appendChild(option);
+    // Show selected page
+    const targetPage = document.getElementById(pageName + 'Page');
+    if (targetPage) {
+        targetPage.classList.add('active');
+    }
+    
+    // Update nav links
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.dataset.page === pageName) {
+            link.classList.add('active');
+        }
+    });
+    
+    // Update page title
+    const titles = {
+        dashboard: 'Dashboard',
+        settings: 'Website Settings',
+        banners: 'Banner Management',
+        categories: 'Categories',
+        products: 'Products',
+        payments: 'Payment Methods',
+        coupons: 'Coupons',
+        news: 'News',
+        contacts: 'Contacts',
+        notifications: 'Notifications',
+        orders: 'Orders',
+        users: 'Users',
+        analytics: 'Analytics',
+        music: 'Music'
+    };
+    
+    document.getElementById('pageTitle').textContent = titles[pageName] || pageName;
+    
+    // Update state
+    AdminState.currentPage = pageName;
+    
+    // Load page data
+    loadAdminPageData(pageName);
+}
+
+// Setup navigation listeners
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.dataset.page;
+            if (page) {
+                switchAdminPage(page);
+            }
         });
     });
+    
+    // Setup tab navigation
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-btn')) {
+            const tabName = e.target.dataset.tab;
+            
+            // Remove active from all tabs
+            e.target.parentElement.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            e.target.classList.add('active');
+            
+            // Show corresponding content
+            const container = e.target.parentElement.parentElement;
+            container.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            container.querySelector(`#${tabName}`).classList.add('active');
+        }
+    });
+});
+
+// Sidebar toggle
+function toggleSidebar() {
+    document.getElementById('adminSidebar').classList.toggle('active');
 }
 
-// ==================== CATEGORY CARDS MANAGEMENT ====================
-async function loadCategoryCards() {
+/* ========================================
+   MODAL MANAGEMENT
+======================================== */
+
+function openAdminModal(content) {
+    const modal = document.getElementById('adminModal');
+    const body = document.getElementById('modalBody');
+    
+    body.innerHTML = content;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAdminModal() {
+    const modal = document.getElementById('adminModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+/* ========================================
+   DASHBOARD INITIALIZATION
+======================================== */
+
+async function initAdminDashboard() {
+    showAdminLoader();
+    
     try {
-        const { data, error } = await supabase
-            .from('category_cards')
-            .select('*, categories(name)')
+        await loadDashboardStats();
+        await loadRecentOrders();
+        await initDashboardCharts();
+        
+        hideAdminLoader();
+    } catch (error) {
+        console.error('Dashboard init error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to load dashboard', 'error');
+    }
+}
+
+async function loadDashboardStats() {
+    try {
+        // Get total users
+        const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id', { count: 'exact' });
+        
+        AdminState.stats.totalUsers = users ? users.length : 0;
+        
+        // Get orders
+        const { data: orders, error: ordersError } = await supabase
+            .from('orders')
+            .select('*');
+        
+        AdminState.stats.totalOrders = orders ? orders.length : 0;
+        AdminState.stats.approvedOrders = orders ? orders.filter(o => o.status === 'approved').length : 0;
+        
+        // Calculate revenue
+        const revenue = orders 
+            ? orders.filter(o => o.status === 'approved').reduce((sum, o) => sum + o.final_price, 0)
+            : 0;
+        AdminState.stats.totalRevenue = revenue;
+        
+        // Update UI
+        document.getElementById('statTotalUsers').textContent = AdminState.stats.totalUsers;
+        document.getElementById('statTotalOrders').textContent = AdminState.stats.totalOrders;
+        document.getElementById('statApprovedOrders').textContent = AdminState.stats.approvedOrders;
+        document.getElementById('statTotalRevenue').textContent = formatPrice(AdminState.stats.totalRevenue);
+        
+        document.getElementById('totalUsers').textContent = AdminState.stats.totalUsers;
+        document.getElementById('totalOrders').textContent = AdminState.stats.totalOrders;
+        
+        // Update pending orders badge
+        const pendingOrders = orders ? orders.filter(o => o.status === 'pending').length : 0;
+        const badge = document.getElementById('pendingOrdersBadge');
+        if (badge) {
+            badge.textContent = pendingOrders;
+            badge.style.display = pendingOrders > 0 ? 'flex' : 'none';
+        }
+        
+    } catch (error) {
+        console.error('Stats load error:', error);
+    }
+}
+
+/* ========================================
+   ADMIN.JS - PART 2
+======================================== */
+
+/* ========================================
+   RECENT ORDERS
+======================================== */
+
+async function loadRecentOrders() {
+    try {
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                users (username, email, avatar),
+                products (name, icon_url)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(5);
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('recentOrdersList');
+        container.innerHTML = '';
+        
+        if (!orders || orders.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No recent orders</p></div>';
+            return;
+        }
+        
+        orders.forEach(order => {
+            const orderItem = document.createElement('div');
+            orderItem.className = 'order-card-admin';
+            
+            const statusClass = order.status === 'approved' ? 'approved' : order.status === 'rejected' ? 'rejected' : 'pending';
+            
+            orderItem.innerHTML = `
+                <div class="order-card-header">
+                    <span class="order-id-admin">Order #${order.order_id}</span>
+                    <span class="order-status-badge ${statusClass}">${order.status.toUpperCase()}</span>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <img src="${order.users.avatar}" style="width: 40px; height: 40px; border-radius: 50%;" alt="${order.users.username}">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; margin-bottom: 4px;">${order.users.username}</div>
+                        <div style="font-size: 0.85rem; color: var(--admin-text-secondary);">${order.products.name}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 700; color: var(--admin-purple);">${formatPrice(order.final_price)}</div>
+                        <div style="font-size: 0.75rem; color: var(--admin-text-muted);">${formatDate(order.created_at)}</div>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(orderItem);
+        });
+        
+    } catch (error) {
+        console.error('Recent orders error:', error);
+    }
+}
+
+/* ========================================
+   DASHBOARD CHARTS
+======================================== */
+
+async function initDashboardCharts() {
+    // Sales Chart
+    const salesCtx = document.getElementById('salesChart');
+    if (salesCtx) {
+        const { data: orders } = await supabase
+            .from('orders')
+            .select('created_at, final_price')
+            .eq('status', 'approved')
             .order('created_at', { ascending: true });
         
-        if (error) throw error;
-        
-        dashboardData.categoryCards = data || [];
-        renderCategoryCards();
-        populateCategoryCardSelects();
-        
-    } catch (error) {
-        console.error('Error loading category cards:', error);
-        showAdminToast('Failed to load category cards', 'error');
-    }
-}
-
-function renderCategoryCards() {
-    const container = document.getElementById('categoryCardsList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (dashboardData.categoryCards.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-th-large"></i><h3>No Category Cards</h3><p>Add your first category card</p></div>';
-        return;
-    }
-    
-    dashboardData.categoryCards.forEach(card => {
-        const cardEl = document.createElement('div');
-        cardEl.className = 'item-card';
-        cardEl.innerHTML = `
-            <img src="${card.icon_url}" alt="${card.name}">
-            <h4>${card.name}</h4>
-            <p>Category: ${card.categories?.name || 'N/A'}</p>
-            ${card.discount_percentage ? `<p>Discount: ${card.discount_percentage}%</p>` : ''}
-            <div class="item-actions">
-                <button class="edit-btn" onclick="editCategoryCard(${card.id})">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="delete-btn" onclick="deleteCategoryCard(${card.id})">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        `;
-        container.appendChild(cardEl);
-    });
-}
-
-async function addCategoryCard() {
-    const categoryId = document.getElementById('cardCategory').value;
-    const name = document.getElementById('cardName').value.trim();
-    const iconFile = document.getElementById('cardIcon').files[0];
-    const flagFile = document.getElementById('cardFlag').files[0];
-    const discount = document.getElementById('cardDiscount').value;
-    
-    if (!categoryId || !name || !iconFile) {
-        showAdminToast('Please fill all required fields', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        // Upload icon
-        const iconUrl = await uploadFile(iconFile, 'category-icons', 'cards/');
-        
-        // Upload flag if exists
-        let flagUrl = null;
-        if (flagFile) {
-            flagUrl = await uploadFile(flagFile, 'category-icons', 'flags/');
-        }
-        
-        const { data, error } = await supabase
-            .from('category_cards')
-            .insert([{
-                category_id: parseInt(categoryId),
-                name: name,
-                icon_url: iconUrl,
-                country_flag_url: flagUrl,
-                discount_percentage: discount ? parseInt(discount) : 0,
-                rating: 0,
-                total_sales: 0,
-                created_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-        
-        if (error) throw error;
-        
-        await loadCategoryCards();
-        
-        // Clear form
-        document.getElementById('cardCategory').value = '';
-        document.getElementById('cardName').value = '';
-        document.getElementById('cardIcon').value = '';
-        document.getElementById('cardFlag').value = '';
-        document.getElementById('cardDiscount').value = '';
-        
-        hideAdminLoading();
-        showAdminToast('Category card added successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error adding category card:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add category card', 'error');
-    }
-}
-
-async function editCategoryCard(id) {
-    // Implementation for editing category card
-    showAdminToast('Edit functionality - to be implemented', 'info');
-}
-
-async function deleteCategoryCard(id) {
-    showConfirmDialog(
-        'Delete Category Card',
-        'Are you sure you want to delete this card?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const card = dashboardData.categoryCards.find(c => c.id === id);
-                
-                // Delete images
-                if (card.icon_url) await deleteFile(card.icon_url, 'category-icons');
-                if (card.country_flag_url) await deleteFile(card.country_flag_url, 'category-icons');
-                
-                const { error } = await supabase
-                    .from('category_cards')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadCategoryCards();
-                
-                hideAdminLoading();
-                showAdminToast('Category card deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting category card:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete category card', 'error');
-            }
-        }
-    );
-}
-
-function populateCategoryCardSelects() {
-    const selects = document.querySelectorAll('#productCategoryCard');
-    
-    selects.forEach(select => {
-        if (!select) return;
-        
-        select.innerHTML = '<option value="">Select Category Card</option>';
-        
-        dashboardData.categoryCards.forEach(card => {
-            const option = document.createElement('option');
-            option.value = card.id;
-            option.textContent = card.name;
-            select.appendChild(option);
+        // Group by date
+        const salesByDate = {};
+        orders?.forEach(order => {
+            const date = new Date(order.created_at).toLocaleDateString();
+            salesByDate[date] = (salesByDate[date] || 0) + order.final_price;
         });
-    });
-}
-
-// ==================== BANNERS MANAGEMENT ====================
-let currentBannerTab = 'main';
-
-function switchBannerTab(tab) {
-    currentBannerTab = tab;
-    
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    document.getElementById(tab + 'BannersTab').classList.add('active');
-    
-    loadBanners(tab);
-}
-
-async function loadBanners(type = 'main') {
-    try {
-        const { data, error } = await supabase
-            .from('banners')
-            .select('*')
-            .eq('type', type)
-            .order('created_at', { ascending: false });
         
-        if (error) throw error;
+        const labels = Object.keys(salesByDate).slice(-7);
+        const data = labels.map(label => salesByDate[label]);
         
-        renderBanners(data || [], type);
-        
-    } catch (error) {
-        console.error('Error loading banners:', error);
-        showAdminToast('Failed to load banners', 'error');
-    }
-}
-
-function renderBanners(banners, type) {
-    const container = document.getElementById(type + 'BannersList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (banners.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-images"></i><h3>No Banners</h3><p>Add your first banner</p></div>';
-        return;
-    }
-    
-    banners.forEach(banner => {
-        const card = document.createElement('div');
-        card.className = 'item-card';
-        card.innerHTML = `
-            <img src="${banner.image_url}" alt="${banner.title || 'Banner'}">
-            <h4>${banner.title || 'Untitled'}</h4>
-            ${banner.link_url ? `<p>Link: ${banner.link_url}</p>` : ''}
-            <div class="item-actions">
-                <button class="delete-btn" onclick="deleteBanner(${banner.id}, '${type}')">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-async function addMainBanner() {
-    const imageFile = document.getElementById('mainBannerImage').files[0];
-    const title = document.getElementById('mainBannerTitle').value.trim();
-    
-    if (!imageFile) {
-        showAdminToast('Please select an image', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        const imageUrl = await uploadFile(imageFile, 'banners', 'main/');
-        
-        const { error } = await supabase
-            .from('banners')
-            .insert([{
-                type: 'main',
-                image_url: imageUrl,
-                title: title || null,
-                created_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
-        
-        document.getElementById('mainBannerImage').value = '';
-        document.getElementById('mainBannerTitle').value = '';
-        
-        await loadBanners('main');
-        
-        hideAdminLoading();
-        showAdminToast('Main banner added successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error adding banner:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add banner', 'error');
-    }
-}
-
-async function addLinkBanner() {
-    const imageFile = document.getElementById('linkBannerImage').files[0];
-    const linkUrl = document.getElementById('linkBannerUrl').value.trim();
-    const title = document.getElementById('linkBannerTitle').value.trim();
-    
-    if (!imageFile || !linkUrl) {
-        showAdminToast('Please fill all required fields', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        const imageUrl = await uploadFile(imageFile, 'banners', 'link/');
-        
-        const { error } = await supabase
-            .from('banners')
-            .insert([{
-                type: 'link',
-                image_url: imageUrl,
-                link_url: linkUrl,
-                title: title || null,
-                created_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
-        
-        document.getElementById('linkBannerImage').value = '';
-        document.getElementById('linkBannerUrl').value = '';
-        document.getElementById('linkBannerTitle').value = '';
-        
-        await loadBanners('link');
-        
-        hideAdminLoading();
-        showAdminToast('Link banner added successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error adding link banner:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add link banner', 'error');
-    }
-}
-
-async function deleteBanner(id, type) {
-    showConfirmDialog(
-        'Delete Banner',
-        'Are you sure you want to delete this banner?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const { data } = await supabase
-                    .from('banners')
-                    .select('image_url')
-                    .eq('id', id)
-                    .single();
-                
-                if (data?.image_url) {
-                    await deleteFile(data.image_url, 'banners');
+        AdminState.charts.sales = new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Sales',
+                    data: data,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        labels: { color: '#b4b4c8' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#b4b4c8' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    },
+                    x: {
+                        ticks: { color: '#b4b4c8' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    }
                 }
-                
-                const { error } = await supabase
-                    .from('banners')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadBanners(type);
-                
-                hideAdminLoading();
-                showAdminToast('Banner deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting banner:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete banner', 'error');
             }
-        }
-    );
+        });
+    }
+    
+    // Order Status Chart
+    const orderStatusCtx = document.getElementById('orderStatusChart');
+    if (orderStatusCtx) {
+        const { data: orders } = await supabase
+            .from('orders')
+            .select('status');
+        
+        const pending = orders?.filter(o => o.status === 'pending').length || 0;
+        const approved = orders?.filter(o => o.status === 'approved').length || 0;
+        const rejected = orders?.filter(o => o.status === 'rejected').length || 0;
+        
+        AdminState.charts.orderStatus = new Chart(orderStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pending', 'Approved', 'Rejected'],
+                datasets: [{
+                    data: [pending, approved, rejected],
+                    backgroundColor: ['#fbbf24', '#4ade80', '#ef4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#b4b4c8', padding: 15 }
+                    }
+                }
+            }
+        });
+    }
 }
 
-// ==================== WEBSITE SETTINGS ====================
-async function saveWebsiteSettings() {
+/* ========================================
+   PAGE DATA LOADING
+======================================== */
+
+async function loadAdminPageData(pageName) {
+    showAdminLoader();
+    
     try {
-        showAdminLoading();
+        switch(pageName) {
+            case 'dashboard':
+                await loadDashboardStats();
+                await loadRecentOrders();
+                break;
+            case 'settings':
+                await loadWebsiteSettings();
+                break;
+            case 'banners':
+                await loadBanners();
+                break;
+            case 'categories':
+                await loadCategories();
+                break;
+            case 'products':
+                await loadProducts();
+                break;
+            case 'payments':
+                await loadPaymentMethods();
+                break;
+            case 'coupons':
+                await loadCoupons();
+                break;
+            case 'news':
+                await loadNews();
+                break;
+            case 'contacts':
+                await loadContacts();
+                break;
+            case 'orders':
+                await loadOrders();
+                break;
+            case 'users':
+                await loadUsers();
+                break;
+            case 'analytics':
+                await loadAnalytics();
+                break;
+            case 'music':
+                await loadMusic();
+                break;
+        }
         
-        const settings = {
-            website_name: document.getElementById('websiteName').value.trim(),
-            version: document.getElementById('websiteVersion').value.trim()
-        };
+        hideAdminLoader();
+    } catch (error) {
+        console.error('Page data load error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to load page data', 'error');
+    }
+}
+
+/* ========================================
+   WEBSITE SETTINGS
+======================================== */
+
+async function loadWebsiteSettings() {
+    try {
+        const { data: config, error } = await supabase
+            .from('website_config')
+            .select('*')
+            .single();
+        
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        AdminState.websiteConfig = config || {};
+        
+        // Populate form
+        if (config) {
+            document.getElementById('websiteName').value = config.name || '';
+            document.getElementById('appVersion').value = config.version || '1.0.0';
+            document.getElementById('appDownloadUrl').value = config.webapp_url || '';
+            
+            if (config.logo_url) {
+                document.getElementById('logoPreview').innerHTML = `<img src="${config.logo_url}" alt="Logo" style="max-height: 90px;">`;
+            }
+            
+            if (config.background_image) {
+                document.getElementById('backgroundPreview').innerHTML = `<img src="${config.background_image}" alt="Background">`;
+            }
+        }
+        
+    } catch (error) {
+        console.error('Settings load error:', error);
+    }
+}
+
+async function saveWebsiteSettings() {
+    showAdminLoader();
+    
+    try {
+        const name = document.getElementById('websiteName').value;
+        const version = document.getElementById('appVersion').value;
+        const webappUrl = document.getElementById('appDownloadUrl').value;
+        
+        let logoUrl = AdminState.websiteConfig?.logo_url;
+        let backgroundUrl = AdminState.websiteConfig?.background_image;
         
         // Upload logo if changed
         const logoFile = document.getElementById('logoUpload').files[0];
         if (logoFile) {
-            settings.logo_url = await uploadFile(logoFile, 'settings', 'logo/');
+            logoUrl = await uploadFile(logoFile, 'settings');
         }
         
-        // Upload main background if changed
-        const mainBgFile = document.getElementById('mainBackground').files[0];
-        if (mainBgFile) {
-            const bgUrl = await uploadFile(mainBgFile, 'settings', 'backgrounds/');
-            
-            await supabase
-                .from('custom_backgrounds')
-                .upsert({
-                    type: 'main',
-                    background_url: bgUrl,
-                    format: mainBgFile.type.includes('video') ? 'video' : 'image'
-                });
+        // Upload background if changed
+        const backgroundFile = document.getElementById('backgroundUpload').files[0];
+        if (backgroundFile) {
+            backgroundUrl = await uploadFile(backgroundFile, 'settings');
         }
         
-        // Upload button background if changed
-        const btnBgFile = document.getElementById('buttonBackground').files[0];
-        if (btnBgFile) {
-            settings.button_background = await uploadFile(btnBgFile, 'settings', 'buttons/');
+        const configData = {
+            name: name,
+            logo_url: logoUrl,
+            background_image: backgroundUrl,
+            version: version,
+            webapp_url: webappUrl,
+            updated_at: new Date().toISOString()
+        };
+        
+        let result;
+        if (AdminState.websiteConfig?.id) {
+            // Update
+            result = await supabase
+                .from('website_config')
+                .update(configData)
+                .eq('id', AdminState.websiteConfig.id)
+                .select()
+                .single();
+        } else {
+            // Insert
+            result = await supabase
+                .from('website_config')
+                .insert([configData])
+                .select()
+                .single();
         }
         
-        // Save settings
-        const { error } = await supabase
-            .from('website_settings')
-            .upsert(settings);
+        if (result.error) throw result.error;
         
-        if (error) throw error;
+        AdminState.websiteConfig = result.data;
         
-        hideAdminLoading();
-        showAdminToast('Settings saved successfully', 'success');
+        hideAdminLoader();
+        showAdminToast('Success', 'Website settings saved successfully', 'success');
         
     } catch (error) {
-        console.error('Error saving settings:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to save settings', 'error');
+        console.error('Settings save error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to save settings', 'error');
     }
 }
 
-// ==================== FILE PREVIEW ====================
-document.addEventListener('change', (e) => {
-    if (e.target.type === 'file') {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const previewId = e.target.id + 'Preview';
-        const preview = document.getElementById(previewId);
-        
-        if (preview && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML = `<img src="${e.target.result}" style="max-width: 100%; border-radius: 8px;">`;
-            };
-            reader.readAsDataURL(file);
-        } else if (preview && file.type.startsWith('video/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML = `<video src="${e.target.result}" style="max-width: 100%; border-radius: 8px;" controls></video>`;
-            };
-            reader.readAsDataURL(file);
-        }
+// File upload preview handlers
+document.getElementById('logoUpload')?.addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('logoPreview').innerHTML = `<img src="${event.target.result}" alt="Logo Preview" style="max-height: 90px;">`;
+        };
+        reader.readAsDataURL(e.target.files[0]);
     }
 });
 
-// ==================== PRODUCTS MANAGEMENT ====================
-async function loadProducts() {
+document.getElementById('backgroundUpload')?.addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('backgroundPreview').innerHTML = `<img src="${event.target.result}" alt="Background Preview">`;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    }
+});
+
+/* ========================================
+   CATEGORIES MANAGEMENT
+======================================== */
+
+async function loadCategories() {
     try {
-        const { data, error } = await supabase
-            .from('products')
-            .select('*, category_cards(name)')
-            .order('created_at', { ascending: false });
+        const { data: categories, error } = await supabase
+            .from('categories')
+            .select('*')
+            .order('created_at', { ascending: true });
         
         if (error) throw error;
         
-        dashboardData.products = data || [];
-        renderProductForm();
-        renderProducts();
+        AdminState.categories = categories || [];
+        
+        const container = document.getElementById('categoriesList');
+        container.innerHTML = '';
+        
+        if (categories.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-folder-open"></i>
+                    <h3>No Categories Yet</h3>
+                    <p>Create your first category to get started</p>
+                </div>
+            `;
+            return;
+        }
+        
+        for (const category of categories) {
+            await renderCategoryGroup(container, category);
+        }
         
     } catch (error) {
-        console.error('Error loading products:', error);
-        showAdminToast('Failed to load products', 'error');
+        console.error('Categories load error:', error);
     }
 }
 
-function renderProductForm() {
-    const container = document.getElementById('productForm');
-    if (!container) return;
+async function renderCategoryGroup(container, category) {
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'category-group-admin';
     
-    container.innerHTML = `
-        <h3>Add Product</h3>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Select Category</label>
-                <select id="productCategory" onchange="loadCategoryCardsForProduct()">
-                    <option value="">Select Category</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Select Category Card</label>
-                <select id="productCategoryCard">
-                    <option value="">Select Category Card</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Product Name *</label>
-                <input type="text" id="productName" placeholder="Enter product name">
-            </div>
-            <div class="form-group">
-                <label>Product Icon *</label>
-                <input type="file" id="productIcon" accept="image/*">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Price (Ks) *</label>
-                <input type="number" id="productPrice" placeholder="Enter price" min="0">
-            </div>
-            <div class="form-group">
-                <label>Discount Percentage</label>
-                <input type="number" id="productDiscount" placeholder="e.g., 10" min="0" max="100">
+    // Get category cards
+    const { data: cards } = await supabase
+        .from('category_cards')
+        .select('*')
+        .eq('category_id', category.id)
+        .order('created_at', { ascending: true });
+    
+    groupDiv.innerHTML = `
+        <div class="category-header-admin">
+            <h3>
+                <i class="fas fa-folder"></i>
+                ${category.name}
+            </h3>
+            <div class="category-actions">
+                <button class="btn-secondary" onclick="openCategoryCardModal('${category.id}')">
+                    <i class="fas fa-plus"></i> Add Card
+                </button>
+                <button class="icon-btn edit" onclick="editCategory('${category.id}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="icon-btn delete" onclick="deleteCategory('${category.id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
         </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Product Type</label>
-                <input type="text" id="productType" placeholder="e.g., Game Account">
-            </div>
-            <div class="form-group">
-                <label>Type Badge Color</label>
-                <input type="color" id="productTypeColor" value="#6366f1">
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Amount/Quantity</label>
-            <input type="text" id="productAmount" placeholder="e.g., 1000 Diamonds">
-        </div>
-        <div class="form-group">
-            <label>Description</label>
-            <textarea id="productDescription" placeholder="Product description (optional)"></textarea>
-        </div>
-        <div class="form-group">
-            <label>Payment Methods *</label>
-            <div id="productPaymentMethods" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 8px;"></div>
-        </div>
-        <button class="add-btn" onclick="addProduct()">
-            <i class="fas fa-plus"></i> Add Product
-        </button>
+        <div class="category-cards-admin" id="cards-${category.id}"></div>
     `;
     
-    populateCategorySelects();
-    loadPaymentMethodsForProduct();
-}
-
-async function loadCategoryCardsForProduct() {
-    const categoryId = document.getElementById('productCategory').value;
-    const select = document.getElementById('productCategoryCard');
+    container.appendChild(groupDiv);
     
-    select.innerHTML = '<option value="">Select Category Card</option>';
-    
-    if (!categoryId) return;
-    
-    const cards = dashboardData.categoryCards.filter(c => c.category_id == categoryId);
-    
-    cards.forEach(card => {
-        const option = document.createElement('option');
-        option.value = card.id;
-        option.textContent = card.name;
-        select.appendChild(option);
-    });
-}
-
-async function loadPaymentMethodsForProduct() {
-    const container = document.getElementById('productPaymentMethods');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    dashboardData.paymentMethods.forEach(payment => {
-        const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '8px';
-        label.style.padding = '12px';
-        label.style.background = 'var(--dark-lighter)';
-        label.style.borderRadius = '8px';
-        label.style.cursor = 'pointer';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = payment.id;
-        checkbox.className = 'product-payment-checkbox';
-        
-        const img = document.createElement('img');
-        img.src = payment.icon_url;
-        img.style.width = '24px';
-        img.style.height = '24px';
-        
-        const span = document.createElement('span');
-        span.textContent = payment.name;
-        span.style.fontSize = '13px';
-        
-        label.appendChild(checkbox);
-        label.appendChild(img);
-        label.appendChild(span);
-        
-        container.appendChild(label);
-    });
-    
-    // Add "Select All" button
-    const selectAllBtn = document.createElement('button');
-    selectAllBtn.textContent = 'Select All';
-    selectAllBtn.className = 'quick-action-btn';
-    selectAllBtn.style.gridColumn = '1 / -1';
-    selectAllBtn.onclick = (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.product-payment-checkbox').forEach(cb => cb.checked = true);
-    };
-    container.appendChild(selectAllBtn);
-}
-
-async function addProduct() {
-    const categoryCardId = document.getElementById('productCategoryCard').value;
-    const name = document.getElementById('productName').value.trim();
-    const iconFile = document.getElementById('productIcon').files[0];
-    const price = document.getElementById('productPrice').value;
-    const discount = document.getElementById('productDiscount').value;
-    const productType = document.getElementById('productType').value.trim();
-    const typeColor = document.getElementById('productTypeColor').value;
-    const amount = document.getElementById('productAmount').value.trim();
-    const description = document.getElementById('productDescription').value.trim();
-    
-    const selectedPayments = Array.from(document.querySelectorAll('.product-payment-checkbox:checked'))
-        .map(cb => parseInt(cb.value));
-    
-    if (!categoryCardId || !name || !iconFile || !price || selectedPayments.length === 0) {
-        showAdminToast('Please fill all required fields', 'warning');
-        return;
+    // Render category cards
+    const cardsContainer = document.getElementById(`cards-${category.id}`);
+    if (cards && cards.length > 0) {
+        cards.forEach(card => renderCategoryCard(cardsContainer, card));
+    } else {
+        cardsContainer.innerHTML = '<p style="color: var(--admin-text-muted); text-align: center; padding: 2rem;">No cards in this category</p>';
     }
+}
+
+function renderCategoryCard(container, card) {
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'category-card-admin';
+    
+    cardDiv.innerHTML = `
+        <div class="category-card-image">
+            <img src="${card.icon_url}" alt="${card.name}">
+        </div>
+        <div class="category-card-info">
+            <div class="category-card-name">${card.name}</div>
+            <div class="category-card-meta">
+                ${card.discount_percent ? `<span><i class="fas fa-tag"></i> ${card.discount_percent}% OFF</span>` : ''}
+                ${card.flag_url ? `<span><i class="fas fa-flag"></i> Flag</span>` : ''}
+            </div>
+            <div class="category-card-actions">
+                <button class="icon-btn view" onclick="viewCategoryCardProducts('${card.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="icon-btn edit" onclick="editCategoryCard('${card.id}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="icon-btn delete" onclick="deleteCategoryCard('${card.id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(cardDiv);
+}
+
+function openCategoryModal() {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Create Category</h2>
+        <form id="categoryForm" onsubmit="submitCategory(event)">
+            <div class="form-group">
+                <label>Category Name</label>
+                <input type="text" id="categoryName" class="form-control" required>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Create Category
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function submitCategory(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('categoryName').value;
+    
+    showAdminLoader();
     
     try {
-        showAdminLoading();
-        
-        const iconUrl = await uploadFile(iconFile, 'products', 'icons/');
-        
         const { data, error } = await supabase
-            .from('products')
+            .from('categories')
             .insert([{
-                category_card_id: parseInt(categoryCardId),
                 name: name,
-                icon_url: iconUrl,
-                price: parseFloat(price),
-                discount_percentage: discount ? parseInt(discount) : 0,
-                product_type: productType || null,
-                type_color: typeColor || '#6366f1',
-                amount: amount || null,
-                description: description || null,
-                payment_method_ids: selectedPayments,
+                status: 'active',
                 created_at: new Date().toISOString()
             }])
             .select()
@@ -1229,1187 +981,2257 @@ async function addProduct() {
         
         if (error) throw error;
         
-        await loadProducts();
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Category created successfully', 'success');
         
-        // Clear form
-        document.getElementById('productCategoryCard').value = '';
-        document.getElementById('productName').value = '';
-        document.getElementById('productIcon').value = '';
-        document.getElementById('productPrice').value = '';
-        document.getElementById('productDiscount').value = '';
-        document.getElementById('productType').value = '';
-        document.getElementById('productAmount').value = '';
-        document.getElementById('productDescription').value = '';
-        document.querySelectorAll('.product-payment-checkbox').forEach(cb => cb.checked = false);
-        
-        hideAdminLoading();
-        showAdminToast('Product added successfully', 'success');
+        await loadCategories();
         
     } catch (error) {
-        console.error('Error adding product:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add product', 'error');
+        console.error('Category create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to create category', 'error');
     }
 }
 
-function renderProducts() {
-    const container = document.getElementById('productsList');
-    if (!container) return;
+async function editCategory(categoryId) {
+    const category = AdminState.categories.find(c => c.id === categoryId);
+    if (!category) return;
     
-    container.innerHTML = '';
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Category</h2>
+        <form id="editCategoryForm" onsubmit="updateCategory(event, '${categoryId}')">
+            <div class="form-group">
+                <label>Category Name</label>
+                <input type="text" id="editCategoryName" class="form-control" value="${category.name}" required>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Category
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
     
-    if (dashboardData.products.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-box"></i><h3>No Products</h3><p>Add your first product</p></div>';
+    openAdminModal(content);
+}
+
+async function updateCategory(e, categoryId) {
+    e.preventDefault();
+    
+    const name = document.getElementById('editCategoryName').value;
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('categories')
+            .update({ name: name })
+            .eq('id', categoryId);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Category updated successfully', 'success');
+        
+        await loadCategories();
+        
+    } catch (error) {
+        console.error('Category update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update category', 'error');
+    }
+}
+
+async function deleteCategory(categoryId) {
+    if (!confirm('Are you sure you want to delete this category? All related category cards and products will also be deleted.')) {
         return;
     }
     
-    dashboardData.products.forEach(product => {
-        const card = document.createElement('div');
-        card.className = 'item-card';
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('categories')
+            .delete()
+            .eq('id', categoryId);
         
-        const finalPrice = product.discount_percentage > 0 
-            ? product.price - (product.price * product.discount_percentage / 100)
-            : product.price;
+        if (error) throw error;
         
-        card.innerHTML = `
-            <img src="${product.icon_url}" alt="${product.name}">
-            ${product.product_type ? `<span class="badge" style="background: ${product.type_color}">${product.product_type}</span>` : ''}
-            <h4>${product.name}</h4>
-            <p>Card: ${product.category_cards?.name || 'N/A'}</p>
-            ${product.amount ? `<p>Amount: ${product.amount}</p>` : ''}
-            <p>Price: ${formatCurrency(product.price)} Ks</p>
-            ${product.discount_percentage > 0 ? `<p style="color: var(--success);">Final: ${formatCurrency(finalPrice)} Ks (-${product.discount_percentage}%)</p>` : ''}
-            <div class="item-actions">
-                <button class="edit-btn" onclick="editProduct(${product.id})">
-                    <i class="fas fa-edit"></i> Edit
+        hideAdminLoader();
+        showAdminToast('Success', 'Category deleted successfully', 'success');
+        
+        await loadCategories();
+        
+    } catch (error) {
+        console.error('Category delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete category', 'error');
+    }
+}
+
+function openCategoryCardModal(categoryId) {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Create Category Card</h2>
+        <form id="categoryCardForm" onsubmit="submitCategoryCard(event, '${categoryId}')">
+            <div class="form-group">
+                <label>Card Name</label>
+                <input type="text" id="cardName" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Icon</label>
+                <input type="file" id="cardIcon" class="form-control" accept="image/*" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Country Flag (Optional)</label>
+                <input type="file" id="cardFlag" class="form-control" accept="image/*">
+            </div>
+            
+            <div class="form-group">
+                <label>Discount Percentage (Optional)</label>
+                <input type="number" id="cardDiscount" class="form-control" min="0" max="100" placeholder="e.g., 10">
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Create Card
                 </button>
-                <button class="delete-btn" onclick="deleteProduct(${product.id})">
-                    <i class="fas fa-trash"></i> Delete
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function submitCategoryCard(e, categoryId) {
+    e.preventDefault();
+    
+    const name = document.getElementById('cardName').value;
+    const iconFile = document.getElementById('cardIcon').files[0];
+    const flagFile = document.getElementById('cardFlag').files[0];
+    const discount = document.getElementById('cardDiscount').value;
+    
+    if (!iconFile) {
+        showAdminToast('Error', 'Please select an icon', 'error');
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        // Upload icon
+        const iconUrl = await uploadFile(iconFile, 'category-cards');
+        
+        // Upload flag if provided
+        let flagUrl = null;
+        if (flagFile) {
+            flagUrl = await uploadFile(flagFile, 'category-cards');
+        }
+        
+        const { data, error } = await supabase
+            .from('category_cards')
+            .insert([{
+                category_id: categoryId,
+                name: name,
+                icon_url: iconUrl,
+                flag_url: flagUrl,
+                discount_percent: discount ? parseInt(discount) : null,
+                status: 'active',
+                created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Category card created successfully', 'success');
+        
+        await loadCategories();
+        
+    } catch (error) {
+        console.error('Category card create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to create category card', 'error');
+    }
+}
+
+async function editCategoryCard(cardId) {
+    const { data: card, error } = await supabase
+        .from('category_cards')
+        .select('*')
+        .eq('id', cardId)
+        .single();
+    
+    if (error || !card) {
+        showAdminToast('Error', 'Card not found', 'error');
+        return;
+    }
+    
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Category Card</h2>
+        <form id="editCardForm" onsubmit="updateCategoryCard(event, '${cardId}')">
+            <div class="form-group">
+                <label>Card Name</label>
+                <input type="text" id="editCardName" class="form-control" value="${card.name}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Icon (Leave empty to keep current)</label>
+                <input type="file" id="editCardIcon" class="form-control" accept="image/*">
+                <div class="image-preview">
+                    <img src="${card.icon_url}" alt="Current Icon" style="max-height: 80px;">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Country Flag (Optional)</label>
+                <input type="file" id="editCardFlag" class="form-control" accept="image/*">
+                ${card.flag_url ? `<div class="image-preview"><img src="${card.flag_url}" alt="Current Flag" style="max-height: 40px;"></div>` : ''}
+            </div>
+            
+            <div class="form-group">
+                <label>Discount Percentage</label>
+                <input type="number" id="editCardDiscount" class="form-control" value="${card.discount_percent || ''}" min="0" max="100">
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Card
                 </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function updateCategoryCard(e, cardId) {
+    e.preventDefault();
+    
+    const name = document.getElementById('editCardName').value;
+    const iconFile = document.getElementById('editCardIcon').files[0];
+    const flagFile = document.getElementById('editCardFlag').files[0];
+    const discount = document.getElementById('editCardDiscount').value;
+    
+    showAdminLoader();
+    
+    try {
+        // Get current card data
+        const { data: currentCard } = await supabase
+            .from('category_cards')
+            .select('*')
+            .eq('id', cardId)
+            .single();
+        
+        let iconUrl = currentCard.icon_url;
+        let flagUrl = currentCard.flag_url;
+        
+        // Upload new icon if provided
+        if (iconFile) {
+            iconUrl = await uploadFile(iconFile, 'category-cards');
+        }
+        
+        // Upload new flag if provided
+        if (flagFile) {
+            flagUrl = await uploadFile(flagFile, 'category-cards');
+        }
+        
+        const { error } = await supabase
+            .from('category_cards')
+            .update({
+                name: name,
+                icon_url: iconUrl,
+                flag_url: flagUrl,
+                discount_percent: discount ? parseInt(discount) : null
+            })
+            .eq('id', cardId);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Category card updated successfully', 'success');
+        
+        await loadCategories();
+        
+    } catch (error) {
+        console.error('Category card update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update category card', 'error');
+    }
+}
+
+async function deleteCategoryCard(cardId) {
+    if (!confirm('Are you sure you want to delete this category card? All related products will also be deleted.')) {
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('category_cards')
+            .delete()
+            .eq('id', cardId);
+        
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'Category card deleted successfully', 'success');
+        
+        await loadCategories();
+        
+    } catch (error) {
+        console.error('Category card delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete category card', 'error');
+    }
+}
+
+function viewCategoryCardProducts(cardId) {
+    // Switch to products page and filter by this card
+    switchAdminPage('products');
+    // TODO: Apply filter
+}
+
+/* ========================================
+   INITIALIZATION
+======================================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Check for existing session
+    if (!checkAdminSession()) {
+        hideAdminLoader();
+    }
+});
+
+/* ========================================
+   ADMIN.JS - PART 3
+======================================== */
+
+/* ========================================
+   PRODUCTS MANAGEMENT
+======================================== */
+
+async function loadProducts() {
+    try {
+        const { data: products, error } = await supabase
+            .from('products')
+            .select(`
+                *,
+                category_cards (
+                    name,
+                    categories (name)
+                )
+            `)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        AdminState.products = products || [];
+        
+        // Load categories for filters
+        await loadCategoryFilters();
+        
+        renderProductsTable(products);
+        
+    } catch (error) {
+        console.error('Products load error:', error);
+        showAdminToast('Error', 'Failed to load products', 'error');
+    }
+}
+
+function renderProductsTable(products) {
+    const container = document.getElementById('productsList');
+    container.innerHTML = '';
+    
+    if (!products || products.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-box-open"></i>
+                <h3>No Products Yet</h3>
+                <p>Create your first product to get started</p>
             </div>
         `;
-        container.appendChild(card);
+        return;
+    }
+    
+    const table = document.createElement('table');
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Discount</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="productsTableBody"></tbody>
+    `;
+    
+    container.appendChild(table);
+    
+    const tbody = document.getElementById('productsTableBody');
+    
+    products.forEach(product => {
+        const finalPrice = product.discount_percent 
+            ? product.price - (product.price * (product.discount_percent / 100))
+            : product.price;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <img src="${product.icon_url}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;" alt="${product.name}">
+                    <div>
+                        <div style="font-weight: 600;">${product.name}</div>
+                        <div style="font-size: 0.85rem; color: var(--admin-text-muted);">${product.amount || 'N/A'}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div style="font-size: 0.85rem;">
+                    <div style="font-weight: 600;">${product.category_cards?.categories?.name || 'N/A'}</div>
+                    <div style="color: var(--admin-text-muted);">${product.category_cards?.name || 'N/A'}</div>
+                </div>
+            </td>
+            <td>
+                <div style="font-weight: 700; color: var(--admin-purple);">${formatPrice(finalPrice)}</div>
+                ${product.discount_percent ? `<div style="font-size: 0.75rem; text-decoration: line-through; color: var(--admin-text-muted);">${formatPrice(product.price)}</div>` : ''}
+            </td>
+            <td>
+                ${product.discount_percent ? `<span class="badge-status active">${product.discount_percent}% OFF</span>` : '<span style="color: var(--admin-text-muted);">-</span>'}
+            </td>
+            <td>
+                <span class="badge-status ${product.status}">${product.status}</span>
+            </td>
+            <td>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="icon-btn edit" onclick="editProduct('${product.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="icon-btn delete" onclick="deleteProduct('${product.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
     });
 }
 
-async function editProduct(id) {
-    showAdminToast('Edit product functionality - to be implemented', 'info');
+async function loadCategoryFilters() {
+    const { data: categories } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('status', 'active');
+    
+    const filterCategory = document.getElementById('filterCategory');
+    if (filterCategory) {
+        filterCategory.innerHTML = '<option value="">All Categories</option>';
+        categories?.forEach(cat => {
+            filterCategory.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+        });
+    }
 }
 
-async function deleteProduct(id) {
-    showConfirmDialog(
-        'Delete Product',
-        'Are you sure you want to delete this product?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const product = dashboardData.products.find(p => p.id === id);
-                if (product?.icon_url) {
-                    await deleteFile(product.icon_url, 'products');
-                }
-                
-                const { error } = await supabase
-                    .from('products')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadProducts();
-                
-                hideAdminLoading();
-                showAdminToast('Product deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting product:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete product', 'error');
-            }
-        }
+// Category filter change handler
+document.getElementById('filterCategory')?.addEventListener('change', async function() {
+    const categoryId = this.value;
+    
+    if (!categoryId) {
+        document.getElementById('filterCategoryCard').innerHTML = '<option value="">All Category Cards</option>';
+        await loadProducts();
+        return;
+    }
+    
+    // Load category cards for selected category
+    const { data: cards } = await supabase
+        .from('category_cards')
+        .select('id, name')
+        .eq('category_id', categoryId)
+        .eq('status', 'active');
+    
+    const filterCard = document.getElementById('filterCategoryCard');
+    filterCard.innerHTML = '<option value="">All Category Cards</option>';
+    cards?.forEach(card => {
+        filterCard.innerHTML += `<option value="${card.id}">${card.name}</option>`;
+    });
+    
+    // Filter products
+    const filtered = AdminState.products.filter(p => 
+        p.category_cards?.categories?.id === categoryId
     );
+    renderProductsTable(filtered);
+});
+
+// Category card filter change handler
+document.getElementById('filterCategoryCard')?.addEventListener('change', function() {
+    const cardId = this.value;
+    
+    if (!cardId) {
+        const categoryId = document.getElementById('filterCategory').value;
+        const filtered = categoryId 
+            ? AdminState.products.filter(p => p.category_cards?.categories?.id === categoryId)
+            : AdminState.products;
+        renderProductsTable(filtered);
+        return;
+    }
+    
+    const filtered = AdminState.products.filter(p => p.category_card_id === cardId);
+    renderProductsTable(filtered);
+});
+
+// Product search handler
+document.getElementById('searchProducts')?.addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    
+    if (!query) {
+        renderProductsTable(AdminState.products);
+        return;
+    }
+    
+    const filtered = AdminState.products.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        p.type_name?.toLowerCase().includes(query) ||
+        p.amount?.toLowerCase().includes(query)
+    );
+    
+    renderProductsTable(filtered);
+});
+
+async function openProductModal() {
+    // Get categories and category cards
+    const { data: categories } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('status', 'active');
+    
+    let categoriesOptions = '';
+    categories?.forEach(cat => {
+        categoriesOptions += `<option value="${cat.id}">${cat.name}</option>`;
+    });
+    
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Create Product</h2>
+        <form id="productForm" onsubmit="submitProduct(event)">
+            <div class="form-group">
+                <label>Category</label>
+                <select id="productCategory" class="form-control" required onchange="loadProductCategoryCards()">
+                    <option value="">Select Category</option>
+                    ${categoriesOptions}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Category Card</label>
+                <select id="productCategoryCard" class="form-control" required>
+                    <option value="">Select Category Card</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" id="productName" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Price (Ks)</label>
+                <input type="number" id="productPrice" class="form-control" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Discount Percentage (Optional)</label>
+                <input type="number" id="productDiscount" class="form-control" min="0" max="100">
+            </div>
+            
+            <div class="form-group">
+                <label>Product Type Name</label>
+                <input type="text" id="productType" class="form-control" placeholder="e.g., Game Account, Premium">
+            </div>
+            
+            <div class="form-group">
+                <label>Type Badge Colors (comma separated hex colors)</label>
+                <input type="text" id="productTypeColors" class="form-control" placeholder="e.g., #667eea, #764ba2">
+            </div>
+            
+            <div class="form-group">
+                <label>Amount/Quantity</label>
+                <input type="text" id="productAmount" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label>Description (Optional)</label>
+                <textarea id="productDescription" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Product Icon</label>
+                <input type="file" id="productIcon" class="form-control" accept="image/*" required>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Create Product
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
 }
 
-// ==================== PAYMENT METHODS ====================
-async function loadPaymentMethods() {
+async function loadProductCategoryCards() {
+    const categoryId = document.getElementById('productCategory').value;
+    const cardSelect = document.getElementById('productCategoryCard');
+    
+    cardSelect.innerHTML = '<option value="">Select Category Card</option>';
+    
+    if (!categoryId) return;
+    
+    const { data: cards } = await supabase
+        .from('category_cards')
+        .select('id, name')
+        .eq('category_id', categoryId)
+        .eq('status', 'active');
+    
+    cards?.forEach(card => {
+        cardSelect.innerHTML += `<option value="${card.id}">${card.name}</option>`;
+    });
+}
+
+async function submitProduct(e) {
+    e.preventDefault();
+    
+    const categoryCardId = document.getElementById('productCategoryCard').value;
+    const name = document.getElementById('productName').value;
+    const price = parseFloat(document.getElementById('productPrice').value);
+    const discount = document.getElementById('productDiscount').value;
+    const typeName = document.getElementById('productType').value;
+    const typeColors = document.getElementById('productTypeColors').value;
+    const amount = document.getElementById('productAmount').value;
+    const description = document.getElementById('productDescription').value;
+    const iconFile = document.getElementById('productIcon').files[0];
+    
+    if (!iconFile) {
+        showAdminToast('Error', 'Please select a product icon', 'error');
+        return;
+    }
+    
+    showAdminLoader();
+    
     try {
+        // Upload icon
+        const iconUrl = await uploadFile(iconFile, 'products');
+        
+        // Parse colors
+        let colorsArray = null;
+        if (typeColors) {
+            colorsArray = typeColors.split(',').map(c => c.trim());
+        }
+        
         const { data, error } = await supabase
-            .from('payment_methods')
+            .from('products')
+            .insert([{
+                category_card_id: categoryCardId,
+                name: name,
+                price: price,
+                discount_percent: discount ? parseInt(discount) : null,
+                type_name: typeName,
+                type_badge_color: colorsArray ? JSON.stringify(colorsArray) : null,
+                amount: amount,
+                description: description,
+                icon_url: iconUrl,
+                status: 'active',
+                created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Product created successfully', 'success');
+        
+        await loadProducts();
+        
+    } catch (error) {
+        console.error('Product create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to create product', 'error');
+    }
+}
+
+async function editProduct(productId) {
+    const product = AdminState.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    // Get categories
+    const { data: categories } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('status', 'active');
+    
+    let categoriesOptions = '';
+    categories?.forEach(cat => {
+        const selected = cat.id === product.category_cards?.categories?.id ? 'selected' : '';
+        categoriesOptions += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+    });
+    
+    // Get category cards
+    const { data: cards } = await supabase
+        .from('category_cards')
+        .select('id, name')
+        .eq('category_id', product.category_cards?.categories?.id)
+        .eq('status', 'active');
+    
+    let cardsOptions = '';
+    cards?.forEach(card => {
+        const selected = card.id === product.category_card_id ? 'selected' : '';
+        cardsOptions += `<option value="${card.id}" ${selected}>${card.name}</option>`;
+    });
+    
+    const typeColors = product.type_badge_color 
+        ? JSON.parse(product.type_badge_color).join(', ')
+        : '';
+    
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Product</h2>
+        <form id="editProductForm" onsubmit="updateProduct(event, '${productId}')">
+            <div class="form-group">
+                <label>Category</label>
+                <select id="editProductCategory" class="form-control" required onchange="loadEditProductCategoryCards()">
+                    ${categoriesOptions}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Category Card</label>
+                <select id="editProductCategoryCard" class="form-control" required>
+                    ${cardsOptions}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" id="editProductName" class="form-control" value="${product.name}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Price (Ks)</label>
+                <input type="number" id="editProductPrice" class="form-control" value="${product.price}" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Discount Percentage</label>
+                <input type="number" id="editProductDiscount" class="form-control" value="${product.discount_percent || ''}" min="0" max="100">
+            </div>
+            
+            <div class="form-group">
+                <label>Product Type Name</label>
+                <input type="text" id="editProductType" class="form-control" value="${product.type_name || ''}">
+            </div>
+            
+            <div class="form-group">
+                <label>Type Badge Colors</label>
+                <input type="text" id="editProductTypeColors" class="form-control" value="${typeColors}">
+            </div>
+            
+            <div class="form-group">
+                <label>Amount/Quantity</label>
+                <input type="text" id="editProductAmount" class="form-control" value="${product.amount || ''}">
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="editProductDescription" class="form-control" rows="3">${product.description || ''}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Product Icon (Leave empty to keep current)</label>
+                <input type="file" id="editProductIcon" class="form-control" accept="image/*">
+                <div class="image-preview">
+                    <img src="${product.icon_url}" alt="Current Icon" style="max-height: 100px;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Product
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function loadEditProductCategoryCards() {
+    const categoryId = document.getElementById('editProductCategory').value;
+    const cardSelect = document.getElementById('editProductCategoryCard');
+    
+    cardSelect.innerHTML = '<option value="">Select Category Card</option>';
+    
+    if (!categoryId) return;
+    
+    const { data: cards } = await supabase
+        .from('category_cards')
+        .select('id, name')
+        .eq('category_id', categoryId)
+        .eq('status', 'active');
+    
+    cards?.forEach(card => {
+        cardSelect.innerHTML += `<option value="${card.id}">${card.name}</option>`;
+    });
+}
+
+async function updateProduct(e, productId) {
+    e.preventDefault();
+    
+    const categoryCardId = document.getElementById('editProductCategoryCard').value;
+    const name = document.getElementById('editProductName').value;
+    const price = parseFloat(document.getElementById('editProductPrice').value);
+    const discount = document.getElementById('editProductDiscount').value;
+    const typeName = document.getElementById('editProductType').value;
+    const typeColors = document.getElementById('editProductTypeColors').value;
+    const amount = document.getElementById('editProductAmount').value;
+    const description = document.getElementById('editProductDescription').value;
+    const iconFile = document.getElementById('editProductIcon').files[0];
+    
+    showAdminLoader();
+    
+    try {
+        // Get current product
+        const { data: currentProduct } = await supabase
+            .from('products')
+            .select('icon_url')
+            .eq('id', productId)
+            .single();
+        
+        let iconUrl = currentProduct.icon_url;
+        
+        // Upload new icon if provided
+        if (iconFile) {
+            iconUrl = await uploadFile(iconFile, 'products');
+        }
+        
+        // Parse colors
+        let colorsArray = null;
+        if (typeColors) {
+            colorsArray = typeColors.split(',').map(c => c.trim());
+        }
+        
+        const { error } = await supabase
+            .from('products')
+            .update({
+                category_card_id: categoryCardId,
+                name: name,
+                price: price,
+                discount_percent: discount ? parseInt(discount) : null,
+                type_name: typeName,
+                type_badge_color: colorsArray ? JSON.stringify(colorsArray) : null,
+                amount: amount,
+                description: description,
+                icon_url: iconUrl
+            })
+            .eq('id', productId);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Product updated successfully', 'success');
+        
+        await loadProducts();
+        
+    } catch (error) {
+        console.error('Product update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update product', 'error');
+    }
+}
+
+async function deleteProduct(productId) {
+    if (!confirm('Are you sure you want to delete this product?')) {
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', productId);
+        
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'Product deleted successfully', 'success');
+        
+        await loadProducts();
+        
+    } catch (error) {
+        console.error('Product delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete product', 'error');
+    }
+}
+
+/* ========================================
+   ORDERS MANAGEMENT
+======================================== */
+
+async function loadOrders() {
+    try {
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                users (username, email, avatar),
+                products (name, icon_url),
+                payment_methods (name, icon_url)
+            `)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        AdminState.orders = orders || [];
+        
+        // Separate by status
+        const pending = orders.filter(o => o.status === 'pending');
+        const approved = orders.filter(o => o.status === 'approved');
+        const rejected = orders.filter(o => o.status === 'rejected');
+        
+        renderOrdersList('pendingOrdersList', pending);
+        renderOrdersList('approvedOrdersList', approved);
+        renderOrdersList('rejectedOrdersList', rejected);
+        
+    } catch (error) {
+        console.error('Orders load error:', error);
+        showAdminToast('Error', 'Failed to load orders', 'error');
+    }
+}
+
+function renderOrdersList(containerId, orders) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    
+    if (!orders || orders.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h3>No Orders</h3>
+            </div>
+        `;
+        return;
+    }
+    
+    orders.forEach(order => {
+        renderOrderCard(container, order);
+    });
+}
+
+function renderOrderCard(container, order) {
+    const card = document.createElement('div');
+    card.className = 'order-card-admin';
+    
+    const statusClass = order.status === 'approved' ? 'approved' : order.status === 'rejected' ? 'rejected' : 'pending';
+    
+    // Parse input data
+    let inputDataHtml = '';
+    if (order.input_data) {
+        try {
+            const inputData = JSON.parse(order.input_data);
+            inputDataHtml = Object.entries(inputData).map(([key, value]) => 
+                `<div><strong>Input ${key}:</strong> ${value}</div>`
+            ).join('');
+        } catch (e) {
+            inputDataHtml = '<div>Invalid input data</div>';
+        }
+    }
+    
+    card.innerHTML = `
+        <div class="order-card-header">
+            <span class="order-id-admin">Order #${order.order_id}</span>
+            <span class="order-status-badge ${statusClass}">${order.status.toUpperCase()}</span>
+        </div>
+        
+        <div class="order-card-body">
+            <div class="order-info-item">
+                <span class="order-info-label">Customer</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <img src="${order.users.avatar}" style="width: 30px; height: 30px; border-radius: 50%;" alt="${order.users.username}">
+                    <div>
+                        <div class="order-info-value">${order.users.username}</div>
+                        <div style="font-size: 0.75rem; color: var(--admin-text-muted);">${order.users.email}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="order-info-item">
+                <span class="order-info-label">Product</span>
+                <span class="order-info-value">${order.products.name}</span>
+            </div>
+            
+            <div class="order-info-item">
+                <span class="order-info-label">Price</span>
+                <span class="order-info-value" style="color: var(--admin-purple);">${formatPrice(order.final_price)}</span>
+            </div>
+            
+            <div class="order-info-item">
+                <span class="order-info-label">Payment Method</span>
+                <span class="order-info-value">${order.payment_methods.name}</span>
+            </div>
+            
+            <div class="order-info-item">
+                <span class="order-info-label">Order Date</span>
+                <span class="order-info-value">${formatDate(order.created_at)}</span>
+            </div>
+            
+            ${order.coupon_discount > 0 ? `
+                <div class="order-info-item">
+                    <span class="order-info-label">Coupon Discount</span>
+                    <span class="order-info-value" style="color: var(--admin-green);">-${formatPrice(order.coupon_discount)}</span>
+                </div>
+            ` : ''}
+        </div>
+        
+        ${inputDataHtml ? `
+            <div style="margin: 1rem 0; padding: 1rem; background: var(--admin-bg-secondary); border-radius: var(--admin-radius-md); font-size: 0.85rem;">
+                <strong style="display: block; margin-bottom: 0.5rem;">Customer Input Data:</strong>
+                ${inputDataHtml}
+            </div>
+        ` : ''}
+        
+        <div style="margin: 1rem 0;">
+            <strong style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem;">Payment Proof:</strong>
+            <img src="${order.payment_proof_url}" class="order-proof-image" onclick="viewOrderProof('${order.payment_proof_url}')" alt="Payment Proof">
+        </div>
+        
+        ${order.admin_message ? `
+            <div style="margin: 1rem 0; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: var(--admin-radius-md); font-size: 0.85rem;">
+                <strong>Your Message:</strong> ${order.admin_message}
+            </div>
+        ` : ''}
+        
+        <div class="order-card-footer">
+            ${order.status === 'pending' ? `
+                <button class="btn-success" onclick="approveOrder('${order.id}')">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <button class="btn-danger" onclick="rejectOrder('${order.id}')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            ` : ''}
+            <button class="btn-secondary" onclick="viewOrderDetails('${order.id}')">
+                <i class="fas fa-eye"></i> Details
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(card);
+}
+
+function viewOrderProof(imageUrl) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.95);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    `;
+    
+    modal.innerHTML = `
+        <img src="${imageUrl}" style="max-width: 100%; max-height: 100%; border-radius: 12px;">
+        <button onclick="this.parentElement.remove()" style="position: absolute; top: 2rem; right: 2rem; width: 50px; height: 50px; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; color: white; cursor: pointer; backdrop-filter: blur(10px); font-size: 1.5rem;">
+            ×
+        </button>
+    `;
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.remove();
+        }
+    });
+    
+    document.body.appendChild(modal);
+}
+
+async function approveOrder(orderId) {
+    const message = prompt('Enter a message for the customer (optional):');
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('orders')
+            .update({
+                status: 'approved',
+                admin_message: message || null,
+                approved_at: new Date().toISOString()
+            })
+            .eq('id', orderId);
+        
+        if (error) throw error;
+        
+        // Send notification to user
+        const order = AdminState.orders.find(o => o.id === orderId);
+        if (order) {
+            await supabase
+                .from('notifications')
+                .insert([{
+                    user_id: order.user_id,
+                    type: 'order',
+                    title: 'Order Approved',
+                    message: `Your order #${order.order_id} has been approved!`,
+                    data: JSON.stringify({ orderId: order.id }),
+                    read: false,
+                    created_at: new Date().toISOString()
+                }]);
+        }
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'Order approved successfully', 'success');
+        
+        await loadOrders();
+        
+    } catch (error) {
+        console.error('Order approve error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to approve order', 'error');
+    }
+}
+
+async function rejectOrder(orderId) {
+    const reason = prompt('Enter rejection reason:');
+    
+    if (!reason) {
+        showAdminToast('Warning', 'Please provide a rejection reason', 'warning');
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('orders')
+            .update({
+                status: 'rejected',
+                admin_message: reason
+            })
+            .eq('id', orderId);
+        
+        if (error) throw error;
+        
+        // Send notification to user
+        const order = AdminState.orders.find(o => o.id === orderId);
+        if (order) {
+            await supabase
+                .from('notifications')
+                .insert([{
+                    user_id: order.user_id,
+                    type: 'order',
+                    title: 'Order Rejected',
+                    message: `Your order #${order.order_id} has been rejected. Reason: ${reason}`,
+                    data: JSON.stringify({ orderId: order.id }),
+                    read: false,
+                    created_at: new Date().toISOString()
+                }]);
+        }
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'Order rejected', 'success');
+        
+        await loadOrders();
+        
+    } catch (error) {
+        console.error('Order reject error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to reject order', 'error');
+    }
+}
+
+function viewOrderDetails(orderId) {
+    const order = AdminState.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    // Create detailed view
+    showAdminToast('Order Details', `Order #${order.order_id}`, 'info');
+}
+
+/* ========================================
+   ADMIN.JS - PART 4
+======================================== */
+
+/* ========================================
+   USERS MANAGEMENT
+======================================== */
+
+async function loadUsers() {
+    try {
+        const { data: users, error } = await supabase
+            .from('users')
             .select('*')
             .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        dashboardData.paymentMethods = data || [];
-        renderPaymentMethods();
+        AdminState.users = users || [];
+        
+        renderUsersList(users);
         
     } catch (error) {
-        console.error('Error loading payment methods:', error);
-        showAdminToast('Failed to load payment methods', 'error');
+        console.error('Users load error:', error);
+        showAdminToast('Error', 'Failed to load users', 'error');
     }
 }
 
-function renderPaymentMethods() {
-    const container = document.getElementById('paymentsContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Add Payment Method</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Payment Name *</label>
-                    <input type="text" id="paymentName" placeholder="e.g., KBZ Pay">
-                </div>
-                <div class="form-group">
-                    <label>Payment Icon *</label>
-                    <input type="file" id="paymentIcon" accept="image/*">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Account Name *</label>
-                    <input type="text" id="paymentAccountName" placeholder="Enter account name">
-                </div>
-                <div class="form-group">
-                    <label>Account Number/Address *</label>
-                    <input type="text" id="paymentAccountNumber" placeholder="Enter account number">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Payment Instructions</label>
-                <textarea id="paymentInstructions" placeholder="Enter instructions for users"></textarea>
-            </div>
-            <button class="add-btn" onclick="addPaymentMethod()">
-                <i class="fas fa-plus"></i> Add Payment Method
-            </button>
-        </div>
-        
-        <div class="items-grid" id="paymentMethodsList"></div>
-    `;
-    
-    renderPaymentMethodsList();
-}
-
-function renderPaymentMethodsList() {
-    const container = document.getElementById('paymentMethodsList');
-    if (!container) return;
-    
+function renderUsersList(users) {
+    const container = document.getElementById('usersList');
     container.innerHTML = '';
     
-    if (dashboardData.paymentMethods.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-credit-card"></i><h3>No Payment Methods</h3><p>Add your first payment method</p></div>';
+    if (!users || users.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <h3>No Users</h3>
+            </div>
+        `;
         return;
     }
     
-    dashboardData.paymentMethods.forEach(payment => {
+    users.forEach(user => {
         const card = document.createElement('div');
-        card.className = 'item-card';
+        card.className = 'user-card-admin';
+        
+        // Get user stats
+        const orderCount = AdminState.orders?.filter(o => o.user_id === user.id).length || 0;
+        const approvedCount = AdminState.orders?.filter(o => o.user_id === user.id && o.status === 'approved').length || 0;
+        
         card.innerHTML = `
-            <img src="${payment.icon_url}" alt="${payment.name}">
-            <h4>${payment.name}</h4>
-            <p>Account: ${payment.account_name}</p>
-            <p>Number: ${payment.account_number}</p>
-            <div class="item-actions">
-                <button class="edit-btn" onclick="editPaymentMethod(${payment.id})">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="delete-btn" onclick="deletePaymentMethod(${payment.id})">
-                    <i class="fas fa-trash"></i> Delete
+            <img src="${user.avatar}" alt="${user.username}" class="user-avatar-admin">
+            <div class="user-info-admin">
+                <div class="user-name-admin">${user.username}</div>
+                <div class="user-email-admin">${user.email}</div>
+                <div class="user-stats-admin">
+                    <span><i class="fas fa-shopping-cart"></i> ${orderCount} orders</span>
+                    <span><i class="fas fa-check-circle"></i> ${approvedCount} approved</span>
+                    <span><i class="fas fa-calendar"></i> Joined ${new Date(user.created_at).toLocaleDateString()}</span>
+                </div>
+            </div>
+            <div class="user-actions-admin">
+                <span class="badge-status ${user.status}">${user.status}</span>
+                ${user.status === 'active' ? `
+                    <button class="icon-btn delete" onclick="blockUser('${user.id}')">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                ` : `
+                    <button class="icon-btn edit" onclick="unblockUser('${user.id}')">
+                        <i class="fas fa-check"></i>
+                    </button>
+                `}
+                <button class="icon-btn delete" onclick="deleteUser('${user.id}')">
+                    <i class="fas fa-trash"></i>
                 </button>
             </div>
         `;
+        
         container.appendChild(card);
     });
 }
 
-async function addPaymentMethod() {
-    const name = document.getElementById('paymentName').value.trim();
-    const iconFile = document.getElementById('paymentIcon').files[0];
-    const accountName = document.getElementById('paymentAccountName').value.trim();
-    const accountNumber = document.getElementById('paymentAccountNumber').value.trim();
-    const instructions = document.getElementById('paymentInstructions').value.trim();
+// User search handler
+document.getElementById('searchUsers')?.addEventListener('input', function() {
+    const query = this.value.toLowerCase();
     
-    if (!name || !iconFile || !accountName || !accountNumber) {
-        showAdminToast('Please fill all required fields', 'warning');
+    if (!query) {
+        renderUsersList(AdminState.users);
         return;
     }
     
+    const filtered = AdminState.users.filter(u => 
+        u.username.toLowerCase().includes(query) ||
+        u.email.toLowerCase().includes(query)
+    );
+    
+    renderUsersList(filtered);
+});
+
+// User status filter
+document.getElementById('filterUserStatus')?.addEventListener('change', function() {
+    const status = this.value;
+    
+    if (!status) {
+        renderUsersList(AdminState.users);
+        return;
+    }
+    
+    const filtered = AdminState.users.filter(u => u.status === status);
+    renderUsersList(filtered);
+});
+
+async function blockUser(userId) {
+    if (!confirm('Are you sure you want to block this user?')) {
+        return;
+    }
+    
+    showAdminLoader();
+    
     try {
-        showAdminLoading();
+        const { error } = await supabase
+            .from('users')
+            .update({ status: 'blocked' })
+            .eq('id', userId);
         
-        const iconUrl = await uploadFile(iconFile, 'payments', 'icons/');
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'User blocked successfully', 'success');
+        
+        await loadUsers();
+        
+    } catch (error) {
+        console.error('Block user error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to block user', 'error');
+    }
+}
+
+async function unblockUser(userId) {
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('users')
+            .update({ status: 'active' })
+            .eq('id', userId);
+        
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'User unblocked successfully', 'success');
+        
+        await loadUsers();
+        
+    } catch (error) {
+        console.error('Unblock user error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to unblock user', 'error');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('users')
+            .update({ status: 'deleted' })
+            .eq('id', userId);
+        
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'User deleted successfully', 'success');
+        
+        await loadUsers();
+        
+    } catch (error) {
+        console.error('Delete user error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete user', 'error');
+    }
+}
+
+/* ========================================
+   PAYMENT METHODS MANAGEMENT
+======================================== */
+
+async function loadPaymentMethods() {
+    try {
+        const { data: payments, error } = await supabase
+            .from('payment_methods')
+            .select('*')
+            .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        AdminState.payments = payments || [];
+        
+        const container = document.getElementById('paymentsList');
+        container.innerHTML = '';
+        
+        if (payments.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-credit-card"></i>
+                    <h3>No Payment Methods</h3>
+                    <p>Add your first payment method</p>
+                </div>
+            `;
+            return;
+        }
+        
+        payments.forEach(payment => {
+            const card = document.createElement('div');
+            card.className = 'payment-card';
+            
+            card.innerHTML = `
+                <div class="payment-icon-wrapper">
+                    <img src="${payment.icon_url}" alt="${payment.name}">
+                </div>
+                <div class="payment-name">${payment.name}</div>
+                <div class="payment-account">${payment.account_name}</div>
+                <div style="font-size: 0.85rem; color: var(--admin-text-secondary); margin-bottom: 1rem;">
+                    ${payment.account_number}
+                </div>
+                <div class="payment-actions">
+                    <button class="icon-btn edit" onclick="editPaymentMethod('${payment.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="icon-btn delete" onclick="deletePaymentMethod('${payment.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(card);
+        });
+        
+    } catch (error) {
+        console.error('Payment methods load error:', error);
+        showAdminToast('Error', 'Failed to load payment methods', 'error');
+    }
+}
+
+function openPaymentModal() {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Add Payment Method</h2>
+        <form id="paymentForm" onsubmit="submitPaymentMethod(event)">
+            <div class="form-group">
+                <label>Payment Method Name</label>
+                <input type="text" id="paymentName" class="form-control" placeholder="e.g., KBZ Pay" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Account Name</label>
+                <input type="text" id="paymentAccountName" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Account Number / Address</label>
+                <input type="text" id="paymentAccountNumber" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Instructions</label>
+                <textarea id="paymentInstructions" class="form-control" rows="3" placeholder="Enter payment instructions..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Payment Icon</label>
+                <input type="file" id="paymentIcon" class="form-control" accept="image/*" required>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Add Payment Method
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function submitPaymentMethod(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('paymentName').value;
+    const accountName = document.getElementById('paymentAccountName').value;
+    const accountNumber = document.getElementById('paymentAccountNumber').value;
+    const instructions = document.getElementById('paymentInstructions').value;
+    const iconFile = document.getElementById('paymentIcon').files[0];
+    
+    if (!iconFile) {
+        showAdminToast('Error', 'Please select an icon', 'error');
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const iconUrl = await uploadFile(iconFile, 'payment-methods');
         
         const { error } = await supabase
             .from('payment_methods')
             .insert([{
                 name: name,
-                icon_url: iconUrl,
                 account_name: accountName,
                 account_number: accountNumber,
-                instructions: instructions || null,
+                instructions: instructions,
+                icon_url: iconUrl,
+                status: 'active',
                 created_at: new Date().toISOString()
             }]);
         
         if (error) throw error;
         
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Payment method added successfully', 'success');
+        
         await loadPaymentMethods();
         
-        // Clear form
-        document.getElementById('paymentName').value = '';
-        document.getElementById('paymentIcon').value = '';
-        document.getElementById('paymentAccountName').value = '';
-        document.getElementById('paymentAccountNumber').value = '';
-        document.getElementById('paymentInstructions').value = '';
-        
-        hideAdminLoading();
-        showAdminToast('Payment method added successfully', 'success');
-        
     } catch (error) {
-        console.error('Error adding payment method:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add payment method', 'error');
+        console.error('Payment method create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to add payment method', 'error');
     }
 }
 
-async function editPaymentMethod(id) {
-    showAdminToast('Edit payment method - to be implemented', 'info');
+async function editPaymentMethod(paymentId) {
+    const payment = AdminState.payments.find(p => p.id === paymentId);
+    if (!payment) return;
+    
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Payment Method</h2>
+        <form id="editPaymentForm" onsubmit="updatePaymentMethod(event, '${paymentId}')">
+            <div class="form-group">
+                <label>Payment Method Name</label>
+                <input type="text" id="editPaymentName" class="form-control" value="${payment.name}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Account Name</label>
+                <input type="text" id="editPaymentAccountName" class="form-control" value="${payment.account_name}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Account Number / Address</label>
+                <input type="text" id="editPaymentAccountNumber" class="form-control" value="${payment.account_number}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Instructions</label>
+                <textarea id="editPaymentInstructions" class="form-control" rows="3">${payment.instructions || ''}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Payment Icon (Leave empty to keep current)</label>
+                <input type="file" id="editPaymentIcon" class="form-control" accept="image/*">
+                <div class="image-preview">
+                    <img src="${payment.icon_url}" alt="Current Icon" style="max-height: 80px;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Payment Method
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
 }
 
-async function deletePaymentMethod(id) {
-    showConfirmDialog(
-        'Delete Payment Method',
-        'Are you sure you want to delete this payment method?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const payment = dashboardData.paymentMethods.find(p => p.id === id);
-                if (payment?.icon_url) {
-                    await deleteFile(payment.icon_url, 'payments');
-                }
-                
-                const { error } = await supabase
-                    .from('payment_methods')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadPaymentMethods();
-                
-                hideAdminLoading();
-                showAdminToast('Payment method deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting payment method:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete payment method', 'error');
-            }
-        }
-    );
-}
-
-// ==================== ORDERS MANAGEMENT ====================
-async function loadOrders() {
+async function updatePaymentMethod(e, paymentId) {
+    e.preventDefault();
+    
+    const name = document.getElementById('editPaymentName').value;
+    const accountName = document.getElementById('editPaymentAccountName').value;
+    const accountNumber = document.getElementById('editPaymentAccountNumber').value;
+    const instructions = document.getElementById('editPaymentInstructions').value;
+    const iconFile = document.getElementById('editPaymentIcon').files[0];
+    
+    showAdminLoader();
+    
     try {
-        const { data, error } = await supabase
-            .from('orders')
-            .select('*, users(username, email, avatar_url)')
-            .order('created_at', { ascending: false });
+        const { data: currentPayment } = await supabase
+            .from('payment_methods')
+            .select('icon_url')
+            .eq('id', paymentId)
+            .single();
+        
+        let iconUrl = currentPayment.icon_url;
+        
+        if (iconFile) {
+            iconUrl = await uploadFile(iconFile, 'payment-methods');
+        }
+        
+        const { error } = await supabase
+            .from('payment_methods')
+            .update({
+                name: name,
+                account_name: accountName,
+                account_number: accountNumber,
+                instructions: instructions,
+                icon_url: iconUrl
+            })
+            .eq('id', paymentId);
         
         if (error) throw error;
         
-        dashboardData.orders = data || [];
-        renderOrdersManagement();
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Payment method updated successfully', 'success');
+        
+        await loadPaymentMethods();
         
     } catch (error) {
-        console.error('Error loading orders:', error);
-        showAdminToast('Failed to load orders', 'error');
+        console.error('Payment method update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update payment method', 'error');
     }
 }
 
-function renderOrdersManagement() {
-    const container = document.getElementById('ordersContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="filter-bar">
-            <select id="orderStatusFilter" onchange="filterOrders()">
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-            </select>
-            <input type="date" id="orderDateFilter" onchange="filterOrders()">
-            <button class="filter-apply-btn" onclick="filterOrders()">
-                <i class="fas fa-filter"></i> Apply Filter
-            </button>
-        </div>
-        
-        <div class="data-table" id="ordersTable"></div>
-    `;
-    
-    renderOrdersTable(dashboardData.orders);
-}
-
-function renderOrdersTable(orders) {
-    const container = document.getElementById('ordersTable');
-    if (!container) return;
-    
-    if (orders.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-shopping-cart"></i><h3>No Orders</h3><p>No orders to display</p></div>';
+async function deletePaymentMethod(paymentId) {
+    if (!confirm('Are you sure you want to delete this payment method?')) {
         return;
     }
     
-    let html = `
-        <table>
-            <thead>
-                <tr>
-                    <th>Order ID</th>
-                    <th>Customer</th>
-                    <th>Product</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    showAdminLoader();
     
-    orders.forEach(order => {
-        html += `
-            <tr>
-                <td><strong>#${order.order_id}</strong></td>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="${order.users?.avatar_url || ''}" style="width: 32px; height: 32px; border-radius: 50%;">
-                        <div>
-                            <div>${order.users?.username || 'N/A'}</div>
-                            <small style="color: var(--text-muted);">${order.users?.email || ''}</small>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="${order.product_icon}" style="width: 32px; height: 32px; border-radius: 4px;">
-                        ${order.product_name}
-                    </div>
-                </td>
-                <td><strong>${formatCurrency(order.final_price)} Ks</strong></td>
-                <td><span class="badge badge-${order.status === 'pending' ? 'warning' : order.status === 'approved' ? 'success' : 'danger'}">${order.status.toUpperCase()}</span></td>
-                <td>${formatTimestamp(order.created_at)}</td>
-                <td>
-                    <button class="icon-btn" onclick="viewOrderDetail(${order.id})" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    ${order.status === 'pending' ? `
-                        <button class="icon-btn" onclick="approveOrder(${order.id})" title="Approve" style="color: var(--success);">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="icon-btn" onclick="rejectOrder(${order.id})" title="Reject" style="color: var(--danger);">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    ` : ''}
-                </td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
-
-function filterOrders() {
-    const statusFilter = document.getElementById('orderStatusFilter').value;
-    const dateFilter = document.getElementById('orderDateFilter').value;
-    
-    let filtered = [...dashboardData.orders];
-    
-    if (statusFilter) {
-        filtered = filtered.filter(o => o.status === statusFilter);
-    }
-    
-    if (dateFilter) {
-        filtered = filtered.filter(o => o.created_at.startsWith(dateFilter));
-    }
-    
-    renderOrdersTable(filtered);
-}
-
-function viewOrderDetail(orderId) {
-    const order = dashboardData.orders.find(o => o.id === orderId);
-    if (!order) return;
-    
-    const modal = document.createElement('div');
-    modal.className = 'admin-modal active';
-    modal.innerHTML = `
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h3>Order Details - #${order.order_id}</h3>
-                <button class="modal-close" onclick="this.closest('.admin-modal').remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Customer Information</label>
-                    <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--dark-lighter); border-radius: 8px;">
-                        <img src="${order.users?.avatar_url}" style="width: 48px; height: 48px; border-radius: 50%;">
-                        <div>
-                            <strong>${order.users?.username}</strong><br>
-                            <small style="color: var(--text-muted);">${order.users?.email}</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Product Information</label>
-                    <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--dark-lighter); border-radius: 8px;">
-                        <img src="${order.product_icon}" style="width: 48px; height: 48px; border-radius: 8px;">
-                        <div>
-                            <strong>${order.product_name}</strong><br>
-                            <small style="color: var(--text-muted);">${order.amount || 'N/A'}</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Original Price</label>
-                        <input type="text" value="${formatCurrency(order.original_price)} Ks" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Discount</label>
-                        <input type="text" value="${order.discount_percentage}%" readonly>
-                    </div>
-                </div>
-                
-                ${order.coupon_code ? `
-                <div class="form-group">
-                    <label>Coupon Applied</label>
-                    <input type="text" value="${order.coupon_code} (-${order.coupon_discount}%)" readonly>
-                </div>
-                ` : ''}
-                
-                <div class="form-group">
-                    <label>Final Price</label>
-                    <input type="text" value="${formatCurrency(order.final_price)} Ks" readonly style="font-weight: 700; color: var(--success);">
-                </div>
-                
-                <div class="form-group">
-                    <label>Payment Method</label>
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--dark-lighter); border-radius: 8px;">
-                        <img src="${order.payment_method_icon}" style="width: 24px; height: 24px;">
-                        <span>${order.payment_method_name}</span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Payment Proof</label>
-                    <img src="${order.payment_proof_url}" style="width: 100%; max-width: 400px; border-radius: 8px; cursor: pointer;" onclick="window.open('${order.payment_proof_url}', '_blank')">
-                </div>
-                
-                ${order.input_data && Object.keys(order.input_data).length > 0 ? `
-                <div class="form-group">
-                    <label>Customer Input Data</label>
-                    <div style="background: var(--dark-lighter); padding: 16px; border-radius: 8px;">
-                        ${Object.entries(order.input_data).map(([key, value]) => `
-                            <div style="margin-bottom: 8px;">
-                                <strong>${key}:</strong> ${value}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
-                
-                <div class="form-group">
-                    <label>Order Status</label>
-                    <span class="badge badge-${order.status === 'pending' ? 'warning' : order.status === 'approved' ? 'success' : 'danger'}" style="font-size: 16px; padding: 8px 16px;">
-                        ${order.status.toUpperCase()}
-                    </span>
-                </div>
-                
-                ${order.status === 'pending' ? `
-                <div class="form-group">
-                    <label>Admin Message (Optional)</label>
-                    <textarea id="orderAdminMessage" placeholder="Enter message for customer"></textarea>
-                </div>
-                ` : ''}
-                
-                ${order.admin_message ? `
-                <div class="form-group">
-                    <label>Admin Message</label>
-                    <div style="background: rgba(99, 102, 241, 0.1); padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary);">
-                        ${order.admin_message}
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-            ${order.status === 'pending' ? `
-            <div class="modal-footer">
-                <button class="delete-btn" onclick="rejectOrderFromModal(${order.id})">
-                    <i class="fas fa-times"></i> Reject Order
-                </button>
-                <button class="save-btn" onclick="approveOrderFromModal(${order.id})">
-                    <i class="fas fa-check"></i> Approve Order
-                </button>
-            </div>
-            ` : ''}
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
-}
-
-async function approveOrder(orderId) {
-    showConfirmDialog(
-        'Approve Order',
-        'Are you sure you want to approve this order?',
-        () => approveOrderFromModal(orderId)
-    );
-}
-
-async function approveOrderFromModal(orderId) {
     try {
-        showAdminLoading();
-        
-        const message = document.getElementById('orderAdminMessage')?.value.trim() || null;
-        
         const { error } = await supabase
-            .from('orders')
-            .update({
-                status: 'approved',
-                approved_at: new Date().toISOString(),
-                admin_message: message
-            })
-            .eq('id', orderId);
+            .from('payment_methods')
+            .delete()
+            .eq('id', paymentId);
         
         if (error) throw error;
         
-        // Update category card sales count
-        const order = dashboardData.orders.find(o => o.id === orderId);
-        if (order) {
-            await updateCategoryCardSales(order.category_card_id);
-        }
+        hideAdminLoader();
+        showAdminToast('Success', 'Payment method deleted successfully', 'success');
         
-        await loadOrders();
-        
-        document.querySelector('.admin-modal')?.remove();
-        
-        hideAdminLoading();
-        showAdminToast('Order approved successfully', 'success');
+        await loadPaymentMethods();
         
     } catch (error) {
-        console.error('Error approving order:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to approve order', 'error');
+        console.error('Payment method delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete payment method', 'error');
     }
 }
 
-async function rejectOrder(orderId) {
-    showConfirmDialog(
-        'Reject Order',
-        'Are you sure you want to reject this order?',
-        () => rejectOrderFromModal(orderId)
-    );
-}
+/* ========================================
+   COUPONS MANAGEMENT
+======================================== */
 
-async function rejectOrderFromModal(orderId) {
-    try {
-        showAdminLoading();
-        
-        const message = document.getElementById('orderAdminMessage')?.value.trim() || 'Your order has been rejected.';
-        
-        const { error } = await supabase
-            .from('orders')
-            .update({
-                status: 'rejected',
-                admin_message: message
-            })
-            .eq('id', orderId);
-        
-        if (error) throw error;
-        
-        await loadOrders();
-        
-        document.querySelector('.admin-modal')?.remove();
-        
-        hideAdminLoading();
-        showAdminToast('Order rejected', 'success');
-        
-    } catch (error) {
-        console.error('Error rejecting order:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to reject order', 'error');
-    }
-}
-
-async function updateCategoryCardSales(categoryCardId) {
-    try {
-        const { data, error } = await supabase
-            .from('orders')
-            .select('id')
-            .eq('category_card_id', categoryCardId)
-            .eq('status', 'approved');
-        
-        if (error) throw error;
-        
-        const totalSales = data?.length || 0;
-        
-        await supabase
-            .from('category_cards')
-            .update({ total_sales: totalSales })
-            .eq('id', categoryCardId);
-        
-    } catch (error) {
-        console.error('Error updating sales:', error);
-    }
-}
-
-// ==================== COUPONS MANAGEMENT ====================
 async function loadCoupons() {
     try {
-        const { data, error } = await supabase
+        const { data: coupons, error } = await supabase
             .from('coupons')
             .select('*')
             .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        dashboardData.coupons = data || [];
-        renderCouponsManagement();
+        AdminState.coupons = coupons || [];
+        
+        const container = document.getElementById('couponsList');
+        container.innerHTML = '';
+        
+        if (coupons.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-tags"></i>
+                    <h3>No Coupons</h3>
+                    <p>Create your first coupon</p>
+                </div>
+            `;
+            return;
+        }
+        
+        for (const coupon of coupons) {
+            // Get usage stats
+            const { data: usage } = await supabase
+                .from('coupon_usage')
+                .select('*')
+                .eq('coupon_id', coupon.id);
+            
+            const usageCount = usage?.length || 0;
+            
+            const card = document.createElement('div');
+            card.className = 'coupon-card';
+            
+            card.innerHTML = `
+                <div class="coupon-code">${coupon.code}</div>
+                
+                <div class="coupon-details">
+                    <div class="coupon-detail-item">
+                        <div class="coupon-detail-label">Discount</div>
+                        <div class="coupon-detail-value">${coupon.discount_percent}%</div>
+                    </div>
+                    <div class="coupon-detail-item">
+                        <div class="coupon-detail-label">Type</div>
+                        <div class="coupon-detail-value">${coupon.product_id ? 'Product Specific' : 'All Products'}</div>
+                    </div>
+                    <div class="coupon-detail-item">
+                        <div class="coupon-detail-label">Single Use</div>
+                        <div class="coupon-detail-value">${coupon.single_use ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div class="coupon-detail-item">
+                        <div class="coupon-detail-label">Status</div>
+                        <div class="coupon-detail-value">
+                            <span class="badge-status ${coupon.status}">${coupon.status}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="coupon-stats">
+                    <div class="coupon-stat">
+                        <div class="coupon-stat-value">${usageCount}</div>
+                        <div class="coupon-stat-label">Times Used</div>
+                    </div>
+                </div>
+                
+                <div class="coupon-actions">
+                    <button class="btn-secondary" onclick="sendCoupon('${coupon.id}')">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                    <button class="icon-btn edit" onclick="editCoupon('${coupon.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="icon-btn delete" onclick="deleteCoupon('${coupon.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(card);
+        }
         
     } catch (error) {
-        console.error('Error loading coupons:', error);
-        showAdminToast('Failed to load coupons', 'error');
+        console.error('Coupons load error:', error);
+        showAdminToast('Error', 'Failed to load coupons', 'error');
     }
 }
 
-function renderCouponsManagement() {
-    const container = document.getElementById('couponsContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Create Coupon</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Coupon Code</label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="couponCode" placeholder="Enter code or generate">
-                        <button class="quick-action-btn" onclick="generateCouponCode()">
-                            <i class="fas fa-random"></i> Generate
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Discount Percentage *</label>
-                    <input type="number" id="couponDiscount" placeholder="e.g., 10" min="1" max="100">
+function openCouponModal() {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Create Coupon</h2>
+        <form id="couponForm" onsubmit="submitCoupon(event)">
+            <div class="form-group">
+                <label>Coupon Code</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="couponCode" class="form-control" required readonly>
+                    <button type="button" class="btn-secondary" onclick="generateCouponCode()">
+                        <i class="fas fa-random"></i> Generate
+                    </button>
                 </div>
             </div>
             
             <div class="form-group">
+                <label>Discount Percentage</label>
+                <input type="number" id="couponDiscount" class="form-control" min="1" max="100" required>
+            </div>
+            
+            <div class="form-group">
                 <label>Coupon Type</label>
-                <select id="couponType" onchange="toggleCouponOptions()">
-                    <option value="all">All Users & All Products</option>
-                    <option value="specific_users">Specific Users</option>
-                    <option value="specific_products">Specific Products</option>
-                    <option value="both">Specific Users & Products</option>
+                <select id="couponType" class="form-control" onchange="toggleCouponProductSelect()">
+                    <option value="all">All Products</option>
+                    <option value="specific">Specific Product</option>
                 </select>
             </div>
             
-            <div class="form-group" id="couponUsersSection" style="display: none;">
-                <label>Select Users</label>
-                <div id="couponUsersList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 12px;"></div>
+            <div class="form-group" id="couponProductGroup" style="display: none;">
+                <label>Select Product</label>
+                <select id="couponProduct" class="form-control">
+                    <option value="">Select Product</option>
+                </select>
             </div>
             
-            <div class="form-group" id="couponProductsSection" style="display: none;">
-                <label>Select Products</label>
-                <div id="couponProductsList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 12px;"></div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="couponSingleUse" style="margin-right: 0.5rem;">
+                    Single Use Per User
+                </label>
             </div>
             
-            <button class="add-btn" onclick="createCoupon()">
-                <i class="fas fa-plus"></i> Create Coupon
-            </button>
-        </div>
-        
-        <div class="items-grid" id="couponsList"></div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Create Coupon
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
     `;
     
-    renderCouponsList();
-    loadUsersForCoupon();
-    loadProductsForCoupon();
+    openAdminModal(content);
+    
+    // Load products for selection
+    loadCouponProducts();
+    
+    // Generate initial code
+    generateCouponCode();
+}
+
+async function loadCouponProducts() {
+    const select = document.getElementById('couponProduct');
+    if (!select) return;
+    
+    const { data: products } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('status', 'active');
+    
+    products?.forEach(product => {
+        select.innerHTML += `<option value="${product.id}">${product.name}</option>`;
+    });
 }
 
 function generateCouponCode() {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < 8; i++) {
-        code += characters.charAt(Math.floor(Math.random() * characters.length));
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     document.getElementById('couponCode').value = code;
 }
 
-function toggleCouponOptions() {
+function toggleCouponProductSelect() {
     const type = document.getElementById('couponType').value;
+    const productGroup = document.getElementById('couponProductGroup');
     
-    const usersSection = document.getElementById('couponUsersSection');
-    const productsSection = document.getElementById('couponProductsSection');
-    
-    usersSection.style.display = (type === 'specific_users' || type === 'both') ? 'block' : 'none';
-    productsSection.style.display = (type === 'specific_products' || type === 'both') ? 'block' : 'none';
-}
-
-function loadUsersForCoupon() {
-    const container = document.getElementById('couponUsersList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    dashboardData.users.forEach(user => {
-        const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '8px';
-        label.style.padding = '8px';
-        label.style.cursor = 'pointer';
-        label.style.borderRadius = '6px';
-        label.style.marginBottom = '4px';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = user.id;
-        checkbox.className = 'coupon-user-checkbox';
-        
-        const avatar = document.createElement('img');
-        avatar.src = user.avatar_url;
-        avatar.style.width = '24px';
-        avatar.style.height = '24px';
-        avatar.style.borderRadius = '50%';
-        
-        const span = document.createElement('span');
-        span.textContent = user.username;
-        
-        label.appendChild(checkbox);
-        label.appendChild(avatar);
-        label.appendChild(span);
-        
-        label.addEventListener('mouseenter', () => {
-            label.style.background = 'var(--dark-lighter)';
-        });
-        label.addEventListener('mouseleave', () => {
-            label.style.background = 'transparent';
-        });
-        
-        container.appendChild(label);
-    });
-}
-
-function loadProductsForCoupon() {
-    const container = document.getElementById('couponProductsList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    dashboardData.products.forEach(product => {
-        const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '8px';
-        label.style.padding = '8px';
-        label.style.cursor = 'pointer';
-        label.style.borderRadius = '6px';
-        label.style.marginBottom = '4px';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = product.id;
-        checkbox.className = 'coupon-product-checkbox';
-        
-        const icon = document.createElement('img');
-        icon.src = product.icon_url;
-        icon.style.width = '24px';
-        icon.style.height = '24px';
-        icon.style.borderRadius = '4px';
-        
-        const span = document.createElement('span');
-        span.textContent = product.name;
-        
-        label.appendChild(checkbox);
-        label.appendChild(icon);
-        label.appendChild(span);
-        
-        label.addEventListener('mouseenter', () => {
-            label.style.background = 'var(--dark-lighter)';
-        });
-        label.addEventListener('mouseleave', () => {
-            label.style.background = 'transparent';
-        });
-        
-        container.appendChild(label);
-    });
-}
-
-async function createCoupon() {
-    const code = document.getElementById('couponCode').value.trim();
-    const discount = document.getElementById('couponDiscount').value;
-    const type = document.getElementById('couponType').value;
-    
-    if (!code || !discount) {
-        showAdminToast('Please fill all required fields', 'warning');
-        return;
+    if (type === 'specific') {
+        productGroup.style.display = 'block';
+    } else {
+        productGroup.style.display = 'none';
     }
+}
+
+async function submitCoupon(e) {
+    e.preventDefault();
+    
+    const code = document.getElementById('couponCode').value;
+    const discount = parseInt(document.getElementById('couponDiscount').value);
+    const type = document.getElementById('couponType').value;
+    const productId = document.getElementById('couponProduct').value;
+    const singleUse = document.getElementById('couponSingleUse').checked;
+    
+    showAdminLoader();
     
     try {
-        showAdminLoading();
-        
-        let userIds = [];
-        let productIds = [];
-        
-        if (type === 'specific_users' || type === 'both') {
-            userIds = Array.from(document.querySelectorAll('.coupon-user-checkbox:checked'))
-                .map(cb => parseInt(cb.value));
-            
-            if (userIds.length === 0) {
-                hideAdminLoading();
-                showAdminToast('Please select at least one user', 'warning');
-                return;
-            }
-        }
-        
-        if (type === 'specific_products' || type === 'both') {
-            productIds = Array.from(document.querySelectorAll('.coupon-product-checkbox:checked'))
-                .map(cb => parseInt(cb.value));
-            
-            if (productIds.length === 0) {
-                hideAdminLoading();
-                showAdminToast('Please select at least one product', 'warning');
-                return;
-            }
-        }
-        
         const { error } = await supabase
             .from('coupons')
             .insert([{
-                code: code.toUpperCase(),
-                discount_percentage: parseInt(discount),
-                user_ids: userIds.length > 0 ? userIds : null,
-                product_ids: productIds.length > 0 ? productIds : null,
-                used_by: [],
-                usage_count: 0,
+                code: code,
+                discount_percent: discount,
+                product_id: type === 'specific' ? productId : null,
+                single_use: singleUse,
+                status: 'active',
                 created_at: new Date().toISOString()
             }]);
         
         if (error) throw error;
         
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Coupon created successfully', 'success');
+        
         await loadCoupons();
         
-        // Clear form
-        document.getElementById('couponCode').value = '';
-        document.getElementById('couponDiscount').value = '';
-        document.getElementById('couponType').value = 'all';
-        document.querySelectorAll('.coupon-user-checkbox').forEach(cb => cb.checked = false);
-        document.querySelectorAll('.coupon-product-checkbox').forEach(cb => cb.checked = false);
-        toggleCouponOptions();
-        
-        hideAdminLoading();
-        showAdminToast('Coupon created successfully', 'success');
-        
     } catch (error) {
-        console.error('Error creating coupon:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to create coupon', 'error');
+        console.error('Coupon create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to create coupon', 'error');
     }
 }
 
-function renderCouponsList() {
-    const container = document.getElementById('couponsList');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (dashboardData.coupons.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-ticket-alt"></i><h3>No Coupons</h3><p>Create your first coupon</p></div>';
-        return;
-    }
-    
-    dashboardData.coupons.forEach(coupon => {
-        const card = document.createElement('div');
-        card.className = 'item-card';
-        
-        let typeText = 'All Users & Products';
-        if (coupon.user_ids && coupon.product_ids) {
-            typeText = 'Specific Users & Products';
-        } else if (coupon.user_ids) {
-            typeText = 'Specific Users';
-        } else if (coupon.product_ids) {
-            typeText = 'Specific Products';
-        }
-        
-        card.innerHTML = `
-            <h4 style="font-size: 24px; color: var(--primary); letter-spacing: 2px;">${coupon.code}</h4>
-            <p><strong>Discount:</strong> ${coupon.discount_percentage}%</p>
-            <p><strong>Type:</strong> ${typeText}</p>
-            <p><strong>Used:</strong> ${coupon.usage_count || 0} times</p>
-            <div class="item-actions">
-                <button class="add-btn" onclick="sendCouponToUsers(${coupon.id})">
-                    <i class="fas fa-paper-plane"></i> Send
-                </button>
-                <button class="delete-btn" onclick="deleteCoupon(${coupon.id})">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-async function sendCouponToUsers(couponId) {
-    const coupon = dashboardData.coupons.find(c => c.id === couponId);
+async function sendCoupon(couponId) {
+    const coupon = AdminState.coupons.find(c => c.id === couponId);
     if (!coupon) return;
     
-    const userIds = coupon.user_ids || dashboardData.users.map(u => u.id);
+    // Get all users
+    const { data: users } = await supabase
+        .from('users')
+        .select('id, username')
+        .eq('status', 'active');
     
-    if (userIds.length === 0) {
-        showAdminToast('No users to send coupon to', 'warning');
+    let usersOptions = '';
+    users?.forEach(user => {
+        usersOptions += `<option value="${user.id}">${user.username}</option>`;
+    });
+    
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Send Coupon</h2>
+        <div style="background: var(--admin-bg-secondary); padding: 1rem; border-radius: var(--admin-radius-md); margin-bottom: 1.5rem;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--admin-purple); margin-bottom: 0.5rem;">${coupon.code}</div>
+            <div style="font-size: 0.9rem; color: var(--admin-text-secondary);">${coupon.discount_percent}% Discount</div>
+        </div>
+        
+        <form id="sendCouponForm" onsubmit="submitSendCoupon(event, '${couponId}')">
+            <div class="form-group">
+                <label>Send To</label>
+                <select id="sendCouponType" class="form-control" onchange="toggleCouponUserSelect()">
+                    <option value="all">All Users</option>
+                    <option value="specific">Specific Users</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="sendCouponUsersGroup" style="display: none;">
+                <label>Select Users</label>
+                <select id="sendCouponUsers" class="form-control" multiple size="5">
+                    ${usersOptions}
+                </select>
+                <small style="color: var(--admin-text-muted);">Hold Ctrl/Cmd to select multiple</small>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> Send Coupon
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+function toggleCouponUserSelect() {
+    const type = document.getElementById('sendCouponType').value;
+    const usersGroup = document.getElementById('sendCouponUsersGroup');
+    
+    if (type === 'specific') {
+        usersGroup.style.display = 'block';
+    } else {
+        usersGroup.style.display = 'none';
+    }
+}
+
+async function submitSendCoupon(e, couponId) {
+    e.preventDefault();
+    
+    const type = document.getElementById('sendCouponType').value;
+    const coupon = AdminState.coupons.find(c => c.id === couponId);
+    
+    showAdminLoader();
+    
+    try {
+        let userIds = [];
+        
+        if (type === 'all') {
+            const { data: users } = await supabase
+                .from('users')
+                .select('id')
+                .eq('status', 'active');
+            
+            userIds = users?.map(u => u.id) || [];
+        } else {
+            const select = document.getElementById('sendCouponUsers');
+            userIds = Array.from(select.selectedOptions).map(option => option.value);
+        }
+        
+        if (userIds.length === 0) {
+            showAdminToast('Error', 'Please select at least one user', 'error');
+            hideAdminLoader();
+            return;
+        }
+        
+        // Send notifications
+        const notifications = userIds.map(userId => ({
+            user_id: userId,
+            type: 'coupon',
+            title: 'New Coupon Received!',
+            message: `You received a ${coupon.discount_percent}% discount coupon! Code: ${coupon.code}`,
+            data: JSON.stringify({ couponCode: coupon.code }),
+            read: false,
+            created_at: new Date().toISOString()
+        }));
+        
+        const { error } = await supabase
+            .from('notifications')
+            .insert(notifications);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', `Coupon sent to ${userIds.length} user(s)`, 'success');
+        
+    } catch (error) {
+        console.error('Send coupon error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to send coupon', 'error');
+    }
+}
+
+async function editCoupon(couponId) {
+    const coupon = AdminState.coupons.find(c => c.id === couponId);
+    if (!coupon) return;
+    
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Coupon</h2>
+        <form id="editCouponForm" onsubmit="updateCoupon(event, '${couponId}')">
+            <div class="form-group">
+                <label>Coupon Code</label>
+                <input type="text" id="editCouponCode" class="form-control" value="${coupon.code}" required readonly>
+            </div>
+            
+            <div class="form-group">
+                <label>Discount Percentage</label>
+                <input type="number" id="editCouponDiscount" class="form-control" value="${coupon.discount_percent}" min="1" max="100" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Status</label>
+                <select id="editCouponStatus" class="form-control">
+                    <option value="active" ${coupon.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="inactive" ${coupon.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Coupon
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function updateCoupon(e, couponId) {
+    e.preventDefault();
+    
+    const discount = parseInt(document.getElementById('editCouponDiscount').value);
+    const status = document.getElementById('editCouponStatus').value;
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('coupons')
+            .update({
+                discount_percent: discount,
+                status: status
+            })
+            .eq('id', couponId);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Coupon updated successfully', 'success');
+        
+        await loadCoupons();
+        
+    } catch (error) {
+        console.error('Coupon update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update coupon', 'error');
+    }
+}
+
+async function deleteCoupon(couponId) {
+    if (!confirm('Are you sure you want to delete this coupon?')) {
         return;
     }
     
-    showConfirmDialog(
-        'Send Coupon',
-        `Send coupon "${coupon.code}" to ${userIds.length} user(s)?`,
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const notifications = userIds.map(userId => ({
-                    user_id: userId,
-                    title: 'New Coupon Available!',
-                    message: `You've received a ${coupon.discount_percentage}% discount coupon. Use code: ${coupon.code}`,
-                    coupon_code: coupon.code,
-                    read: false,
-                    created_at: new Date().toISOString()
-                }));
-                
-                const { error } = await supabase
-                    .from('notifications')
-                    .insert(notifications);
-                
-                if (error) throw error;
-                
-                hideAdminLoading();
-                showAdminToast(`Coupon sent to ${userIds.length} user(s)`, 'success');
-                
-            } catch (error) {
-                console.error('Error sending coupon:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to send coupon', 'error');
-            }
-        }
-    );
-}
-
-async function deleteCoupon(id) {
-    showConfirmDialog(
-        'Delete Coupon',
-        'Are you sure you want to delete this coupon?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const { error } = await supabase
-                    .from('coupons')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadCoupons();
-                
-                hideAdminLoading();
-                showAdminToast('Coupon deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting coupon:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete coupon', 'error');
-            }
-        }
-    );
-}
-
-// ==================== NEWS MANAGEMENT ====================
-async function loadNewsItems() {
+    showAdminLoader();
+    
     try {
-        const { data, error } = await supabase
+        const { error } = await supabase
+            .from('coupons')
+            .delete()
+            .eq('id', couponId);
+        
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'Coupon deleted successfully', 'success');
+        
+        await loadCoupons();
+        
+    } catch (error) {
+        console.error('Coupon delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete coupon', 'error');
+    }
+}
+
+/* ========================================
+   ADMIN.JS - PART 5 (FINAL)
+======================================== */
+
+/* ========================================
+   NEWS MANAGEMENT
+======================================== */
+
+async function loadNews() {
+    try {
+        const { data: news, error } = await supabase
             .from('news')
             .select('*')
             .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        dashboardData.news = data || [];
-        renderNewsManagement();
+        AdminState.news = news || [];
+        
+        const container = document.getElementById('newsList');
+        container.innerHTML = '';
+        
+        if (news.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-newspaper"></i>
+                    <h3>No News</h3>
+                    <p>Create your first news article</p>
+                </div>
+            `;
+            return;
+        }
+        
+        news.forEach(item => {
+            const newsItem = document.createElement('div');
+            newsItem.className = 'news-item-admin';
+            
+            const images = item.images ? JSON.parse(item.images) : [];
+            const firstImage = images[0] || '';
+            
+            newsItem.innerHTML = `
+                <div class="news-item-header">
+                    ${firstImage ? `
+                        <div class="news-item-image">
+                            <img src="${firstImage}" alt="${item.title}">
+                        </div>
+                    ` : ''}
+                    <div class="news-item-content">
+                        <div class="news-item-title">${item.title}</div>
+                        <div class="news-item-description">${item.content}</div>
+                        <div class="news-item-meta">
+                            <span><i class="fas fa-calendar"></i> ${formatDate(item.created_at)}</span>
+                            ${item.video_url ? '<span><i class="fas fa-video"></i> Has Video</span>' : ''}
+                            ${images.length > 1 ? `<span><i class="fas fa-images"></i> ${images.length} images</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="news-item-footer">
+                    <span class="badge-status ${item.status}">${item.status}</span>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="icon-btn edit" onclick="editNews('${item.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="icon-btn delete" onclick="deleteNews('${item.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newsItem);
+        });
         
     } catch (error) {
-        console.error('Error loading news:', error);
-        showAdminToast('Failed to load news', 'error');
+        console.error('News load error:', error);
+        showAdminToast('Error', 'Failed to load news', 'error');
     }
 }
 
-function renderNewsManagement() {
-    const container = document.getElementById('newsContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Add News</h3>
+function openNewsModal() {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Create News</h2>
+        <form id="newsForm" onsubmit="submitNews(event)">
             <div class="form-group">
-                <label>News Title *</label>
-                <input type="text" id="newsTitle" placeholder="Enter news title">
+                <label>Title</label>
+                <input type="text" id="newsTitle" class="form-control" required>
             </div>
+            
             <div class="form-group">
-                <label>News Content *</label>
-                <textarea id="newsContent" rows="6" placeholder="Enter news content (supports image URLs)"></textarea>
-                <small style="color: var(--text-muted);">Tip: Paste image URLs directly in content to display inline images</small>
+                <label>Content</label>
+                <textarea id="newsContent" class="form-control" rows="5" required></textarea>
             </div>
+            
             <div class="form-group">
-                <label>News Images (Multiple)</label>
-                <input type="file" id="newsImages" accept="image/*" multiple>
-                <small style="color: var(--text-muted);">Max 10 images, 5MB each</small>
+                <label>Images (Multiple allowed, max 50MB total)</label>
+                <input type="file" id="newsImages" class="form-control" accept="image/*" multiple>
+                <small style="color: var(--admin-text-muted);">Each image max 10MB</small>
             </div>
+            
             <div class="form-group">
-                <label>YouTube Video URL</label>
-                <input type="url" id="newsYoutubeUrl" placeholder="https://youtube.com/...">
+                <label>Video URL (YouTube or direct link)</label>
+                <input type="url" id="newsVideo" class="form-control" placeholder="https://youtube.com/...">
             </div>
-            <div class="form-group">
-                <label>Payment Methods (Optional)</label>
-                <div id="newsPaymentMethods" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;"></div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Create News
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
             </div>
-            <div class="form-group">
-                <label>Contacts (Optional)</label>
-                <div id="newsContacts" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;"></div>
-            </div>
-            <button class="add-btn" onclick="addNews()">
-                <i class="fas fa-plus"></i> Add News
-            </button>
-        </div>
-        
-        <div class="items-grid" id="newsList"></div>
+        </form>
     `;
     
-    loadPaymentMethodsForNews();
-    loadContactsForNews();
-    renderNewsList();
+    openAdminModal(content);
 }
 
-function loadPaymentMethodsForNews() {
-    const container = document.getElementById('newsPaymentMethods');
-    if (!container) return;
+async function submitNews(e) {
+    e.preventDefault();
     
-    container.innerHTML = '';
-    
-    dashboardData.paymentMethods.forEach(payment => {
-        const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '4px';
-        label.style.padding = '6px';
-        label.style.background = 'var(--dark-lighter)';
-        label.style.borderRadius = '6px';
-        label.style.cursor = 'pointer';
-        label.style.fontSize = '12px';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = payment.id;
-        checkbox.className = 'news-payment-checkbox';
-        
-        const span = document.createElement('span');
-        span.textContent = payment.name;
-        
-        label.appendChild(checkbox);
-        label.appendChild(span);
-        container.appendChild(label);
-    });
-}
-
-function loadContactsForNews() {
-    const container = document.getElementById('newsContacts');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    dashboardData.contacts?.forEach(contact => {
-        const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '4px';
-        label.style.padding = '6px';
-        label.style.background = 'var(--dark-lighter)';
-        label.style.borderRadius = '6px';
-        label.style.cursor = 'pointer';
-        label.style.fontSize = '12px';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = contact.id;
-        checkbox.className = 'news-contact-checkbox';
-        
-        const span = document.createElement('span');
-        span.textContent = contact.name;
-        
-        label.appendChild(checkbox);
-        label.appendChild(span);
-        container.appendChild(label);
-    });
-}
-
-async function addNews() {
-    const title = document.getElementById('newsTitle').value.trim();
-    const content = document.getElementById('newsContent').value.trim();
+    const title = document.getElementById('newsTitle').value;
+    const content = document.getElementById('newsContent').value;
+    const videoUrl = document.getElementById('newsVideo').value;
     const imageFiles = document.getElementById('newsImages').files;
-    const youtubeUrl = document.getElementById('newsYoutubeUrl').value.trim();
     
-    const selectedPayments = Array.from(document.querySelectorAll('.news-payment-checkbox:checked'))
-        .map(cb => parseInt(cb.value));
-    
-    const selectedContacts = Array.from(document.querySelectorAll('.news-contact-checkbox:checked'))
-        .map(cb => parseInt(cb.value));
-    
-    if (!title || !content) {
-        showAdminToast('Please fill required fields', 'warning');
-        return;
-    }
+    showAdminLoader();
     
     try {
-        showAdminLoading();
-        
-        let imageUrls = [];
+        // Upload images
+        const imageUrls = [];
         
         if (imageFiles.length > 0) {
-            if (imageFiles.length > 10) {
-                hideAdminLoading();
-                showAdminToast('Maximum 10 images allowed', 'warning');
+            // Check total size
+            let totalSize = 0;
+            for (let file of imageFiles) {
+                totalSize += file.size;
+                if (file.size > 10 * 1024 * 1024) {
+                    showAdminToast('Error', 'Each image must be less than 10MB', 'error');
+                    hideAdminLoader();
+                    return;
+                }
+            }
+            
+            if (totalSize > 50 * 1024 * 1024) {
+                showAdminToast('Error', 'Total images size must be less than 50MB', 'error');
+                hideAdminLoader();
                 return;
             }
             
+            // Upload all images
             for (let file of imageFiles) {
-                if (file.size > 5 * 1024 * 1024) {
-                    hideAdminLoading();
-                    showAdminToast('Each image must be less than 5MB', 'warning');
-                    return;
-                }
-                
-                const url = await uploadFile(file, 'news', 'images/');
+                const url = await uploadFile(file, 'news');
                 imageUrls.push(url);
             }
         }
@@ -2418,723 +3240,943 @@ async function addNews() {
             .from('news')
             .insert([{
                 title: title,
-                description: content,
-                images: imageUrls.length > 0 ? imageUrls : null,
-                youtube_url: youtubeUrl || null,
-                payment_method_ids: selectedPayments.length > 0 ? selectedPayments : null,
-                contact_ids: selectedContacts.length > 0 ? selectedContacts : null,
+                content: content,
+                images: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
+                video_url: videoUrl || null,
+                status: 'active',
                 created_at: new Date().toISOString()
             }]);
         
         if (error) throw error;
         
-        await loadNewsItems();
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'News created successfully', 'success');
         
-        // Clear form
-        document.getElementById('newsTitle').value = '';
-        document.getElementById('newsContent').value = '';
-        document.getElementById('newsImages').value = '';
-        document.getElementById('newsYoutubeUrl').value = '';
-        document.querySelectorAll('.news-payment-checkbox').forEach(cb => cb.checked = false);
-        document.querySelectorAll('.news-contact-checkbox').forEach(cb => cb.checked = false);
-        
-        hideAdminLoading();
-        showAdminToast('News added successfully', 'success');
+        await loadNews();
         
     } catch (error) {
-        console.error('Error adding news:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add news', 'error');
+        console.error('News create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to create news', 'error');
     }
 }
 
-function renderNewsList() {
-    const container = document.getElementById('newsList');
-    if (!container) return;
+async function editNews(newsId) {
+    const news = AdminState.news.find(n => n.id === newsId);
+    if (!news) return;
     
-    container.innerHTML = '';
-    
-    if (dashboardData.news.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-newspaper"></i><h3>No News</h3><p>Add your first news article</p></div>';
-        return;
-    }
-    
-    dashboardData.news.forEach(news => {
-        const card = document.createElement('div');
-        card.className = 'item-card';
-        card.innerHTML = `
-            ${news.images && news.images.length > 0 ? `<img src="${news.images[0]}" alt="${news.title}">` : ''}
-            <h4>${news.title}</h4>
-            <p>${news.description.substring(0, 100)}...</p>
-            <div class="item-actions">
-                <button class="delete-btn" onclick="deleteNews(${news.id})">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit News</h2>
+        <form id="editNewsForm" onsubmit="updateNews(event, '${newsId}')">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="editNewsTitle" class="form-control" value="${news.title}" required>
             </div>
-        `;
-        container.appendChild(card);
-    });
+            
+            <div class="form-group">
+                <label>Content</label>
+                <textarea id="editNewsContent" class="form-control" rows="5" required>${news.content}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Video URL</label>
+                <input type="url" id="editNewsVideo" class="form-control" value="${news.video_url || ''}">
+            </div>
+            
+            <div class="form-group">
+                <label>Status</label>
+                <select id="editNewsStatus" class="form-control">
+                    <option value="active" ${news.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="inactive" ${news.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update News
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
 }
 
-async function deleteNews(id) {
-    showConfirmDialog(
-        'Delete News',
-        'Are you sure you want to delete this news?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const news = dashboardData.news.find(n => n.id === id);
-                if (news?.images) {
-                    for (let imageUrl of news.images) {
-                        await deleteFile(imageUrl, 'news');
-                    }
-                }
-                
-                const { error } = await supabase
-                    .from('news')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadNewsItems();
-                
-                hideAdminLoading();
-                showAdminToast('News deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting news:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete news', 'error');
-            }
-        }
-    );
-}
-
-// ==================== CONTACTS MANAGEMENT ====================
-async function loadContactsItems() {
+async function updateNews(e, newsId) {
+    e.preventDefault();
+    
+    const title = document.getElementById('editNewsTitle').value;
+    const content = document.getElementById('editNewsContent').value;
+    const videoUrl = document.getElementById('editNewsVideo').value;
+    const status = document.getElementById('editNewsStatus').value;
+    
+    showAdminLoader();
+    
     try {
-        const { data, error } = await supabase
-            .from('contacts')
-            .select('*')
-            .order('created_at', { ascending: false });
+        const { error } = await supabase
+            .from('news')
+            .update({
+                title: title,
+                content: content,
+                video_url: videoUrl || null,
+                status: status
+            })
+            .eq('id', newsId);
         
         if (error) throw error;
         
-        dashboardData.contacts = data || [];
-        renderContactsManagement();
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'News updated successfully', 'success');
+        
+        await loadNews();
         
     } catch (error) {
-        console.error('Error loading contacts:', error);
-        showAdminToast('Failed to load contacts', 'error');
+        console.error('News update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update news', 'error');
     }
 }
 
-function renderContactsManagement() {
-    const container = document.getElementById('contactsContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Add Contact</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Contact Name *</label>
-                    <input type="text" id="contactName" placeholder="e.g., Facebook">
-                </div>
-                <div class="form-group">
-                    <label>Contact Icon *</label>
-                    <input type="file" id="contactIcon" accept="image/*">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="contactDescription" placeholder="Contact description"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Contact Address</label>
-                <input type="text" id="contactAddress" placeholder="Address or phone number">
-            </div>
-            <div class="form-group">
-                <label>Contact Link URL</label>
-                <input type="url" id="contactLink" placeholder="https://...">
-            </div>
-            <button class="add-btn" onclick="addContact()">
-                <i class="fas fa-plus"></i> Add Contact
-            </button>
-        </div>
-        
-        <div class="items-grid" id="contactsList"></div>
-    `;
-    
-    renderContactsList();
-}
-
-async function addContact() {
-    const name = document.getElementById('contactName').value.trim();
-    const iconFile = document.getElementById('contactIcon').files[0];
-    const description = document.getElementById('contactDescription').value.trim();
-    const address = document.getElementById('contactAddress').value.trim();
-    const linkUrl = document.getElementById('contactLink').value.trim();
-    
-    if (!name || !iconFile) {
-        showAdminToast('Please fill required fields', 'warning');
+async function deleteNews(newsId) {
+    if (!confirm('Are you sure you want to delete this news?')) {
         return;
     }
     
+    showAdminLoader();
+    
     try {
-        showAdminLoading();
+        const { error } = await supabase
+            .from('news')
+            .delete()
+            .eq('id', newsId);
         
-        const iconUrl = await uploadFile(iconFile, 'contacts', 'icons/');
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'News deleted successfully', 'success');
+        
+        await loadNews();
+        
+    } catch (error) {
+        console.error('News delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete news', 'error');
+    }
+}
+
+/* ========================================
+   CONTACTS MANAGEMENT
+======================================== */
+
+async function loadContacts() {
+    try {
+        const { data: contacts, error } = await supabase
+            .from('contacts')
+            .select('*')
+            .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        AdminState.contacts = contacts || [];
+        
+        const container = document.getElementById('contactsList');
+        container.innerHTML = '';
+        
+        if (contacts.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-address-book"></i>
+                    <h3>No Contacts</h3>
+                    <p>Add your first contact</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contacts.forEach(contact => {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            
+            card.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="width: 60px; height: 60px; margin: 0 auto 1rem; background: var(--admin-bg-secondary); border-radius: var(--admin-radius-md); display: flex; align-items: center; justify-content: center;">
+                        <img src="${contact.icon_url}" style="max-width: 40px; max-height: 40px;" alt="${contact.name}">
+                    </div>
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">${contact.name}</div>
+                    ${contact.description ? `<div style="font-size: 0.85rem; color: var(--admin-text-secondary); margin-bottom: 1rem;">${contact.description}</div>` : ''}
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button class="icon-btn edit" onclick="editContact('${contact.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="icon-btn delete" onclick="deleteContact('${contact.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(card);
+        });
+        
+    } catch (error) {
+        console.error('Contacts load error:', error);
+        showAdminToast('Error', 'Failed to load contacts', 'error');
+    }
+}
+
+function openContactModal() {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Add Contact</h2>
+        <form id="contactForm" onsubmit="submitContact(event)">
+            <div class="form-group">
+                <label>Contact Name</label>
+                <input type="text" id="contactName" class="form-control" placeholder="e.g., Facebook" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="contactDescription" class="form-control" rows="2"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Contact Link</label>
+                <input type="url" id="contactLink" class="form-control" placeholder="https://" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Icon</label>
+                <input type="file" id="contactIcon" class="form-control" accept="image/*" required>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Add Contact
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function submitContact(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('contactName').value;
+    const description = document.getElementById('contactDescription').value;
+    const link = document.getElementById('contactLink').value;
+    const iconFile = document.getElementById('contactIcon').files[0];
+    
+    if (!iconFile) {
+        showAdminToast('Error', 'Please select an icon', 'error');
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const iconUrl = await uploadFile(iconFile, 'contacts');
         
         const { error } = await supabase
             .from('contacts')
             .insert([{
                 name: name,
+                description: description,
+                link: link,
                 icon_url: iconUrl,
-                description: description || null,
-                address: address || null,
-                link_url: linkUrl || null,
+                status: 'active',
                 created_at: new Date().toISOString()
             }]);
         
         if (error) throw error;
         
-        await loadContactsItems();
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Contact added successfully', 'success');
         
-        // Clear form
-        document.getElementById('contactName').value = '';
-        document.getElementById('contactIcon').value = '';
-        document.getElementById('contactDescription').value = '';
-        document.getElementById('contactAddress').value = '';
-        document.getElementById('contactLink').value = '';
-        
-        hideAdminLoading();
-        showAdminToast('Contact added successfully', 'success');
+        await loadContacts();
         
     } catch (error) {
-        console.error('Error adding contact:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add contact', 'error');
+        console.error('Contact create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to add contact', 'error');
     }
 }
 
-function renderContactsList() {
-    const container = document.getElementById('contactsList');
-    if (!container) return;
+async function editContact(contactId) {
+    const contact = AdminState.contacts.find(c => c.id === contactId);
+    if (!contact) return;
     
-    container.innerHTML = '';
-    
-    if (!dashboardData.contacts || dashboardData.contacts.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-address-book"></i><h3>No Contacts</h3><p>Add your first contact</p></div>';
-        return;
-    }
-    
-    dashboardData.contacts.forEach(contact => {
-        const card = document.createElement('div');
-        card.className = 'item-card';
-        card.innerHTML = `
-            <img src="${contact.icon_url}" alt="${contact.name}">
-            <h4>${contact.name}</h4>
-            ${contact.description ? `<p>${contact.description}</p>` : ''}
-            ${contact.link_url ? `<p><a href="${contact.link_url}" target="_blank" style="color: var(--primary);">View Link</a></p>` : ''}
-            <div class="item-actions">
-                <button class="delete-btn" onclick="deleteContact(${contact.id})">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-async function deleteContact(id) {
-    showConfirmDialog(
-        'Delete Contact',
-        'Are you sure you want to delete this contact?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const contact = dashboardData.contacts.find(c => c.id === id);
-                if (contact?.icon_url) {
-                    await deleteFile(contact.icon_url, 'contacts');
-                }
-                
-                const { error } = await supabase
-                    .from('contacts')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadContactsItems();
-                
-                hideAdminLoading();
-                showAdminToast('Contact deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting contact:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete contact', 'error');
-            }
-        }
-    );
-}
-
-// ==================== USERS MANAGEMENT ====================
-async function loadUsers() {
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        dashboardData.users = data || [];
-        renderUsersManagement();
-        
-    } catch (error) {
-        console.error('Error loading users:', error);
-        showAdminToast('Failed to load users', 'error');
-    }
-}
-
-function renderUsersManagement() {
-    const container = document.getElementById('usersContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="data-table" id="usersTable"></div>
-    `;
-    
-    renderUsersTable();
-}
-
-function renderUsersTable() {
-    const container = document.getElementById('usersTable');
-    if (!container) return;
-    
-    if (dashboardData.users.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><h3>No Users</h3><p>No registered users yet</p></div>';
-        return;
-    }
-    
-    let html = `
-        <table>
-            <thead>
-                <tr>
-                    <th>User</th>
-                    <th>Email</th>
-                    <th>Total Orders</th>
-                    <th>Joined Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    dashboardData.users.forEach(user => {
-        html += `
-            <tr>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="${user.avatar_url}" style="width: 40px; height: 40px; border-radius: 50%;">
-                        <strong>${user.username}</strong>
-                    </div>
-                </td>
-                <td>${user.email}</td>
-                <td>${user.total_orders || 0}</td>
-                <td>${formatTimestamp(user.created_at)}</td>
-                <td>
-                    <button class="delete-btn" onclick="blockUser(${user.id}, '${user.email}')">
-                        <i class="fas fa-ban"></i> Block
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
-
-async function blockUser(userId, email) {
-    showConfirmDialog(
-        'Block User',
-        `Are you sure you want to block this user? They will be logged out and cannot login again.`,
-        async () => {
-            try {
-                showAdminLoading();
-                
-                const user = dashboardData.users.find(u => u.id === userId);
-                
-                // Add to blocked accounts
-                const { error: blockError } = await supabase
-                    .from('blocked_accounts')
-                    .insert([{
-                        user_id: userId,
-                        username: user.username,
-                        email: user.email,
-                        blocked_at: new Date().toISOString()
-                    }]);
-                
-                if (blockError) throw blockError;
-                
-                // Delete user
-                const { error: deleteError } = await supabase
-                    .from('users')
-                    .delete()
-                    .eq('id', userId);
-                
-                if (deleteError) throw deleteError;
-                
-                await loadUsers();
-                
-                hideAdminLoading();
-                showAdminToast('User blocked successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error blocking user:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to block user', 'error');
-            }
-        }
-    );
-}
-
-// ==================== MUSIC MANAGEMENT ====================
-async function loadMusic() {
-    const container = document.getElementById('musicContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Upload Background Music</h3>
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Contact</h2>
+        <form id="editContactForm" onsubmit="updateContact(event, '${contactId}')">
             <div class="form-group">
-                <label>Music File (MP3/MP4) *</label>
-                <input type="file" id="musicFile" accept="audio/*,video/mp4">
-                <small style="color: var(--text-muted);">Recommended: MP3 format, max 10MB</small>
+                <label>Contact Name</label>
+                <input type="text" id="editContactName" class="form-control" value="${contact.name}" required>
             </div>
+            
             <div class="form-group">
-                <label>Music Title</label>
-                <input type="text" id="musicTitle" placeholder="Enter music title">
+                <label>Description</label>
+                <textarea id="editContactDescription" class="form-control" rows="2">${contact.description || ''}</textarea>
             </div>
-            <button class="add-btn" onclick="uploadMusic()">
-                <i class="fas fa-upload"></i> Upload Music
-            </button>
-        </div>
-        
-        <div class="items-grid" id="musicList"></div>
+            
+            <div class="form-group">
+                <label>Contact Link</label>
+                <input type="url" id="editContactLink" class="form-control" value="${contact.link}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Icon (Leave empty to keep current)</label>
+                <input type="file" id="editContactIcon" class="form-control" accept="image/*">
+                <div class="image-preview">
+                    <img src="${contact.icon_url}" alt="Current Icon" style="max-height: 60px;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Contact
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
     `;
     
-    loadMusicList();
+    openAdminModal(content);
 }
 
-async function loadMusicList() {
-    try {
-        const { data, error } = await supabase
-            .from('music_files')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        renderMusicList(data || []);
-        
-    } catch (error) {
-        console.error('Error loading music:', error);
-    }
-}
-
-function renderMusicList(musicFiles) {
-    const container = document.getElementById('musicList');
-    if (!container) return;
+async function updateContact(e, contactId) {
+    e.preventDefault();
     
-    container.innerHTML = '';
+    const name = document.getElementById('editContactName').value;
+    const description = document.getElementById('editContactDescription').value;
+    const link = document.getElementById('editContactLink').value;
+    const iconFile = document.getElementById('editContactIcon').files[0];
     
-    if (musicFiles.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-music"></i><h3>No Music Files</h3><p>Upload background music</p></div>';
-        return;
-    }
-    
-    musicFiles.forEach(music => {
-        const card = document.createElement('div');
-        card.className = 'item-card';
-        card.innerHTML = `
-            <i class="fas fa-music" style="font-size: 48px; color: var(--primary); margin-bottom: 16px;"></i>
-            <h4>${music.title || 'Untitled'}</h4>
-            <audio controls style="width: 100%; margin: 12px 0;">
-                <source src="${music.file_url}" type="audio/mpeg">
-            </audio>
-            <div class="item-actions">
-                <button class="delete-btn" onclick="deleteMusic(${music.id}, '${music.file_url}')">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-async function uploadMusic() {
-    const musicFile = document.getElementById('musicFile').files[0];
-    const title = document.getElementById('musicTitle').value.trim();
-    
-    if (!musicFile) {
-        showAdminToast('Please select a music file', 'warning');
-        return;
-    }
-    
-    if (musicFile.size > 10 * 1024 * 1024) {
-        showAdminToast('Music file must be less than 10MB', 'warning');
-        return;
-    }
+    showAdminLoader();
     
     try {
-        showAdminLoading();
+        const { data: currentContact } = await supabase
+            .from('contacts')
+            .select('icon_url')
+            .eq('id', contactId)
+            .single();
         
-        const fileUrl = await uploadFile(musicFile, 'music', 'background/');
+        let iconUrl = currentContact.icon_url;
+        
+        if (iconFile) {
+            iconUrl = await uploadFile(iconFile, 'contacts');
+        }
         
         const { error } = await supabase
-            .from('music_files')
+            .from('contacts')
+            .update({
+                name: name,
+                description: description,
+                link: link,
+                icon_url: iconUrl
+            })
+            .eq('id', contactId);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Contact updated successfully', 'success');
+        
+        await loadContacts();
+        
+    } catch (error) {
+        console.error('Contact update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update contact', 'error');
+    }
+}
+
+async function deleteContact(contactId) {
+    if (!confirm('Are you sure you want to delete this contact?')) {
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('contacts')
+            .delete()
+            .eq('id', contactId);
+        
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'Contact deleted successfully', 'success');
+        
+        await loadContacts();
+        
+    } catch (error) {
+        console.error('Contact delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete contact', 'error');
+    }
+}
+
+/* ========================================
+   BANNERS MANAGEMENT
+======================================== */
+
+async function loadBanners() {
+    try {
+        const { data: banners, error } = await supabase
+            .from('banners')
+            .select('*')
+            .order('order', { ascending: true });
+        
+        if (error) throw error;
+        
+        AdminState.banners = banners || [];
+        
+        // Separate by type
+        const mainBanners = banners.filter(b => b.type === 'main');
+        const secondaryBanners = banners.filter(b => b.type === 'secondary');
+        const productBanners = banners.filter(b => b.type === 'product');
+        
+        renderBannersList('mainBannersList', mainBanners);
+        renderBannersList('secondaryBannersList', secondaryBanners);
+        renderBannersList('productBannersList', productBanners);
+        
+    } catch (error) {
+        console.error('Banners load error:', error);
+        showAdminToast('Error', 'Failed to load banners', 'error');
+    }
+}
+
+function renderBannersList(containerId, banners) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    
+    if (!banners || banners.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No banners</p></div>';
+        return;
+    }
+    
+    banners.forEach(banner => {
+        const card = document.createElement('div');
+        card.className = 'banner-card';
+        
+        card.innerHTML = `
+            <img src="${banner.image_url}" alt="${banner.title || 'Banner'}" class="banner-image">
+            <div class="banner-info">
+                <span class="banner-type">${banner.type}</span>
+                ${banner.title ? `<div style="font-weight: 600; margin-bottom: 0.5rem;">${banner.title}</div>` : ''}
+                ${banner.link ? `<div style="font-size: 0.85rem; color: var(--admin-text-muted);">Has link</div>` : ''}
+                <div class="banner-actions">
+                    <button class="icon-btn edit" onclick="editBanner('${banner.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="icon-btn delete" onclick="deleteBanner('${banner.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+function openBannerModal() {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Add Banner</h2>
+        <form id="bannerForm" onsubmit="submitBanner(event)">
+            <div class="form-group">
+                <label>Banner Type</label>
+                <select id="bannerType" class="form-control" required>
+                    <option value="main">Main Banner (1280x720)</option>
+                    <option value="secondary">Secondary Banner (1280x180)</option>
+                    <option value="product">Product Page Banner</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Title (Optional)</label>
+                <input type="text" id="bannerTitle" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label>Link (Optional - for secondary banners)</label>
+                <input type="url" id="bannerLink" class="form-control" placeholder="https://">
+            </div>
+            
+            <div class="form-group">
+                <label>Banner Image</label>
+                <input type="file" id="bannerImage" class="form-control" accept="image/*" required>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Add Banner
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function submitBanner(e) {
+    e.preventDefault();
+    
+    const type = document.getElementById('bannerType').value;
+    const title = document.getElementById('bannerTitle').value;
+    const link = document.getElementById('bannerLink').value;
+    const imageFile = document.getElementById('bannerImage').files[0];
+    
+    if (!imageFile) {
+        showAdminToast('Error', 'Please select an image', 'error');
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const imageUrl = await uploadFile(imageFile, 'banners');
+        
+        const { error } = await supabase
+            .from('banners')
             .insert([{
-                title: title || musicFile.name,
-                file_url: fileUrl,
+                type: type,
+                title: title || null,
+                image_url: imageUrl,
+                link: link || null,
+                order: 0,
+                status: 'active',
                 created_at: new Date().toISOString()
             }]);
         
         if (error) throw error;
         
-        document.getElementById('musicFile').value = '';
-        document.getElementById('musicTitle').value = '';
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Banner added successfully', 'success');
         
-        await loadMusicList();
-        
-        hideAdminLoading();
-        showAdminToast('Music uploaded successfully', 'success');
+        await loadBanners();
         
     } catch (error) {
-        console.error('Error uploading music:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to upload music', 'error');
+        console.error('Banner create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to add banner', 'error');
     }
 }
 
-async function deleteMusic(id, fileUrl) {
-    showConfirmDialog(
-        'Delete Music',
-        'Are you sure you want to delete this music file?',
-        async () => {
-            try {
-                showAdminLoading();
-                
-                await deleteFile(fileUrl, 'music');
-                
-                const { error } = await supabase
-                    .from('music_files')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                await loadMusicList();
-                
-                hideAdminLoading();
-                showAdminToast('Music deleted successfully', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting music:', error);
-                hideAdminLoading();
-                showAdminToast('Failed to delete music', 'error');
-            }
-        }
-    );
-}
-
-// ==================== NOTIFICATIONS/MESSAGING ====================
-async function loadNotifications() {
-    const container = document.getElementById('notificationsContent');
-    if (!container) return;
+async function editBanner(bannerId) {
+    const banner = AdminState.banners.find(b => b.id === bannerId);
+    if (!banner) return;
     
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Send Notification/Message</h3>
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Banner</h2>
+        <form id="editBannerForm" onsubmit="updateBanner(event, '${bannerId}')">
             <div class="form-group">
-                <label>Select Recipients</label>
-                <select id="notifRecipients" onchange="toggleRecipientsList()">
-                    <option value="all">All Users</option>
-                    <option value="specific">Specific Users</option>
-                </select>
-            </div>
-            
-            <div class="form-group" id="specificUsersSection" style="display: none;">
-                <label>Select Users</label>
-                <div id="notifUsersList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 12px;"></div>
+                <label>Title</label>
+                <input type="text" id="editBannerTitle" class="form-control" value="${banner.title || ''}">
             </div>
             
             <div class="form-group">
-                <label>Notification Title *</label>
-                <input type="text" id="notifTitle" placeholder="Enter title">
+                <label>Link</label>
+                <input type="url" id="editBannerLink" class="form-control" value="${banner.link || ''}">
             </div>
             
             <div class="form-group">
-                <label>Message *</label>
-                <textarea id="notifMessage" rows="4" placeholder="Enter message"></textarea>
+                <label>Image (Leave empty to keep current)</label>
+                <input type="file" id="editBannerImage" class="form-control" accept="image/*">
+                <div class="image-preview">
+                    <img src="${banner.image_url}" alt="Current Banner">
+                </div>
             </div>
             
-            <div class="form-group">
-                <label>Attach Image (Optional)</label>
-                <input type="file" id="notifImage" accept="image/*">
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Banner
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
             </div>
-            
-            <div class="form-group">
-                <label>Attach Coupon (Optional)</label>
-                <select id="notifCoupon">
-                    <option value="">No Coupon</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Attach Product Link (Optional)</label>
-                <select id="notifProduct">
-                    <option value="">No Product</option>
-                </select>
-            </div>
-            
-            <button class="add-btn" onclick="sendNotification()">
-                <i class="fas fa-paper-plane"></i> Send Notification
-            </button>
-        </div>
+        </form>
     `;
     
-    loadUsersForNotification();
-    loadCouponsForNotification();
-    loadProductsForNotification();
+    openAdminModal(content);
 }
 
-function toggleRecipientsList() {
-    const type = document.getElementById('notifRecipients').value;
-    document.getElementById('specificUsersSection').style.display = type === 'specific' ? 'block' : 'none';
+async function updateBanner(e, bannerId) {
+    e.preventDefault();
+    
+    const title = document.getElementById('editBannerTitle').value;
+    const link = document.getElementById('editBannerLink').value;
+    const imageFile = document.getElementById('editBannerImage').files[0];
+    
+    showAdminLoader();
+    
+    try {
+        const { data: currentBanner } = await supabase
+            .from('banners')
+            .select('image_url')
+            .eq('id', bannerId)
+            .single();
+        
+        let imageUrl = currentBanner.image_url;
+        
+        if (imageFile) {
+            imageUrl = await uploadFile(imageFile, 'banners');
+        }
+        
+        const { error } = await supabase
+            .from('banners')
+            .update({
+                title: title || null,
+                link: link || null,
+                image_url: imageUrl
+            })
+            .eq('id', bannerId);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Banner updated successfully', 'success');
+        
+        await loadBanners();
+        
+    } catch (error) {
+        console.error('Banner update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update banner', 'error');
+    }
 }
 
-function loadUsersForNotification() {
-    const container = document.getElementById('notifUsersList');
-    if (!container) return;
+async function deleteBanner(bannerId) {
+    if (!confirm('Are you sure you want to delete this banner?')) {
+        return;
+    }
     
-    container.innerHTML = '';
+    showAdminLoader();
     
-    dashboardData.users.forEach(user => {
-        const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '8px';
-        label.style.padding = '8px';
-        label.style.cursor = 'pointer';
-        label.style.borderRadius = '6px';
-        label.style.marginBottom = '4px';
+    try {
+        const { error } = await supabase
+            .from('banners')
+            .delete()
+            .eq('id', bannerId);
         
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = user.id;
-        checkbox.className = 'notif-user-checkbox';
+        if (error) throw error;
         
-        const avatar = document.createElement('img');
-        avatar.src = user.avatar_url;
-        avatar.style.width = '32px';
-        avatar.style.height = '32px';
-        avatar.style.borderRadius = '50%';
+        hideAdminLoader();
+        showAdminToast('Success', 'Banner deleted successfully', 'success');
         
-        const div = document.createElement('div');
-        div.innerHTML = `
-            <strong>${user.username}</strong><br>
-            <small style="color: var(--text-muted);">${user.email}</small>
-        `;
+        await loadBanners();
         
-        label.appendChild(checkbox);
-        label.appendChild(avatar);
-        label.appendChild(div);
-        
-        label.addEventListener('mouseenter', () => label.style.background = 'var(--dark-lighter)');
-        label.addEventListener('mouseleave', () => label.style.background = 'transparent');
-        
-        container.appendChild(label);
-    });
+    } catch (error) {
+        console.error('Banner delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete banner', 'error');
+    }
 }
 
-function loadCouponsForNotification() {
-    const select = document.getElementById('notifCoupon');
-    if (!select) return;
+/* ========================================
+   MUSIC MANAGEMENT
+======================================== */
+
+async function loadMusic() {
+    try {
+        const { data: music, error } = await supabase
+            .from('music')
+            .select('*')
+            .order('order', { ascending: true });
+        
+        if (error) throw error;
+        
+        AdminState.music = music || [];
+        
+        const container = document.getElementById('musicList');
+        container.innerHTML = '';
+        
+        if (music.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-music"></i>
+                    <h3>No Music</h3>
+                    <p>Add your first background music</p>
+                </div>
+            `;
+            return;
+        }
+        
+        music.forEach((song, index) => {
+            const item = document.createElement('div');
+            item.className = 'music-item';
+            
+            item.innerHTML = `
+                <div class="music-icon">
+                    <i class="fas fa-music"></i>
+                </div>
+                <div class="music-info">
+                    <div class="music-name">${song.name}</div>
+                    <div class="music-details">Order: ${index + 1} • ${song.status}</div>
+                </div>
+                <div class="music-actions">
+                    <button class="icon-btn edit" onclick="editMusic('${song.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="icon-btn delete" onclick="deleteMusic('${song.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(item);
+        });
+        
+    } catch (error) {
+        console.error('Music load error:', error);
+        showAdminToast('Error', 'Failed to load music', 'error');
+    }
+}
+
+function openMusicModal() {
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Add Music</h2>
+        <form id="musicForm" onsubmit="submitMusic(event)">
+            <div class="form-group">
+                <label>Music Name</label>
+                <input type="text" id="musicName" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Music File (MP3, max 50MB)</label>
+                <input type="file" id="musicFile" class="form-control" accept="audio/mp3,audio/mpeg" required>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Add Music
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
     
-    select.innerHTML = '<option value="">No Coupon</option>';
+    openAdminModal(content);
+}
+
+async function submitMusic(e) {
+    e.preventDefault();
     
-    dashboardData.coupons?.forEach(coupon => {
+    const name = document.getElementById('musicName').value;
+    const musicFile = document.getElementById('musicFile').files[0];
+    
+    if (!musicFile) {
+        showAdminToast('Error', 'Please select a music file', 'error');
+        return;
+    }
+    
+    if (musicFile.size > 50 * 1024 * 1024) {
+        showAdminToast('Error', 'File size must be less than 50MB', 'error');
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const fileUrl = await uploadFile(musicFile, 'music');
+        
+        const { error } = await supabase
+            .from('music')
+            .insert([{
+                name: name,
+                file_url: fileUrl,
+                order: 0,
+                status: 'active',
+                created_at: new Date().toISOString()
+            }]);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Music added successfully', 'success');
+        
+        await loadMusic();
+        
+    } catch (error) {
+        console.error('Music create error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to add music', 'error');
+    }
+}
+
+async function editMusic(musicId) {
+    const music = AdminState.music.find(m => m.id === musicId);
+    if (!music) return;
+    
+    const content = `
+        <h2 style="margin-bottom: 1.5rem;">Edit Music</h2>
+        <form id="editMusicForm" onsubmit="updateMusic(event, '${musicId}')">
+            <div class="form-group">
+                <label>Music Name</label>
+                <input type="text" id="editMusicName" class="form-control" value="${music.name}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Status</label>
+                <select id="editMusicStatus" class="form-control">
+                    <option value="active" ${music.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="inactive" ${music.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Update Music
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    openAdminModal(content);
+}
+
+async function updateMusic(e, musicId) {
+    e.preventDefault();
+    
+    const name = document.getElementById('editMusicName').value;
+    const status = document.getElementById('editMusicStatus').value;
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('music')
+            .update({
+                name: name,
+                status: status
+            })
+            .eq('id', musicId);
+        
+        if (error) throw error;
+        
+        closeAdminModal();
+        hideAdminLoader();
+        showAdminToast('Success', 'Music updated successfully', 'success');
+        
+        await loadMusic();
+        
+    } catch (error) {
+        console.error('Music update error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to update music', 'error');
+    }
+}
+
+async function deleteMusic(musicId) {
+    if (!confirm('Are you sure you want to delete this music?')) {
+        return;
+    }
+    
+    showAdminLoader();
+    
+    try {
+        const { error } = await supabase
+            .from('music')
+            .delete()
+            .eq('id', musicId);
+        
+        if (error) throw error;
+        
+        hideAdminLoader();
+        showAdminToast('Success', 'Music deleted successfully', 'success');
+        
+        await loadMusic();
+        
+    } catch (error) {
+        console.error('Music delete error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to delete music', 'error');
+    }
+}
+
+/* ========================================
+   SEND NOTIFICATIONS
+======================================== */
+
+document.getElementById('notificationType')?.addEventListener('change', function() {
+    const type = this.value;
+    const usersGroup = document.getElementById('specificUsersGroup');
+    
+    if (type === 'specific') {
+        usersGroup.style.display = 'block';
+        loadNotificationUsers();
+    } else {
+        usersGroup.style.display = 'none';
+    }
+});
+
+async function loadNotificationUsers() {
+    const { data: users } = await supabase
+        .from('users')
+        .select('id, username, email')
+        .eq('status', 'active');
+    
+    const select = document.getElementById('notificationUsers');
+    select.innerHTML = '';
+    
+    users?.forEach(user => {
         const option = document.createElement('option');
-        option.value = coupon.code;
-        option.textContent = `${coupon.code} (-${coupon.discount_percentage}%)`;
-        select.appendChild(option);
-    });
-}
-
-function loadProductsForNotification() {
-    const select = document.getElementById('notifProduct');
-    if (!select) return;
-    
-    select.innerHTML = '<option value="">No Product</option>';
-    
-    dashboardData.products.forEach(product => {
-        const option = document.createElement('option');
-        option.value = product.id;
-        option.textContent = product.name;
+        option.value = user.id;
+        option.textContent = `${user.username} (${user.email})`;
         select.appendChild(option);
     });
 }
 
 async function sendNotification() {
-    const recipientType = document.getElementById('notifRecipients').value;
-    const title = document.getElementById('notifTitle').value.trim();
-    const message = document.getElementById('notifMessage').value.trim();
-    const imageFile = document.getElementById('notifImage').files[0];
-    const couponCode = document.getElementById('notifCoupon').value;
-    const productId = document.getElementById('notifProduct').value;
+    const type = document.getElementById('notificationType').value;
+    const title = document.getElementById('notificationTitle').value;
+    const message = document.getElementById('notificationMessage').value;
     
     if (!title || !message) {
-        showAdminToast('Please fill required fields', 'warning');
+        showAdminToast('Error', 'Please fill in all fields', 'error');
         return;
     }
     
+    showAdminLoader();
+    
     try {
-        showAdminLoading();
-        
         let userIds = [];
         
-        if (recipientType === 'all') {
-            userIds = dashboardData.users.map(u => u.id);
-        } else {
-            userIds = Array.from(document.querySelectorAll('.notif-user-checkbox:checked'))
-                .map(cb => parseInt(cb.value));
+        if (type === 'all') {
+            const { data: users } = await supabase
+                .from('users')
+                .select('id')
+                .eq('status', 'active');
             
-            if (userIds.length === 0) {
-                hideAdminLoading();
-                showAdminToast('Please select at least one user', 'warning');
-                return;
-            }
+            userIds = users?.map(u => u.id) || [];
+        } else {
+            const select = document.getElementById('notificationUsers');
+            userIds = Array.from(select.selectedOptions).map(option => option.value);
         }
         
-        let imageUrl = null;
-        if (imageFile) {
-            imageUrl = await uploadFile(imageFile, 'notifications', 'images/');
+        if (userIds.length === 0) {
+            showAdminToast('Error', 'No users selected', 'error');
+            hideAdminLoader();
+            return;
         }
         
         const notifications = userIds.map(userId => ({
             user_id: userId,
+            type: 'message',
             title: title,
             message: message,
-            image_url: imageUrl,
-            coupon_code: couponCode || null,
-            product_id: productId ? parseInt(productId) : null,
             read: false,
             created_at: new Date().toISOString()
         }));
@@ -3146,576 +4188,28 @@ async function sendNotification() {
         if (error) throw error;
         
         // Clear form
-        document.getElementById('notifTitle').value = '';
-        document.getElementById('notifMessage').value = '';
-        document.getElementById('notifImage').value = '';
-        document.getElementById('notifCoupon').value = '';
-        document.getElementById('notifProduct').value = '';
-        document.querySelectorAll('.notif-user-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('notificationTitle').value = '';
+        document.getElementById('notificationMessage').value = '';
         
-        hideAdminLoading();
-        showAdminToast(`Notification sent to ${userIds.length} user(s)`, 'success');
+        hideAdminLoader();
+        showAdminToast('Success', `Notification sent to ${userIds.length} user(s)`, 'success');
         
     } catch (error) {
-        console.error('Error sending notification:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to send notification', 'error');
+        console.error('Notification send error:', error);
+        hideAdminLoader();
+        showAdminToast('Error', 'Failed to send notification', 'error');
     }
 }
 
-// ==================== INPUT TABLES MANAGEMENT ====================
-async function loadInputTables() {
-    const container = document.getElementById('inputTablesContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Create Input Table</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Select Category</label>
-                    <select id="inputTableCategory" onchange="loadCategoryCardsForInputTable()">
-                        <option value="">Select Category</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Select Category Card</label>
-                    <select id="inputTableCategoryCard">
-                        <option value="">Select Category Card</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Table Title *</label>
-                <input type="text" id="inputTableTitle" placeholder="e.g., Account Information">
-            </div>
-            
-            <div id="inputFieldsContainer">
-                <div class="input-field-item">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Field Label</label>
-                            <input type="text" class="field-label" placeholder="e.g., User ID">
-                        </div>
-                        <div class="form-group">
-                            <label>Field Placeholder</label>
-                            <input type="text" class="field-placeholder" placeholder="Enter your user ID">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <button class="quick-action-btn" onclick="addInputField()">
-                <i class="fas fa-plus"></i> Add Another Field
-            </button>
-            
-            <button class="add-btn" onclick="createInputTable()">
-                <i class="fas fa-save"></i> Create Input Table
-            </button>
-        </div>
-    `;
-    
-    populateCategorySelects();
+/* ========================================
+   ANALYTICS
+======================================== */
+
+async function loadAnalytics() {
+    // Charts will be initialized here
+    showAdminToast('Info', 'Analytics page loaded', 'info');
 }
 
-function loadCategoryCardsForInputTable() {
-    const categoryId = document.getElementById('inputTableCategory').value;
-    const select = document.getElementById('inputTableCategoryCard');
-    
-    select.innerHTML = '<option value="">Select Category Card</option>';
-    
-    if (!categoryId) return;
-    
-    const cards = dashboardData.categoryCards.filter(c => c.category_id == categoryId);
-    
-    cards.forEach(card => {
-        const option = document.createElement('option');
-        option.value = card.id;
-        option.textContent = card.name;
-        select.appendChild(option);
-    });
-}
-
-function addInputField() {
-    const container = document.getElementById('inputFieldsContainer');
-    
-    const fieldItem = document.createElement('div');
-    fieldItem.className = 'input-field-item';
-    fieldItem.style.position = 'relative';
-    fieldItem.style.padding = '16px';
-    fieldItem.style.background = 'var(--dark-lighter)';
-    fieldItem.style.borderRadius = '8px';
-    fieldItem.style.marginTop = '12px';
-    
-    fieldItem.innerHTML = `
-        <button class="delete-btn" onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; padding: 6px 12px;">
-            <i class="fas fa-times"></i>
-        </button>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Field Label</label>
-                <input type="text" class="field-label" placeholder="e.g., User ID">
-            </div>
-            <div class="form-group">
-                <label>Field Placeholder</label>
-                <input type="text" class="field-placeholder" placeholder="Enter your user ID">
-            </div>
-        </div>
-    `;
-    
-    container.appendChild(fieldItem);
-}
-
-async function createInputTable() {
-    const categoryCardId = document.getElementById('inputTableCategoryCard').value;
-    const title = document.getElementById('inputTableTitle').value.trim();
-    
-    if (!categoryCardId || !title) {
-        showAdminToast('Please fill required fields', 'warning');
-        return;
-    }
-    
-    const fields = [];
-    document.querySelectorAll('.input-field-item').forEach(item => {
-        const label = item.querySelector('.field-label').value.trim();
-        const placeholder = item.querySelector('.field-placeholder').value.trim();
-        
-        if (label && placeholder) {
-            fields.push({ label, placeholder });
-        }
-    });
-    
-    if (fields.length === 0) {
-        showAdminToast('Please add at least one field', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        const { error } = await supabase
-            .from('input_tables')
-            .insert([{
-                category_card_id: parseInt(categoryCardId),
-                title: title,
-                fields: fields,
-                created_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
-        
-        hideAdminLoading();
-        showAdminToast('Input table created successfully', 'success');
-        
-        // Reload the form
-        loadInputTables();
-        
-    } catch (error) {
-        console.error('Error creating input table:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to create input table', 'error');
-    }
-}
-
-// ==================== PRODUCT PAGE BANNERS ====================
-async function loadProductBanners() {
-    const container = document.getElementById('productBannersContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Add Product Page Banner</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Select Category</label>
-                    <select id="bannerCategory" onchange="loadCategoryCardsForBanner()">
-                        <option value="">Select Category</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Select Category Card</label>
-                    <select id="bannerCategoryCard">
-                        <option value="">Select Category Card</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Banner Image *</label>
-                <input type="file" id="bannerImage" accept="image/*">
-            </div>
-            
-            <button class="add-btn" onclick="addProductBanner()">
-                <i class="fas fa-plus"></i> Add Banner
-            </button>
-        </div>
-    `;
-    
-    populateCategorySelects();
-}
-
-function loadCategoryCardsForBanner() {
-    const categoryId = document.getElementById('bannerCategory').value;
-    const select = document.getElementById('bannerCategoryCard');
-    
-    select.innerHTML = '<option value="">Select Category Card</option>';
-    
-    if (!categoryId) return;
-    
-    const cards = dashboardData.categoryCards.filter(c => c.category_id == categoryId);
-    
-    cards.forEach(card => {
-        const option = document.createElement('option');
-        option.value = card.id;
-        option.textContent = card.name;
-        select.appendChild(option);
-    });
-}
-
-async function addProductBanner() {
-    const categoryCardId = document.getElementById('bannerCategoryCard').value;
-    const imageFile = document.getElementById('bannerImage').files[0];
-    
-    if (!categoryCardId || !imageFile) {
-        showAdminToast('Please fill all fields', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        const imageUrl = await uploadFile(imageFile, 'banners', 'products/');
-        
-        const { error } = await supabase
-            .from('product_page_banners')
-            .insert([{
-                category_card_id: parseInt(categoryCardId),
-                image_url: imageUrl,
-                created_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
-        
-        document.getElementById('bannerImage').value = '';
-        
-        hideAdminLoading();
-        showAdminToast('Product banner added successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error adding product banner:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add product banner', 'error');
-    }
-}
-
-// ==================== GUIDELINES MANAGEMENT ====================
-async function loadGuidelines() {
-    const container = document.getElementById('guidelinesContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Add Guideline</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Select Category</label>
-                    <select id="guidelineCategory" onchange="loadCategoryCardsForGuideline()">
-                        <option value="">Select Category</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Select Category Card</label>
-                    <select id="guidelineCategoryCard">
-                        <option value="">Select Category Card</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Title *</label>
-                <input type="text" id="guidelineTitle" placeholder="Enter guideline title">
-            </div>
-            
-            <div class="form-group">
-                <label>Content *</label>
-                <textarea id="guidelineContent" rows="8" placeholder="Enter content (supports image URLs)"></textarea>
-                <small style="color: var(--text-muted);">Tip: Include image URLs directly in text</small>
-            </div>
-            
-            <div class="form-group">
-                <label>Icon/Image</label>
-                <input type="file" id="guidelineIcon" accept="image/*">
-            </div>
-            
-            <button class="add-btn" onclick="addGuideline()">
-                <i class="fas fa-plus"></i> Add Guideline
-            </button>
-        </div>
-    `;
-    
-    populateCategorySelects();
-}
-
-function loadCategoryCardsForGuideline() {
-    const categoryId = document.getElementById('guidelineCategory').value;
-    const select = document.getElementById('guidelineCategoryCard');
-    
-    select.innerHTML = '<option value="">Select Category Card</option>';
-    
-    if (!categoryId) return;
-    
-    const cards = dashboardData.categoryCards.filter(c => c.category_id == categoryId);
-    
-    cards.forEach(card => {
-        const option = document.createElement('option');
-        option.value = card.id;
-        option.textContent = card.name;
-        select.appendChild(option);
-    });
-}
-
-async function addGuideline() {
-    const categoryCardId = document.getElementById('guidelineCategoryCard').value;
-    const title = document.getElementById('guidelineTitle').value.trim();
-    const content = document.getElementById('guidelineContent').value.trim();
-    const iconFile = document.getElementById('guidelineIcon').files[0];
-    
-    if (!categoryCardId || !title || !content) {
-        showAdminToast('Please fill required fields', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        let iconUrl = null;
-        if (iconFile) {
-            iconUrl = await uploadFile(iconFile, 'guidelines', 'icons/');
-        }
-        
-        const { error } = await supabase
-            .from('product_guidelines')
-            .insert([{
-                category_card_id: parseInt(categoryCardId),
-                title: title,
-                content: content,
-                icon_url: iconUrl,
-                created_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
-        
-        document.getElementById('guidelineTitle').value = '';
-        document.getElementById('guidelineContent').value = '';
-        document.getElementById('guidelineIcon').value = '';
-        
-        hideAdminLoading();
-        showAdminToast('Guideline added successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error adding guideline:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add guideline', 'error');
-    }
-}
-
-// ==================== YOUTUBE VIDEOS ====================
-async function loadYoutubeVideos() {
-    const container = document.getElementById('youtubeVideosContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Add YouTube Video</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Select Category</label>
-                    <select id="videoCategory" onchange="loadCategoryCardsForVideo()">
-                        <option value="">Select Category</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Select Category Card</label>
-                    <select id="videoCategoryCard">
-                        <option value="">Select Category Card</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>YouTube Video URL *</label>
-                <input type="url" id="videoUrl" placeholder="https://youtube.com/... or https://youtu.be/...">
-            </div>
-            
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="videoDescription" placeholder="Video description"></textarea>
-            </div>
-            
-            <button class="add-btn" onclick="addYoutubeVideo()">
-                <i class="fas fa-plus"></i> Add Video
-            </button>
-        </div>
-    `;
-    
-    populateCategorySelects();
-}
-
-function loadCategoryCardsForVideo() {
-    const categoryId = document.getElementById('videoCategory').value;
-    const select = document.getElementById('videoCategoryCard');
-    
-    select.innerHTML = '<option value="">Select Category Card</option>';
-    
-    if (!categoryId) return;
-    
-    const cards = dashboardData.categoryCards.filter(c => c.category_id == categoryId);
-    
-    cards.forEach(card => {
-        const option = document.createElement('option');
-        option.value = card.id;
-        option.textContent = card.name;
-        select.appendChild(option);
-    });
-}
-
-async function addYoutubeVideo() {
-    const categoryCardId = document.getElementById('videoCategoryCard').value;
-    const videoUrl = document.getElementById('videoUrl').value.trim();
-    const description = document.getElementById('videoDescription').value.trim();
-    
-    if (!categoryCardId || !videoUrl) {
-        showAdminToast('Please fill required fields', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        const { error } = await supabase
-            .from('product_youtube_videos')
-            .insert([{
-                category_card_id: parseInt(categoryCardId),
-                video_url: videoUrl,
-                description: description || null,
-                created_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
-        
-        document.getElementById('videoUrl').value = '';
-        document.getElementById('videoDescription').value = '';
-        
-        hideAdminLoading();
-        showAdminToast('YouTube video added successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error adding video:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to add video', 'error');
-    }
-}
-
-// ==================== FEEDBACK SETTINGS ====================
-async function loadFeedbackSettings() {
-    const container = document.getElementById('feedbackSettingsContent');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="form-card">
-            <h3>Configure Feedback System</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Select Category</label>
-                    <select id="feedbackCategory" onchange="loadCategoryCardsForFeedback()">
-                        <option value="">Select Category</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Select Category Card</label>
-                    <select id="feedbackCategoryCard">
-                        <option value="">Select Category Card</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Feedback Title *</label>
-                <input type="text" id="feedbackTitle" placeholder="e.g., Rate Your Experience">
-            </div>
-            
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="feedbackDescription" placeholder="Feedback description"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label>Maximum Stars *</label>
-                <input type="number" id="feedbackMaxStars" value="5" min="1" max="10">
-            </div>
-            
-            <button class="add-btn" onclick="saveFeedbackSettings()">
-                <i class="fas fa-save"></i> Save Feedback Settings
-            </button>
-        </div>
-    `;
-    
-    populateCategorySelects();
-}
-
-function loadCategoryCardsForFeedback() {
-    const categoryId = document.getElementById('feedbackCategory').value;
-    const select = document.getElementById('feedbackCategoryCard');
-    
-    select.innerHTML = '<option value="">Select Category Card</option>';
-    
-    if (!categoryId) return;
-    
-    const cards = dashboardData.categoryCards.filter(c => c.category_id == categoryId);
-    
-    cards.forEach(card => {
-        const option = document.createElement('option');
-        option.value = card.id;
-        option.textContent = card.name;
-        select.appendChild(option);
-    });
-}
-
-async function saveFeedbackSettings() {
-    const categoryCardId = document.getElementById('feedbackCategoryCard').value;
-    const title = document.getElementById('feedbackTitle').value.trim();
-    const description = document.getElementById('feedbackDescription').value.trim();
-    const maxStars = document.getElementById('feedbackMaxStars').value;
-    
-    if (!categoryCardId || !title || !maxStars) {
-        showAdminToast('Please fill required fields', 'warning');
-        return;
-    }
-    
-    try {
-        showAdminLoading();
-        
-        const { error } = await supabase
-            .from('feedback_settings')
-            .upsert([{
-                category_card_id: parseInt(categoryCardId),
-                title: title,
-                description: description || null,
-                max_stars: parseInt(maxStars),
-                created_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
-        
-        hideAdminLoading();
-        showAdminToast('Feedback settings saved successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error saving feedback settings:', error);
-        hideAdminLoading();
-        showAdminToast('Failed to save feedback settings', 'error');
-    }
-}
-
-console.log('✅ Admin Dashboard Fully Loaded');
+/* ========================================
+   END OF ADMIN.JS
+======================================== */
