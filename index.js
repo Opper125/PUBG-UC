@@ -17,6 +17,7 @@ const AppState = {
   currentPage: "home",
   websiteConfig: null,
   categories: [],
+  categoryCards: [], // Added for category cards
   products: [],
   orders: [],
   notifications: [],
@@ -107,7 +108,7 @@ function showToast(title, message, type = "info") {
   toastContainer.appendChild(toast)
 
   setTimeout(() => {
-    toast.style.animation = "toastSlideOut 0.3s ease forwards"
+    toast.style.animation = "toastSlideOut 0.3s forwards"
     setTimeout(() => toast.remove(), 300)
   }, 5000)
 }
@@ -410,7 +411,7 @@ document.getElementById("signupFormElement")?.addEventListener("submit", async (
       username: username,
       email: email,
       password: password,
-      profile_image: avatarUrl, // Changed from avatar to profile_image
+      avatar: avatarUrl, // Changed from avatar to profile_image
       status: "active",
       created_at: new Date().toISOString(),
     }
@@ -514,8 +515,9 @@ async function loadWebsiteConfig() {
     }
 
     // Update title
-    if (data.website_name) {
-      document.title = data.website_name
+    if (data.name) {
+      // Changed from data.website_name to data.name
+      document.title = data.name
     }
   } catch (error) {
     console.error("Config load error:", error)
@@ -529,8 +531,8 @@ function updateUserUI() {
   const profileImg = document.getElementById("userProfileImg")
   const menuAvatar = document.getElementById("userMenuAvatar")
 
-  if (profileImg) profileImg.src = AppState.currentUser.profile_image
-  if (menuAvatar) menuAvatar.src = AppState.currentUser.profile_image
+  if (profileImg) profileImg.src = AppState.currentUser.avatar || generateAIAvatar() // Changed from profile_image to avatar
+  if (menuAvatar) menuAvatar.src = AppState.currentUser.avatar || generateAIAvatar() // Changed from profile_image to avatar
 
   // Update user info
   const menuName = document.getElementById("userMenuName")
@@ -696,19 +698,33 @@ function rotateSecondaryBanners(total, centerIndex) {
 
 async function loadCategories() {
   try {
-    const { data: categories, error } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("status", "active")
-      .order("order", { ascending: true }) // Use 'order' column for ordering
+    const { data: categories, error } = await supabase.from("categories").select("*").eq("status", "active")
 
     if (error) throw error
 
     AppState.categories = categories || []
 
-    renderCategories()
+    // Load category cards for each category
+    await loadCategoryCards()
   } catch (error) {
     console.error("Categories load error:", error)
+  }
+}
+
+async function loadCategoryCards() {
+  try {
+    const { data: categoryCards, error } = await supabase
+      .from("category_cards")
+      .select("*, categories(*)")
+      .eq("status", "active")
+
+    if (error) throw error
+
+    AppState.categoryCards = categoryCards || []
+
+    renderCategories()
+  } catch (error) {
+    console.error("Category cards load error:", error)
   }
 }
 
@@ -718,98 +734,98 @@ function renderCategories() {
 
   container.innerHTML = ""
 
-  // Group categories by parent category for a hierarchical structure
+  // Group category cards by parent category
   const grouped = {}
 
   AppState.categories.forEach((cat) => {
-    const parent = cat.parent_category || "Main" // Default to 'Main' if no parent
-    if (!grouped[parent]) {
-      grouped[parent] = []
+    grouped[cat.name] = []
+  })
+
+  AppState.categoryCards.forEach((card) => {
+    const categoryName = card.categories?.name || "Other"
+    if (!grouped[categoryName]) {
+      grouped[categoryName] = []
     }
-    grouped[parent].push(cat)
+    grouped[categoryName].push(card)
   })
 
   // Render each group
-  Object.entries(grouped).forEach(([parent, cats]) => {
+  Object.entries(grouped).forEach(([categoryName, cards]) => {
+    if (cards.length === 0) return
+
     const group = document.createElement("div")
     group.className = "category-group"
 
     group.innerHTML = `
             <h3 class="category-title">
                 <i class="fas fa-gamepad"></i>
-                ${parent}
+                ${categoryName}
             </h3>
             <div class="category-cards-grid"></div>
         `
 
     const grid = group.querySelector(".category-cards-grid")
 
-    cats.forEach((category) => {
-      const card = document.createElement("div")
-      card.className = "category-card"
-      card.onclick = () => openCategory(category) // Open category details on click
+    cards.forEach((card) => {
+      const cardElement = document.createElement("div")
+      cardElement.className = "category-card"
+      cardElement.onclick = () => openCategoryCard(card)
 
-      card.innerHTML = `
+      cardElement.innerHTML = `
                 <div class="category-card-content">
                     <div class="category-icon-wrapper">
-                        <img src="${category.icon_url}" alt="${category.name}" class="category-icon">
-                        ${category.flag_url ? `<img src="${category.flag_url}" alt="Flag" class="category-flag">` : ""}
+                        <img src="${card.icon_url}" alt="${card.name}" class="category-icon">
+                        ${card.flag_url ? `<img src="${card.flag_url}" alt="Flag" class="category-flag">` : ""}
                         ${
-                          category.discount_percent > 0
+                          card.discount_percent > 0
                             ? `
-                            <div class="category-discount-badge">-${category.discount_percent}%</div>
+                            <div class="category-discount-badge">-${card.discount_percent}%</div>
                         `
                             : ""
                         }
                     </div>
-                    <div class="category-name">${category.name}</div>
-                    ${category.description ? `<div class="category-description">${category.description}</div>` : ""}
+                    <div class="category-name">${card.name}</div>
                 </div>
             `
 
-      grid.appendChild(card)
+      grid.appendChild(cardElement)
     })
 
     container.appendChild(group)
   })
 }
 
-async function openCategory(category) {
-  AppState.currentCategory = category
-  AppState.currentCategoryCard = category // Assuming currentCategoryCard is used similarly
+async function openCategoryCard(categoryCard) {
+  AppState.currentCategoryCard = categoryCard
 
   showLoader()
 
   try {
-    // Load products for this category
+    // Load products for this category card
     const { data: products, error } = await supabase
       .from("products")
       .select("*")
-      .eq("category_id", category.id)
+      .eq("category_card_id", categoryCard.id)
       .eq("status", "active")
-      .order("order", { ascending: true }) // Use 'order' column for ordering
 
     if (error) throw error
 
     AppState.products = products || []
 
-    // Load category-specific data (banners, input tables, guidelines, videos, feedback)
-    await loadCategoryBanners(category.id)
-    await loadCategoryInputTables(category.id)
-    await loadCategoryGuidelines(category.id)
-    await loadCategoryYoutubeVideos(category.id)
-    await loadCategoryFeedback(category.id)
+    // Load category-specific data
+    await loadCategoryBanners(categoryCard.id)
+    await loadCategoryInputTables(categoryCard.id)
+    await loadCategoryGuidelines(categoryCard.id)
+    await loadCategoryYoutubeVideos(categoryCard.id)
+    await loadCategoryFeedback(categoryCard.id)
 
-    // Update UI elements for the category page
+    // Update UI
     const categoryIconElement = document.getElementById("categoryIcon")
     const categoryNameElement = document.getElementById("categoryName")
-    if (categoryIconElement) categoryIconElement.src = category.icon_url
-    if (categoryNameElement) categoryNameElement.textContent = category.name
+    if (categoryIconElement) categoryIconElement.src = categoryCard.icon_url
+    if (categoryNameElement) categoryNameElement.textContent = categoryCard.name
 
-    // Render the products for the category
     renderProducts()
-
-    // Switch to the category products page
     switchPage("categoryProducts")
 
     hideLoader()
@@ -846,12 +862,12 @@ function renderProducts() {
 
     card.innerHTML = `
         <div class="product-image-wrapper">
-            <img src="${product.image_url}" alt="${product.name}" class="product-image">
+            <img src="${product.icon_url}" alt="${product.name}" class="product-image">
             ${
-              product.type
+              product.type_name // Changed from product.type to product.type_name
                 ? `
-                <div class="product-type-badge" style="background: ${getTypeBadgeColor(product.type)};">
-                    ${product.type}
+                <div class="product-type-badge" style="background: ${product.type_badge_color ? JSON.parse(product.type_badge_color).background : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"};">
+                    ${product.type_name}
                 </div>
             `
                 : ""
@@ -896,12 +912,13 @@ function getTypeBadgeColor(type) {
   return colors[type] || "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" // Default color
 }
 
-async function loadCategoryBanners(categoryId) {
+async function loadCategoryBanners(categoryCardId) {
   try {
     const { data: banners, error } = await supabase
-      .from("category_banners")
+      .from("banners")
       .select("*")
-      .eq("category_id", categoryId)
+      .eq("type", "product")
+      .eq("category_card_id", categoryCardId)
       .eq("status", "active")
       .order("order", { ascending: true })
 
@@ -966,14 +983,13 @@ function rotateCategoryBanners(total, centerIndex) {
   })
 }
 
-async function loadCategoryInputTables(categoryId) {
+async function loadCategoryInputTables(categoryCardId) {
   try {
     const { data: tables, error } = await supabase
       .from("input_tables")
       .select("*")
-      .eq("category_id", categoryId)
+      .eq("category_card_id", categoryCardId)
       .eq("status", "active")
-      .order("order", { ascending: true })
 
     if (error) throw error
 
@@ -1029,12 +1045,12 @@ function renderInputTables(tables) {
   })
 }
 
-async function loadCategoryGuidelines(categoryId) {
+async function loadCategoryGuidelines(categoryCardId) {
   try {
     const { data: guidelines, error } = await supabase
-      .from("guidelines")
+      .from("product_guidelines")
       .select("*")
-      .eq("category_id", categoryId)
+      .eq("category_card_id", categoryCardId)
       .eq("status", "active")
       .order("order", { ascending: true })
 
@@ -1064,7 +1080,8 @@ function renderGuidelines(guidelines) {
     if (guideline.social_links) {
       try {
         // Assuming social_links is a JSON string like {"facebook": "url", "twitter": "url"}
-        const socials = JSON.parse(guideline.social_links)
+        const socials =
+          typeof guideline.social_links === "string" ? JSON.parse(guideline.social_links) : guideline.social_links
         socialsHTML = '<div class="guideline-socials">'
 
         // Iterate over the platform names (keys)
@@ -1100,12 +1117,12 @@ function renderGuidelines(guidelines) {
   })
 }
 
-async function loadCategoryYoutubeVideos(categoryId) {
+async function loadCategoryYoutubeVideos(categoryCardId) {
   try {
     const { data: videos, error } = await supabase
       .from("youtube_videos")
       .select("*")
-      .eq("category_id", categoryId)
+      .eq("category_card_id", categoryCardId)
       .eq("status", "active")
       .order("order", { ascending: true })
 
@@ -1134,7 +1151,7 @@ function renderYoutubeVideos(videos) {
     // Extract video ID from URL
     let videoId = ""
     try {
-      const url = new URL(video.video_url)
+      const url = new URL(video.url) // Changed from video.video_url to video.url
       // Handle standard YouTube watch URLs and short URLs
       videoId = url.searchParams.get("v") || url.pathname.split("/").pop()
     } catch (e) {
@@ -1156,13 +1173,12 @@ function renderYoutubeVideos(videos) {
   })
 }
 
-async function loadCategoryFeedback(categoryId) {
+async function loadCategoryFeedback(categoryCardId) {
   try {
     const { data: feedbacks, error } = await supabase
       .from("feedback")
-      .select("*, users(username, profile_image)") // Join with users table
-      .eq("category_id", categoryId)
-      .eq("status", "approved") // Only load approved feedback
+      .select("*, users(username, avatar)") // Join with users table, select 'avatar'
+      .eq("category_card_id", categoryCardId)
       .order("created_at", { ascending: false })
       .limit(20) // Limit to latest 20 feedbacks
 
@@ -1213,7 +1229,7 @@ function renderFeedback(feedbacks) {
 
     item.innerHTML = `
                 <div class="feedback-user">
-                    <img src="${feedback.users?.profile_image || generateAIAvatar()}" alt="User">
+                    <img src="${feedback.users?.avatar || generateAIAvatar()}" alt="User">
                     <div>
                         <div class="feedback-username">${feedback.users?.username || "Anonymous"}</div>
                         <div class="feedback-date">${new Date(feedback.created_at).toLocaleDateString()}</div>
@@ -1222,7 +1238,7 @@ function renderFeedback(feedbacks) {
                 <div class="feedback-rating">
                     ${generateStars(feedback.rating)}
                 </div>
-                <div class="feedback-comment">${feedback.comment}</div>
+                <div class="feedback-comment">${feedback.message}</div>
             `
 
     list.appendChild(item)
@@ -1257,16 +1273,17 @@ async function openProductDetail(product) {
   showLoader()
 
   try {
-    // Fetch payment methods associated with the product
     const { data: productPaymentMethods, error: ppmError } = await supabase
       .from("product_payment_methods")
-      .select("payment_method_id, payment_methods (*)") // Select payment method details too
+      .select("payment_method_id, payment_methods (*)")
       .eq("product_id", product.id)
-      .filter("payment_methods.status", "eq", "active") // Filter by active payment methods
 
     if (ppmError) {
       console.error("Payment methods load error:", ppmError)
     }
+
+    // Filter active payment methods
+    const activePaymentMethods = productPaymentMethods?.filter((ppm) => ppm.payment_methods?.status === "active") || []
 
     const modal = document.getElementById("productDetailModal")
     const content = document.getElementById("productDetailContent")
@@ -1275,12 +1292,12 @@ async function openProductDetail(product) {
 
     let paymentMethodsHTML = ""
 
-    if (productPaymentMethods && productPaymentMethods.length > 0) {
+    if (activePaymentMethods.length > 0) {
       paymentMethodsHTML = `
                 <div class="payment-methods-section">
                     <h3>Select Payment Method</h3>
                     <div class="payment-methods-grid">
-                        ${productPaymentMethods
+                        ${activePaymentMethods
                           .map(
                             (ppm) => `
                                 <div class="payment-method-card" onclick="selectPaymentMethod('${ppm.payment_methods.id}', '${ppm.payment_methods.name}')">
@@ -1308,7 +1325,7 @@ async function openProductDetail(product) {
 
     content.innerHTML = `
             <div class="product-detail-image">
-                <img src="${product.image_url}" alt="${product.name}">
+                <img src="${product.icon_url}" alt="${product.name}">
             </div>
             
             <div class="product-detail-info">
@@ -1340,7 +1357,7 @@ async function openProductDetail(product) {
                 
                 ${paymentMethodsHTML}
                 
-                <button class="buy-now-btn" onclick="proceedToOrder()">
+                <button class="buy-now-btn" onclick="proceedToOrder()" ${activePaymentMethods.length === 0 ? "disabled" : ""}>
                     <i class="fas fa-shopping-cart"></i>
                     Buy Now
                 </button>
@@ -1700,7 +1717,7 @@ async function loadOrderHistory() {
       .select(
         `
                 *,
-                products (name, image_url),
+                products (name, icon_url), -- Changed image_url to icon_url
                 payment_methods (name, icon_url)
             `,
       ) // Select order details, product name/image, and payment method name/icon
@@ -1769,7 +1786,7 @@ function renderOrderHistory() {
             </div>
             
             <div class="order-body">
-                <img src="${order.products?.image_url}" alt="${order.products?.name}" class="order-product-image">
+                <img src="${order.products?.icon_url}" alt="${order.products?.name}" class="order-product-image">
                 <div class="order-details">
                     <div class="order-product-name">${order.products?.name}</div>
                     <div class="order-meta">
@@ -2159,7 +2176,7 @@ async function loadProfile() {
   container.innerHTML = `
         <div class="profile-card">
             <div class="profile-avatar-section">
-                <img src="${user.profile_image}" alt="Profile" class="profile-avatar">
+                <img src="${user.avatar || generateAIAvatar()}" alt="Profile" class="profile-avatar">
                 <button class="change-avatar-btn" onclick="changeAvatar()">
                     <i class="fas fa-camera"></i>
                 </button>
@@ -2266,6 +2283,27 @@ if (!AppState.settings) {
   }
 }
 
+// Define startMusicPlayer and stopMusicPlayer (placeholders for now)
+function startMusicPlayer() {
+  console.log("Starting music player...")
+  // Add actual music player start logic here
+  if (AppState.musicPlaylist.length > 0) {
+    playSong(AppState.currentSongIndex || 0) // Play current song or the first one
+    AppState.isPlaying = true // Ensure isPlaying is set
+  }
+}
+
+function stopMusicPlayer() {
+  console.log("Stopping music player...")
+  const audio = document.getElementById("audioPlayer")
+  if (audio) {
+    audio.pause()
+    audio.removeAttribute("src") // Clear the source to stop playback
+  }
+  AppState.isPlaying = false // Ensure isPlaying is set
+  document.getElementById("playPauseBtn").innerHTML = '<i class="fas fa-play"></i>' // Update button to play icon
+}
+
 function toggleSetting(setting) {
   AppState.settings[setting] = !AppState.settings[setting] // Toggle the setting value
 
@@ -2323,13 +2361,13 @@ async function changeAvatar() {
       // Update the user's profile image URL in the database
       const { error } = await supabase
         .from("users")
-        .update({ profile_image: imageUrl }) // Use 'profile_image' column
+        .update({ avatar: imageUrl }) // Use 'avatar' column
         .eq("id", AppState.currentUser.id)
 
       if (error) throw error
 
       // Update local state and localStorage
-      AppState.currentUser.profile_image = imageUrl
+      AppState.currentUser.avatar = imageUrl // Update avatar property
       localStorage.setItem("currentUser", JSON.stringify(AppState.currentUser))
 
       // Refresh UI elements that display the avatar
@@ -2589,7 +2627,7 @@ document.addEventListener("click", (e) => {
 
 async function loadMusicPlaylist() {
   try {
-    const { data: songs, error } = await supabase
+    const { data: music, error } = await supabase
       .from("music")
       .select("*")
       .eq("status", "active")
@@ -2597,75 +2635,87 @@ async function loadMusicPlaylist() {
 
     if (error) throw error
 
-    AppState.musicPlaylist = songs || []
+    AppState.musicPlaylist = music || []
 
-    // Start music player if enabled in settings and songs are available
-    if (songs && songs.length > 0 && AppState.settings?.music) {
-      startMusicPlayer()
+    if (AppState.musicPlaylist.length > 0) {
+      renderMusicPlaylist()
     }
   } catch (error) {
     console.error("Music load error:", error)
   }
 }
 
-function startMusicPlayer() {
-  if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return // Don't start if no songs
+function renderMusicPlaylist() {
+  const container = document.getElementById("musicPlaylist")
+  if (!container) return
 
-  const player = document.getElementById("musicPlayer")
-  const audio = document.getElementById("audioPlayer")
+  container.innerHTML = ""
 
-  player.classList.add("active") // Show the music player UI
+  AppState.musicPlaylist.forEach((song, index) => {
+    const item = document.createElement("div")
+    item.className = "music-playlist-item"
+    if (index === AppState.currentSongIndex) {
+      item.classList.add("active")
+    }
 
-  playSong(AppState.currentSongIndex) // Play the current song
+    item.innerHTML = `
+            <i class="fas fa-music"></i>
+            <span>${song.name}</span>
+        `
+
+    item.onclick = () => playSong(index)
+
+    container.appendChild(item)
+  })
 }
 
-function stopMusicPlayer() {
-  const player = document.getElementById("musicPlayer")
-  const audio = document.getElementById("audioPlayer")
+function toggleMusicPlayer() {
+  const modal = document.getElementById("musicPlayerModal")
+  if (modal.classList.contains("active")) {
+    closeMusicPlayer()
+  } else {
+    modal.classList.add("active")
+    document.body.classList.add("no-scroll")
+  }
+}
 
-  player.classList.remove("active") // Hide the music player UI
-  audio.pause() // Pause the audio
-  AppState.isPlaying = false // Update playing state
+function closeMusicPlayer() {
+  const modal = document.getElementById("musicPlayerModal")
+  modal.classList.remove("active")
+  document.body.classList.remove("no-scroll")
 }
 
 function playSong(index) {
   if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return
 
-  AppState.currentSongIndex = index // Update current song index
+  AppState.currentSongIndex = index
   const song = AppState.musicPlaylist[index]
 
   const audio = document.getElementById("audioPlayer")
   const songName = document.getElementById("currentSongName")
   const playPauseBtn = document.getElementById("playPauseBtn")
 
-  audio.src = song.file_url // Set audio source
-  songName.textContent = song.name // Update displayed song name
+  audio.src = song.file_url
+  audio.play()
 
-  audio.play() // Play the audio
+  songName.textContent = song.name
+  playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>'
+
   AppState.isPlaying = true
-  playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>' // Change button to pause icon
 
-  // Set up event listener for when the song ends
+  // Update playlist UI
+  document.querySelectorAll(".music-playlist-item").forEach((item, i) => {
+    if (i === index) {
+      item.classList.add("active")
+    } else {
+      item.classList.remove("active")
+    }
+  })
+
+  // Auto play next song when current ends
   audio.onended = () => {
-    playNextSong() // Automatically play the next song
+    nextSong()
   }
-}
-
-function playNextSong() {
-  if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return
-
-  // Calculate next song index, looping back to the start if at the end
-  AppState.currentSongIndex = (AppState.currentSongIndex + 1) % AppState.musicPlaylist.length
-  playSong(AppState.currentSongIndex) // Play the next song
-}
-
-function playPrevSong() {
-  if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return
-
-  // Calculate previous song index, looping back to the end if at the start
-  AppState.currentSongIndex =
-    (AppState.currentSongIndex - 1 + AppState.musicPlaylist.length) % AppState.musicPlaylist.length
-  playSong(AppState.currentSongIndex) // Play the previous song
 }
 
 function togglePlayPause() {
@@ -2673,25 +2723,43 @@ function togglePlayPause() {
   const playPauseBtn = document.getElementById("playPauseBtn")
 
   if (AppState.isPlaying) {
-    audio.pause() // Pause audio
+    audio.pause()
+    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>'
     AppState.isPlaying = false
-    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>' // Change button to play icon
   } else {
-    audio.play() // Play audio
-    AppState.isPlaying = true
-    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>' // Change button to pause icon
+    if (!audio.src && AppState.musicPlaylist.length > 0) {
+      playSong(0)
+    } else {
+      audio.play()
+      playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>'
+      AppState.isPlaying = true
+    }
   }
 }
 
-// Add event listeners for music player controls
-document.getElementById("playPauseBtn")?.addEventListener("click", togglePlayPause)
-document.getElementById("nextSongBtn")?.addEventListener("click", playNextSong)
-document.getElementById("prevSongBtn")?.addEventListener("click", playPrevSong)
+function nextSong() {
+  if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return
 
-// Volume slider functionality
-document.getElementById("volumeSlider")?.addEventListener("input", function () {
+  AppState.currentSongIndex = (AppState.currentSongIndex + 1) % AppState.musicPlaylist.length
+  playSong(AppState.currentSongIndex)
+}
+
+function prevSong() {
+  if (!AppState.musicPlaylist || AppState.musicPlaylist.length === 0) return
+
+  AppState.currentSongIndex =
+    (AppState.currentSongIndex - 1 + AppState.musicPlaylist.length) % AppState.musicPlaylist.length
+  playSong(AppState.currentSongIndex)
+}
+
+// Music player event listeners
+document.getElementById("playPauseBtn")?.addEventListener("click", togglePlayPause)
+document.getElementById("nextSongBtn")?.addEventListener("click", nextSong)
+document.getElementById("prevSongBtn")?.addEventListener("click", prevSong)
+
+document.getElementById("volumeSlider")?.addEventListener("input", (e) => {
   const audio = document.getElementById("audioPlayer")
-  audio.volume = this.value / 100 // Volume is between 0 and 1
+  audio.volume = e.target.value / 100
 })
 
 /* ========================================
@@ -2825,12 +2893,12 @@ function renderProduct(container, product) {
 
   card.innerHTML = `
     <div class="product-image-wrapper">
-      <img src="${product.image_url}" alt="${product.name}" class="product-image">
+      <img src="${product.icon_url}" alt="${product.name}" class="product-image">
       ${
-        product.type
+        product.type_name // Changed from product.type to product.type_name
           ? `
-        <div class="product-type-badge" style="background: ${getTypeBadgeColor(product.type)};">
-          ${product.type}
+        <div class="product-type-badge" style="background: ${product.type_badge_color ? JSON.parse(product.type_badge_color).background : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"};">
+          ${product.type_name}
         </div>
       `
           : ""
@@ -4111,6 +4179,18 @@ class SwipeDetector {
 ======================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize the ProductFilter instance
+  const productFilter = new ProductFilter() // Instantiate the ProductFilter class
+
+  // Setup realtime subscriptions when the user is logged in
+  if (AppState.sessionActive) {
+    setupRealtimeSubscriptions()
+  }
+
+  // Load the cart from localStorage when the app starts
+  CartManager.load()
+  CartManager.updateUI() // Update UI immediately after loading
+
   // Initialize pull-to-refresh functionality
   initPullToRefresh()
 
