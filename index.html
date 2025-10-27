@@ -126,7 +126,7 @@
     <div id="topBar" class="top-bar">
         <div class="top-bar-content">
             <div class="logo-container">
-                <img id="websiteLogo" src="/placeholder.svg" alt="Logo" class="website-logo">
+                <img id="websiteLogo" src="" alt="Logo" class="website-logo">
             </div>
             
             <div class="top-bar-actions">
@@ -136,13 +136,8 @@
                 </div>
                 
                 <div class="user-profile-btn" onclick="toggleUserMenu()">
-                    <img id="userProfileImg" src="/placeholder.svg" alt="Profile" class="user-avatar">
+                    <img id="userProfileImg" src="" alt="Profile" class="user-avatar">
                 </div>
-                
-                <!-- Music Player Button -->
-                <button id="musicPlayerBtn" class="music-player-btn" onclick="toggleMusicPlayer()">
-                    <i class="fas fa-music"></i>
-                </button>
             </div>
         </div>
     </div>
@@ -161,18 +156,18 @@
     <!-- User Menu Dropdown -->
     <div id="userMenu" class="user-menu-dropdown">
         <div class="user-menu-header">
-            <img id="userMenuAvatar" src="/placeholder.svg" alt="Avatar">
+            <img id="userMenuAvatar" src="" alt="Avatar">
             <div class="user-menu-info">
                 <h4 id="userMenuName"></h4>
                 <p id="userMenuEmail"></p>
             </div>
         </div>
         <div class="user-menu-items">
-            <a href="#profile" class="user-menu-item" onclick="switchPage('profile')">
+            <a href="#profile" class="user-menu-item">
                 <i class="fas fa-user"></i>
                 <span>My Profile</span>
             </a>
-            <a href="#settings" class="user-menu-item" onclick="switchPage('profile')">
+            <a href="#settings" class="user-menu-item">
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
             </a>
@@ -247,7 +242,7 @@
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <div class="products-page-info">
-                    <img id="categoryIcon" src="/placeholder.svg" alt="">
+                    <img id="categoryIcon" src="" alt="">
                     <h2 id="categoryName"></h2>
                 </div>
             </div>
@@ -269,27 +264,27 @@
 
     <!-- Bottom Navigation -->
     <div id="bottomNav" class="bottom-nav">
-        <button class="nav-item active" data-page="home" onclick="switchPage('home')">
+        <button class="nav-item active" data-page="home">
             <i class="fas fa-home"></i>
             <span>Home</span>
         </button>
         
-        <button class="nav-item" data-page="orderHistory" onclick="switchPage('orderHistory')">
+        <button class="nav-item" data-page="orderHistory">
             <i class="fas fa-history"></i>
             <span>Orders</span>
         </button>
         
-        <button class="nav-item" data-page="news" onclick="switchPage('news')">
+        <button class="nav-item" data-page="news">
             <i class="fas fa-newspaper"></i>
             <span>News</span>
         </button>
         
-        <button class="nav-item" data-page="contacts" onclick="switchPage('contacts')">
+        <button class="nav-item" data-page="contacts">
             <i class="fas fa-address-book"></i>
             <span>Contacts</span>
         </button>
         
-        <button class="nav-item" data-page="profile" onclick="switchPage('profile')">
+        <button class="nav-item" data-page="profile">
             <i class="fas fa-user"></i>
             <span>Profile</span>
         </button>
@@ -314,31 +309,24 @@
         </div>
     </div>
 
-    <!-- Music Player Modal -->
-    <div id="musicPlayerModal" class="music-player-modal">
-        <div class="modal-overlay" onclick="closeMusicPlayer()"></div>
-        <div class="modal-content">
-            <button class="modal-close-btn" onclick="closeMusicPlayer()">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="music-player-content">
-                <div class="music-info">
-                    <i class="fas fa-music"></i>
-                    <span id="currentSongName">No song playing</span>
-                </div>
-                <div class="music-controls">
-                    <button id="prevSongBtn"><i class="fas fa-backward"></i></button>
-                    <button id="playPauseBtn"><i class="fas fa-play"></i></button>
-                    <button id="nextSongBtn"><i class="fas fa-forward"></i></button>
-                </div>
-                <div class="music-volume">
-                    <i class="fas fa-volume-up"></i>
-                    <input type="range" id="volumeSlider" min="0" max="100" value="50">
-                </div>
-                <div id="musicPlaylist" class="music-playlist"></div>
+    <!-- Music Player -->
+    <div id="musicPlayer" class="music-player">
+        <div class="music-player-content">
+            <div class="music-info">
+                <i class="fas fa-music"></i>
+                <span id="currentSongName">No song playing</span>
             </div>
-            <audio id="audioPlayer"></audio>
+            <div class="music-controls">
+                <button id="prevSongBtn"><i class="fas fa-backward"></i></button>
+                <button id="playPauseBtn"><i class="fas fa-play"></i></button>
+                <button id="nextSongBtn"><i class="fas fa-forward"></i></button>
+            </div>
+            <div class="music-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volumeSlider" min="0" max="100" value="50">
+            </div>
         </div>
+        <audio id="audioPlayer"></audio>
     </div>
 
     <!-- Toast Notifications -->
@@ -346,5 +334,6 @@
 
     <!-- JS Files -->
     <script src="index.js"></script>
+    <script src="index1.js"></script>
 </body>
 </html>
