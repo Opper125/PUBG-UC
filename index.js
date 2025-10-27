@@ -3163,3 +3163,1542 @@ function loadSavedSettings() {
 
 // Load settings on init
 loadSavedSettings();
+
+/* ========================================
+   INDEX1.JS - ADDITIONAL FEATURES
+======================================== */
+
+/* ========================================
+   ADVANCED ANIMATIONS
+======================================== */
+
+function initScrollAnimations() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+    
+    document.querySelectorAll('.category-group, .news-card, .order-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'all 0.5s ease';
+        observer.observe(el);
+    });
+}
+
+// Call on page load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initScrollAnimations, 500);
+});
+
+/* ========================================
+   IMAGE LAZY LOADING
+======================================== */
+
+function initLazyLoading() {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.add('loaded');
+                observer.unobserve(img);
+            }
+        });
+    });
+    
+    document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
+    });
+}
+
+/* ========================================
+   SEARCH FUNCTIONALITY
+======================================== */
+
+let searchTimeout;
+
+function initSearch() {
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search products...';
+    searchInput.style.cssText = `
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 3rem;
+        background: var(--bg-secondary);
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    `;
+    
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch(e.target.value);
+        }, 300);
+    });
+    
+    return searchInput;
+}
+
+function performSearch(query) {
+    if (!query) {
+        // Show all products
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.style.display = 'block';
+        });
+        return;
+    }
+    
+    const lowerQuery = query.toLowerCase();
+    
+    document.querySelectorAll('.product-card').forEach(card => {
+        const name = card.querySelector('.product-name')?.textContent.toLowerCase();
+        const amount = card.querySelector('.product-amount')?.textContent.toLowerCase();
+        
+        if (name?.includes(lowerQuery) || amount?.includes(lowerQuery)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+/* ========================================
+   OFFLINE DETECTION
+======================================== */
+
+window.addEventListener('online', () => {
+    showToast('Connected', 'You are back online', 'success');
+    // Retry any pending operations
+});
+
+window.addEventListener('offline', () => {
+    showToast('Offline', 'No internet connection', 'warning');
+});
+
+/* ========================================
+   PERFORMANCE MONITORING
+======================================== */
+
+function measurePerformance() {
+    if (window.performance) {
+        const perfData = window.performance.timing;
+        const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+        
+        console.log(`Page Load Time: ${pageLoadTime}ms`);
+    }
+}
+
+window.addEventListener('load', measurePerformance);
+
+/* ========================================
+   ERROR BOUNDARY
+======================================== */
+
+window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+    
+    // Don't show error toast for every error in production
+    if (window.location.hostname === 'localhost') {
+        showToast('Error', event.error?.message || 'An error occurred', 'error');
+    }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+});
+
+/* ========================================
+   CACHE MANAGEMENT
+======================================== */
+
+const CacheManager = {
+    set(key, value, expiryMinutes = 60) {
+        const item = {
+            value: value,
+            expiry: new Date().getTime() + (expiryMinutes * 60 * 1000)
+        };
+        localStorage.setItem(`cache_${key}`, JSON.stringify(item));
+    },
+    
+    get(key) {
+        const itemStr = localStorage.getItem(`cache_${key}`);
+        if (!itemStr) return null;
+        
+        try {
+            const item = JSON.parse(itemStr);
+            
+            if (new Date().getTime() > item.expiry) {
+                localStorage.removeItem(`cache_${key}`);
+                return null;
+            }
+            
+            return item.value;
+        } catch (e) {
+            return null;
+        }
+    },
+    
+    clear() {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('cache_')) {
+                localStorage.removeItem(key);
+            }
+        });
+    }
+};
+
+/* ========================================
+   ANALYTICS TRACKING
+======================================== */
+
+const Analytics = {
+    trackPageView(pageName) {
+        console.log('Page View:', pageName);
+        // Add your analytics service here (Google Analytics, etc.)
+    },
+    
+    trackEvent(category, action, label) {
+        console.log('Event:', { category, action, label });
+        // Add your analytics service here
+    },
+    
+    trackPurchase(orderId, amount) {
+        console.log('Purchase:', { orderId, amount });
+        // Add your analytics service here
+    }
+};
+
+/* ========================================
+   CLIPBOARD UTILITIES
+======================================== */
+
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('Copied', 'Text copied to clipboard', 'success');
+    } catch (error) {
+        console.error('Copy error:', error);
+        showToast('Error', 'Failed to copy text', 'error');
+    }
+}
+
+/* ========================================
+   SHARE FUNCTIONALITY
+======================================== */
+
+async function shareProduct(product) {
+    const shareData = {
+        title: product.name,
+        text: `Check out ${product.name} - ${formatPrice(product.price)}`,
+        url: window.location.href
+    };
+    
+    try {
+        if (navigator.share) {
+            await navigator.share(shareData);
+            Analytics.trackEvent('Share', 'Product', product.name);
+        } else {
+            // Fallback to copying link
+            await copyToClipboard(window.location.href);
+        }
+    } catch (error) {
+        console.error('Share error:', error);
+    }
+}
+
+/* ========================================
+   PWA INSTALL PROMPT
+======================================== */
+
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Show install button
+    showInstallPrompt();
+});
+
+function showInstallPrompt() {
+    const installBtn = document.createElement('button');
+    installBtn.className = 'buy-now-btn';
+    installBtn.innerHTML = '<i class="fas fa-download"></i> Install App';
+    installBtn.style.cssText = `
+        position: fixed;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        animation: slideUp 0.3s ease;
+    `;
+    
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                showToast('Installed', 'App installed successfully', 'success');
+            }
+            
+            deferredPrompt = null;
+            installBtn.remove();
+        }
+    });
+    
+    document.body.appendChild(installBtn);
+    
+    // Remove after 10 seconds
+    setTimeout(() => installBtn.remove(), 10000);
+}
+
+/* ========================================
+   INDEX2.JS - ADVANCED FEATURES
+======================================== */
+
+/* ========================================
+   REAL-TIME UPDATES WITH SUPABASE
+======================================== */
+
+function setupRealtimeSubscriptions() {
+    if (!AppState.sessionActive) return;
+    
+    // Subscribe to order updates
+    const orderSubscription = supabase
+        .channel('orders_channel')
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'orders',
+            filter: `user_id=eq.${AppState.currentUser.id}`
+        }, (payload) => {
+            handleOrderUpdate(payload.new);
+        })
+        .subscribe();
+    
+    // Subscribe to notifications
+    const notificationSubscription = supabase
+        .channel('notifications_channel')
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${AppState.currentUser.id}`
+        }, (payload) => {
+            handleNewNotification(payload.new);
+        })
+        .subscribe();
+    
+    // Store subscriptions for cleanup
+    AppState.subscriptions = [orderSubscription, notificationSubscription];
+}
+
+async function handleOrderUpdate(order) {
+    console.log('Order updated:', order);
+    
+    // Show notification based on status
+    if (order.status === 'approved') {
+        showToast('Order Approved! 🎉', `Order #${order.order_id} has been approved`, 'success');
+        
+        // Auto-download if setting enabled
+        if (AppState.settings?.autoDownload) {
+            setTimeout(() => {
+                downloadOrderPDF(order.id);
+            }, 2000);
+        }
+    } else if (order.status === 'rejected') {
+        showToast('Order Rejected', `Order #${order.order_id} was rejected`, 'error');
+    }
+    
+    // Reload order history if on that page
+    if (AppState.currentPage === 'orderHistory') {
+        await loadOrderHistory();
+    }
+}
+
+function handleNewNotification(notification) {
+    console.log('New notification:', notification);
+    
+    // Update notification count
+    const badge = document.getElementById('notificationCount');
+    const currentCount = parseInt(badge.textContent) || 0;
+    badge.textContent = currentCount + 1;
+    badge.style.display = 'flex';
+    
+    // Show toast notification if enabled
+    if (AppState.settings?.notifications !== false) {
+        showToast(notification.title, notification.message, notification.type || 'info');
+    }
+    
+    // Reload notifications if panel is open
+    const panel = document.getElementById('notificationPanel');
+    if (panel && panel.classList.contains('active')) {
+        loadNotifications();
+    }
+}
+
+function cleanupSubscriptions() {
+    if (AppState.subscriptions) {
+        AppState.subscriptions.forEach(sub => {
+            supabase.removeChannel(sub);
+        });
+        AppState.subscriptions = [];
+    }
+}
+
+/* ========================================
+   ADVANCED FILTERING & SORTING
+======================================== */
+
+class ProductFilter {
+    constructor() {
+        this.filters = {
+            priceMin: 0,
+            priceMax: Infinity,
+            sortBy: 'newest',
+            hasDiscount: false,
+            rating: 0
+        };
+    }
+    
+    setPriceRange(min, max) {
+        this.filters.priceMin = min;
+        this.filters.priceMax = max;
+        this.apply();
+    }
+    
+    setSorting(sortBy) {
+        this.filters.sortBy = sortBy;
+        this.apply();
+    }
+    
+    setDiscountFilter(hasDiscount) {
+        this.filters.hasDiscount = hasDiscount;
+        this.apply();
+    }
+    
+    setRatingFilter(rating) {
+        this.filters.rating = rating;
+        this.apply();
+    }
+    
+    apply() {
+        let filteredProducts = [...AppState.products];
+        
+        // Apply price filter
+        filteredProducts = filteredProducts.filter(p => {
+            const finalPrice = calculateDiscount(p.price, p.discount_percent);
+            return finalPrice >= this.filters.priceMin && finalPrice <= this.filters.priceMax;
+        });
+        
+        // Apply discount filter
+        if (this.filters.hasDiscount) {
+            filteredProducts = filteredProducts.filter(p => p.discount_percent > 0);
+        }
+        
+        // Apply sorting
+        switch(this.filters.sortBy) {
+            case 'price_low':
+                filteredProducts.sort((a, b) => {
+                    const priceA = calculateDiscount(a.price, a.discount_percent);
+                    const priceB = calculateDiscount(b.price, b.discount_percent);
+                    return priceA - priceB;
+                });
+                break;
+            case 'price_high':
+                filteredProducts.sort((a, b) => {
+                    const priceA = calculateDiscount(a.price, a.discount_percent);
+                    const priceB = calculateDiscount(b.price, b.discount_percent);
+                    return priceB - priceA;
+                });
+                break;
+            case 'discount':
+                filteredProducts.sort((a, b) => (b.discount_percent || 0) - (a.discount_percent || 0));
+                break;
+            case 'newest':
+            default:
+                filteredProducts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                break;
+        }
+        
+        // Re-render products
+        const container = document.getElementById('productsList');
+        if (container) {
+            container.innerHTML = '';
+            filteredProducts.forEach(product => {
+                renderProduct(container, product);
+            });
+        }
+    }
+    
+    reset() {
+        this.filters = {
+            priceMin: 0,
+            priceMax: Infinity,
+            sortBy: 'newest',
+            hasDiscount: false,
+            rating: 0
+        };
+        this.apply();
+    }
+}
+
+const productFilter = new ProductFilter();
+
+/* ========================================
+   FAVORITES SYSTEM
+======================================== */
+
+const FavoritesManager = {
+    async add(productId) {
+        if (!AppState.sessionActive) {
+            openAuthModal();
+            return;
+        }
+        
+        try {
+            const { error } = await supabase
+                .from('favorites')
+                .insert([{
+                    user_id: AppState.currentUser.id,
+                    product_id: productId,
+                    created_at: new Date().toISOString()
+                }]);
+            
+            if (error) throw error;
+            
+            showToast('Added to Favorites', 'Product added to your favorites', 'success');
+            this.updateUI(productId, true);
+            
+        } catch (error) {
+            console.error('Add favorite error:', error);
+            showToast('Error', 'Failed to add to favorites', 'error');
+        }
+    },
+    
+    async remove(productId) {
+        try {
+            const { error } = await supabase
+                .from('favorites')
+                .delete()
+                .eq('user_id', AppState.currentUser.id)
+                .eq('product_id', productId);
+            
+            if (error) throw error;
+            
+            showToast('Removed', 'Product removed from favorites', 'info');
+            this.updateUI(productId, false);
+            
+        } catch (error) {
+            console.error('Remove favorite error:', error);
+            showToast('Error', 'Failed to remove from favorites', 'error');
+        }
+    },
+    
+    async toggle(productId) {
+        const isFavorite = await this.isFavorite(productId);
+        
+        if (isFavorite) {
+            await this.remove(productId);
+        } else {
+            await this.add(productId);
+        }
+    },
+    
+    async isFavorite(productId) {
+        if (!AppState.sessionActive) return false;
+        
+        try {
+            const { data, error } = await supabase
+                .from('favorites')
+                .select('*')
+                .eq('user_id', AppState.currentUser.id)
+                .eq('product_id', productId)
+                .single();
+            
+            return !!data;
+        } catch (error) {
+            return false;
+        }
+    },
+    
+    updateUI(productId, isFavorite) {
+        const productCard = document.querySelector(`[data-product-id="${productId}"]`);
+        if (!productCard) return;
+        
+        let favoriteBtn = productCard.querySelector('.favorite-btn');
+        
+        if (!favoriteBtn) {
+            favoriteBtn = document.createElement('button');
+            favoriteBtn.className = 'favorite-btn';
+            favoriteBtn.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                width: 32px;
+                height: 32px;
+                background: rgba(0,0,0,0.5);
+                border: none;
+                border-radius: 50%;
+                color: white;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: var(--transition-fast);
+                backdrop-filter: blur(10px);
+                z-index: 10;
+            `;
+            
+            favoriteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggle(productId);
+            });
+            
+            const imageWrapper = productCard.querySelector('.product-image-wrapper');
+            imageWrapper.style.position = 'relative';
+            imageWrapper.appendChild(favoriteBtn);
+        }
+        
+        if (isFavorite) {
+            favoriteBtn.innerHTML = '<i class="fas fa-heart" style="color: #ef4444;"></i>';
+        } else {
+            favoriteBtn.innerHTML = '<i class="far fa-heart"></i>';
+        }
+    }
+};
+
+/* ========================================
+   CART SYSTEM (Optional)
+======================================== */
+
+const CartManager = {
+    items: [],
+    
+    add(product, quantity = 1) {
+        const existingItem = this.items.find(item => item.product.id === product.id);
+        
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            this.items.push({
+                product: product,
+                quantity: quantity
+            });
+        }
+        
+        this.save();
+        this.updateUI();
+        showToast('Added to Cart', `${product.name} added to cart`, 'success');
+    },
+    
+    remove(productId) {
+        this.items = this.items.filter(item => item.product.id !== productId);
+        this.save();
+        this.updateUI();
+    },
+    
+    clear() {
+        this.items = [];
+        this.save();
+        this.updateUI();
+    },
+    
+    getTotal() {
+        return this.items.reduce((total, item) => {
+            const price = calculateDiscount(item.product.price, item.product.discount_percent);
+            return total + (price * item.quantity);
+        }, 0);
+    },
+    
+    save() {
+        localStorage.setItem('cart', JSON.stringify(this.items));
+    },
+    
+    load() {
+        const saved = localStorage.getItem('cart');
+        if (saved) {
+            try {
+                this.items = JSON.parse(saved);
+            } catch (e) {
+                this.items = [];
+            }
+        }
+    },
+    
+    updateUI() {
+        // Update cart count badge
+        const badge = document.getElementById('cartCount');
+        if (badge) {
+            const totalItems = this.items.reduce((sum, item) => sum + item.quantity, 0);
+            badge.textContent = totalItems;
+            badge.style.display = totalItems > 0 ? 'flex' : 'none';
+        }
+    }
+};
+
+/* ========================================
+   IMAGE COMPRESSION
+======================================== */
+
+async function compressImage(file, maxSizeMB = 1) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Calculate new dimensions
+                const maxDim = 1920;
+                if (width > height && width > maxDim) {
+                    height = (height * maxDim) / width;
+                    width = maxDim;
+                } else if (height > maxDim) {
+                    width = (width * maxDim) / height;
+                    height = maxDim;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to blob
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        }));
+                    } else {
+                        reject(new Error('Compression failed'));
+                    }
+                }, 'image/jpeg', 0.85);
+            };
+            
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+/* ========================================
+   FORM VALIDATION
+======================================== */
+
+class FormValidator {
+    constructor(formId) {
+        this.form = document.getElementById(formId);
+        this.errors = {};
+    }
+    
+    validate(rules) {
+        this.errors = {};
+        
+        for (const [field, fieldRules] of Object.entries(rules)) {
+            const input = this.form.querySelector(`[name="${field}"]`);
+            if (!input) continue;
+            
+            const value = input.value.trim();
+            
+            // Required validation
+            if (fieldRules.required && !value) {
+                this.errors[field] = fieldRules.message || `${field} is required`;
+                this.showError(input, this.errors[field]);
+                continue;
+            }
+            
+            // Min length validation
+            if (fieldRules.minLength && value.length < fieldRules.minLength) {
+                this.errors[field] = `${field} must be at least ${fieldRules.minLength} characters`;
+                this.showError(input, this.errors[field]);
+                continue;
+            }
+            
+            // Max length validation
+            if (fieldRules.maxLength && value.length > fieldRules.maxLength) {
+                this.errors[field] = `${field} must not exceed ${fieldRules.maxLength} characters`;
+                this.showError(input, this.errors[field]);
+                continue;
+            }
+            
+            // Pattern validation
+            if (fieldRules.pattern && !fieldRules.pattern.test(value)) {
+                this.errors[field] = fieldRules.message || `${field} format is invalid`;
+                this.showError(input, this.errors[field]);
+                continue;
+            }
+            
+            // Custom validation
+            if (fieldRules.custom && !fieldRules.custom(value)) {
+                this.errors[field] = fieldRules.message || `${field} is invalid`;
+                this.showError(input, this.errors[field]);
+                continue;
+            }
+            
+            // Clear error if validation passes
+            this.clearError(input);
+        }
+        
+        return Object.keys(this.errors).length === 0;
+    }
+    
+    showError(input, message) {
+        input.style.borderColor = '#ef4444';
+        
+        let errorDiv = input.parentElement.querySelector('.error-message');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.cssText = `
+                color: #ef4444;
+                font-size: 0.75rem;
+                margin-top: 0.25rem;
+            `;
+            input.parentElement.appendChild(errorDiv);
+        }
+        
+        errorDiv.textContent = message;
+    }
+    
+    clearError(input) {
+        input.style.borderColor = '';
+        
+        const errorDiv = input.parentElement.querySelector('.error-message');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+    
+    clearAll() {
+        this.errors = {};
+        this.form.querySelectorAll('input, textarea, select').forEach(input => {
+            this.clearError(input);
+        });
+    }
+}
+
+/* ========================================
+   DATE & TIME UTILITIES
+======================================== */
+
+const DateUtils = {
+    formatRelative(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        
+        return date.toLocaleDateString();
+    },
+    
+    formatDateTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+    
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    },
+    
+    formatTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+};
+
+/* ========================================
+   LOCAL STORAGE UTILITIES
+======================================== */
+
+const Storage = {
+    set(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (error) {
+            console.error('Storage set error:', error);
+            return false;
+        }
+    },
+    
+    get(key, defaultValue = null) {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (error) {
+            console.error('Storage get error:', error);
+            return defaultValue;
+        }
+    },
+    
+    remove(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (error) {
+            console.error('Storage remove error:', error);
+            return false;
+        }
+    },
+    
+    clear() {
+        try {
+            localStorage.clear();
+            return true;
+        } catch (error) {
+            console.error('Storage clear error:', error);
+            return false;
+        }
+    },
+    
+    has(key) {
+        return localStorage.getItem(key) !== null;
+    }
+};
+
+/* ========================================
+   DEBOUNCE & THROTTLE
+======================================== */
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+/* ========================================
+   RANDOM UTILITIES
+======================================== */
+
+const Utils = {
+    randomId() {
+        return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    },
+    
+    randomColor() {
+        return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    },
+    
+    shuffle(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    },
+    
+    chunk(array, size) {
+        const chunks = [];
+        for (let i = 0; i < array.length; i += size) {
+            chunks.push(array.slice(i, i + size));
+        }
+        return chunks;
+    },
+    
+    groupBy(array, key) {
+        return array.reduce((result, item) => {
+            const group = item[key];
+            if (!result[group]) {
+                result[group] = [];
+            }
+            result[group].push(item);
+            return result;
+        }, {});
+    }
+};
+
+/* ========================================
+   INITIALIZATION
+======================================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Setup realtime subscriptions when user logs in
+    if (AppState.sessionActive) {
+        setupRealtimeSubscriptions();
+    }
+    
+    // Load cart
+    CartManager.load();
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    cleanupSubscriptions();
+});
+
+/* ========================================
+   INDEX3.JS - UI ENHANCEMENTS
+======================================== */
+
+/* ========================================
+   SMOOTH SCROLL
+======================================== */
+
+function smoothScrollTo(element, duration = 500) {
+    const target = typeof element === 'string' ? document.querySelector(element) : element;
+    if (!target) return;
+    
+    const targetPosition = target.getBoundingClientRect().top + window.pageYOffset;
+    const startPosition = window.pageYOffset;
+    const distance = targetPosition - startPosition - 70; // Account for fixed header
+    let startTime = null;
+    
+    function animation(currentTime) {
+        if (startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        const run = ease(timeElapsed, startPosition, distance, duration);
+        window.scrollTo(0, run);
+        if (timeElapsed < duration) requestAnimationFrame(animation);
+    }
+    
+    function ease(t, b, c, d) {
+        t /= d / 2;
+        if (t < 1) return c / 2 * t * t + b;
+        t--;
+        return -c / 2 * (t * (t - 2) - 1) + b;
+    }
+    
+    requestAnimationFrame(animation);
+}
+
+/* ========================================
+   RIPPLE EFFECT
+======================================== */
+
+function createRipple(event) {
+    const button = event.currentTarget;
+    const ripple = document.createElement('span');
+    const rect = button.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    ripple.className = 'ripple-effect';
+    
+    const existingRipple = button.querySelector('.ripple-effect');
+    if (existingRipple) {
+        existingRipple.remove();
+    }
+    
+    button.appendChild(ripple);
+    
+    setTimeout(() => ripple.remove(), 600);
+}
+
+// Add ripple CSS
+const rippleStyle = document.createElement('style');
+rippleStyle.textContent = `
+    .ripple-effect {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+        transform: scale(0);
+        animation: ripple-animation 0.6s ease-out;
+        pointer-events: none;
+    }
+    
+    @keyframes ripple-animation {
+        to {
+            transform: scale(2);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(rippleStyle);
+
+// Add ripple to all buttons
+document.addEventListener('click', (e) => {
+    if (e.target.matches('button, .btn, .nav-item')) {
+        createRipple(e);
+    }
+});
+
+/* ========================================
+   PULL TO REFRESH
+======================================== */
+
+let pullToRefreshEnabled = false;
+let startY = 0;
+let pulling = false;
+let refreshThreshold = 80;
+
+function initPullToRefresh() {
+    let refreshIndicator = document.getElementById('refreshIndicator');
+    
+    if (!refreshIndicator) {
+        refreshIndicator = document.createElement('div');
+        refreshIndicator.id = 'refreshIndicator';
+        refreshIndicator.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            z-index: 999;
+        `;
+        refreshIndicator.innerHTML = '<i class="fas fa-sync-alt" style="color: var(--accent-purple); font-size: 1.5rem;"></i>';
+        document.body.appendChild(refreshIndicator);
+    }
+    
+    document.addEventListener('touchstart', (e) => {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].clientY;
+            pulling = true;
+        }
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (!pulling) return;
+        
+        const currentY = e.touches[0].clientY;
+        const distance = currentY - startY;
+        
+        if (distance > 0 && distance < refreshThreshold * 2) {
+            e.preventDefault();
+            refreshIndicator.style.transform = `translateY(${Math.min(distance - 60, 0)}px)`;
+            
+            if (distance > refreshThreshold) {
+                refreshIndicator.querySelector('i').style.animation = 'spin 1s linear infinite';
+            }
+        }
+    });
+    
+    document.addEventListener('touchend', async (e) => {
+        if (!pulling) return;
+        
+        const currentY = e.changedTouches[0].clientY;
+        const distance = currentY - startY;
+        
+        if (distance > refreshThreshold) {
+            // Trigger refresh
+            refreshIndicator.style.transform = 'translateY(0)';
+            await refreshCurrentPage();
+            refreshIndicator.style.transform = 'translateY(-100%)';
+            refreshIndicator.querySelector('i').style.animation = '';
+        } else {
+            refreshIndicator.style.transform = 'translateY(-100%)';
+        }
+        
+        pulling = false;
+        startY = 0;
+    });
+}
+
+async function refreshCurrentPage() {
+    showLoader();
+    
+    try {
+        await loadPageData(AppState.currentPage);
+        showToast('Refreshed', 'Page refreshed successfully', 'success');
+    } catch (error) {
+        console.error('Refresh error:', error);
+        showToast('Error', 'Failed to refresh page', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+/* ========================================
+   SKELETON LOADING
+======================================== */
+
+function createSkeletonLoader(type = 'card') {
+    const skeleton = document.createElement('div');
+    skeleton.className = 'skeleton-loader';
+    
+    if (type === 'card') {
+        skeleton.innerHTML = `
+            <div class="skeleton-image"></div>
+            <div class="skeleton-text"></div>
+            <div class="skeleton-text short"></div>
+        `;
+    } else if (type === 'list') {
+        skeleton.innerHTML = `
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-content">
+                <div class="skeleton-text"></div>
+                <div class="skeleton-text short"></div>
+            </div>
+        `;
+    }
+    
+    return skeleton;
+}
+
+// Add skeleton CSS
+const skeletonStyle = document.createElement('style');
+skeletonStyle.textContent = `
+    .skeleton-loader {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .skeleton-image,
+    .skeleton-text,
+    .skeleton-avatar {
+        background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-secondary) 50%, var(--bg-hover) 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: var(--radius-sm);
+    }
+    
+    .skeleton-image {
+        width: 100%;
+        height: 150px;
+        margin-bottom: 1rem;
+    }
+    
+    .skeleton-text {
+        height: 16px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .skeleton-text.short {
+        width: 60%;
+    }
+    
+    .skeleton-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+    }
+    
+    @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+`;
+document.head.appendChild(skeletonStyle);
+
+/* ========================================
+   INFINITE SCROLL
+======================================== */
+
+class InfiniteScroll {
+    constructor(container, loadMoreCallback) {
+        this.container = container;
+        this.loadMoreCallback = loadMoreCallback;
+        this.loading = false;
+        this.hasMore = true;
+        this.page = 1;
+        
+        this.init();
+    }
+    
+    init() {
+        window.addEventListener('scroll', throttle(() => {
+            if (this.shouldLoadMore()) {
+                this.loadMore();
+            }
+        }, 200));
+    }
+    
+    shouldLoadMore() {
+        if (!this.hasMore || this.loading) return false;
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight;
+        
+        return scrollTop + clientHeight >= scrollHeight - 500;
+    }
+    
+    async loadMore() {
+        this.loading = true;
+        
+        try {
+            const hasMore = await this.loadMoreCallback(++this.page);
+            this.hasMore = hasMore;
+        } catch (error) {
+            console.error('Infinite scroll error:', error);
+            this.page--;
+        } finally {
+            this.loading = false;
+        }
+    }
+    
+    reset() {
+        this.page = 1;
+        this.hasMore = true;
+        this.loading = false;
+    }
+}
+
+/* ========================================
+   CONTEXTMENU (Long Press)
+======================================== */
+
+function initContextMenu() {
+    let pressTimer;
+    
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('.product-card, .order-card');
+        if (!target) return;
+        
+        pressTimer = setTimeout(() => {
+            showContextMenu(e, target);
+        }, 500);
+    });
+    
+    document.addEventListener('touchend', () => {
+        clearTimeout(pressTimer);
+    });
+    
+    document.addEventListener('touchmove', () => {
+        clearTimeout(pressTimer);
+    });
+}
+
+function showContextMenu(event, element) {
+    // Vibrate if supported
+    if (navigator.vibrate) {
+        navigator.vibrate(50);
+    }
+    
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.style.cssText = `
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-card);
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        padding: 1.5rem;
+        z-index: 9999;
+        animation: slideUpMenu 0.3s ease;
+    `;
+    
+    const productId = element.dataset.productId;
+    const orderId = element.dataset.orderId;
+    
+    let menuItems = '';
+    
+    if (productId) {
+        menuItems = `
+            <button onclick="FavoritesManager.toggle('${productId}'); closeContextMenu()">
+                <i class="fas fa-heart"></i> Add to Favorites
+            </button>
+            <button onclick="shareProduct(AppState.products.find(p => p.id === '${productId}')); closeContextMenu()">
+                <i class="fas fa-share"></i> Share
+            </button>
+            <button onclick="closeContextMenu()" style="color: var(--text-muted);">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        `;
+    } else if (orderId) {
+        menuItems = `
+            <button onclick="viewOrderDetails('${orderId}'); closeContextMenu()">
+                <i class="fas fa-eye"></i> View Details
+            </button>
+            <button onclick="downloadOrderPDF('${orderId}'); closeContextMenu()">
+                <i class="fas fa-download"></i> Download Receipt
+            </button>
+            <button onclick="closeContextMenu()" style="color: var(--text-muted);">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        `;
+    }
+    
+    menu.innerHTML = menuItems;
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        z-index: 9998;
+    `;
+    overlay.onclick = closeContextMenu;
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(menu);
+    
+    // Style menu buttons
+    menu.querySelectorAll('button').forEach(btn => {
+        btn.style.cssText = `
+            width: 100%;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1rem;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--transition-fast);
+            border-radius: var(--radius-md);
+            margin-bottom: 0.5rem;
+        `;
+        
+        btn.addEventListener('click', () => btn.style.background = 'var(--bg-hover)');
+    });
+}
+
+function closeContextMenu() {
+    document.querySelectorAll('.context-menu, .context-menu + div').forEach(el => el.remove());
+}
+
+// Add animation CSS
+const menuStyle = document.createElement('style');
+menuStyle.textContent = `
+    @keyframes slideUpMenu {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+`;
+document.head.appendChild(menuStyle);
+
+/* ========================================
+   SWIPE GESTURES
+======================================== */
+
+class SwipeDetector {
+    constructor(element, callbacks = {}) {
+        this.element = element;
+        this.callbacks = callbacks;
+        this.startX = 0;
+        this.startY = 0;
+        this.distX = 0;
+        this.distY = 0;
+        this.threshold = 50;
+        
+        this.init();
+    }
+    
+    init() {
+        this.element.addEventListener('touchstart', (e) => {
+            this.startX = e.touches[0].clientX;
+            this.startY = e.touches[0].clientY;
+        });
+        
+        this.element.addEventListener('touchmove', (e) => {
+            this.distX = e.touches[0].clientX - this.startX;
+            this.distY = e.touches[0].clientY - this.startY;
+        });
+        
+        this.element.addEventListener('touchend', () => {
+            if (Math.abs(this.distX) > Math.abs(this.distY)) {
+                if (this.distX > this.threshold && this.callbacks.onSwipeRight) {
+                    this.callbacks.onSwipeRight();
+                } else if (this.distX < -this.threshold && this.callbacks.onSwipeLeft) {
+                    this.callbacks.onSwipeLeft();
+                }
+            } else {
+                if (this.distY > this.threshold && this.callbacks.onSwipeDown) {
+                    this.callbacks.onSwipeDown();
+                } else if (this.distY < -this.threshold && this.callbacks.onSwipeUp) {
+                    this.callbacks.onSwipeUp();
+                }
+            }
+            
+            this.distX = 0;
+            this.distY = 0;
+        });
+    }
+}
+
+/* ========================================
+   INITIALIZATION
+======================================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize pull to refresh
+    initPullToRefresh();
+    
+    // Initialize context menu
+    initContextMenu();
+    
+    // Add swipe to go back
+    new SwipeDetector(document.body, {
+        onSwipeRight: () => {
+            if (AppState.currentPage !== 'home') {
+                goBack();
+            }
+        }
+    });
+});
